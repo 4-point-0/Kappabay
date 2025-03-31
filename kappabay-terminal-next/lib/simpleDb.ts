@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { Buffer } from 'buffer';
 import NodeCache from 'node-cache';
 
 const cache = new NodeCache({ stdTTL: 300 }); // Cache TTL set to 5 minutes
@@ -53,4 +54,17 @@ export const deleteBlobHash = async (agentId: string): Promise<void> => {
 
   // Remove from cache
   cache.del(agentId);
+};
+export const setDbFile = async (agentId: string, buffer: Buffer): Promise<void> => {
+  // Store the Buffer directly
+  cache.set(`dbFile_${agentId}`, buffer);
+};
+
+export const getDbFile = async (agentId: string): Promise<Buffer | null> => {
+  const cachedBuffer = cache.get<Buffer>(`dbFile_${agentId}`);
+  return cachedBuffer || null;
+};
+
+export const deleteDbFile = async (agentId: string): Promise<void> => {
+  cache.del(`dbFile_${agentId}`);
 };
