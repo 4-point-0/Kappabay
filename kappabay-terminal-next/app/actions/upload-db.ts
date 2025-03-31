@@ -6,16 +6,15 @@ import { uploadBlob, deleteBlob } from "../../lib/walrusApi";
 /**
  * Server Action to upload db.sqlite to Walrus.
  * @param agentId - The agent identifier.
- * @param file - The db.sqlite file to upload.
+ * @param bufferArray - The serialized db.sqlite file as an array of numbers.
  * @returns An object containing the state and the new blob hash.
  */
-export async function uploadDb(agentId: string, file: File): Promise<{ state: string; blobHash: string }> {
+export async function uploadDb(agentId: string, bufferArray: number[]): Promise<{ state: string; blobHash: string }> {
 	try {
 		console.log("in uploadDb");
 
-		// Convert File to buffer
-		const arrayBuffer = await file.arrayBuffer();
-		const buffer = Buffer.from(arrayBuffer);
+		// Reconstruct the Buffer from the array of numbers
+		const buffer = Buffer.from(bufferArray);
 		console.log("before getBlobHash");
 		// Check for existing blob hash
 		const existingBlobHash = await getBlobHash(agentId);

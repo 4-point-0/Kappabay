@@ -20,7 +20,14 @@ const UploadDb = () => {
 		try {
 			console.log("before");
 
-			const result = await uploadDb(agentId, file);
+			// Read the file as an ArrayBuffer
+			const arrayBuffer = await file.arrayBuffer();
+			
+			// Convert ArrayBuffer to an array of numbers
+			const bufferArray = Array.from(new Uint8Array(arrayBuffer));
+
+			// Pass the serialized buffer to the Server Action
+			const result = await uploadDb(agentId, bufferArray);
 			console.log("after");
 			setBlobHash(result.blobHash);
 			setStatus("Upload successful!");
