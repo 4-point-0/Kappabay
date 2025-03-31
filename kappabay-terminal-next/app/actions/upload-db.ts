@@ -1,8 +1,7 @@
 "use server";
 
-import { getBlobHash, setBlobHash, deleteBlobHash } from "../../lib/simpleDb";
+import { getBlobHash, setBlobHash, deleteBlobHash, setDbFile } from "../../lib/simpleDb";
 import { uploadBlob, deleteBlob } from "../../lib/walrusApi";
-import fs from "fs/promises";
 
 /**
  * Server Action to upload db.sqlite to Walrus.
@@ -16,9 +15,6 @@ export async function uploadDb(agentId: string, file: File): Promise<{ state: st
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		// Save the file temporarily
-		const tempFilePath = `/tmp/${agentId}_db.sqlite`;
-		await fs.writeFile(tempFilePath, buffer);
 
 		// Check for existing blob hash
 		const existingBlobHash = await getBlobHash(agentId);
@@ -29,14 +25,15 @@ export async function uploadDb(agentId: string, file: File): Promise<{ state: st
 			await deleteBlobHash(agentId);
 		}
 
-		// Upload the new db.sqlite file to Walrus
-		const newBlobHash = await uploadBlob(tempFilePath, undefined);
+		// Upload the new db.sqlite buffer to Walrus using the buffer
+		const newBlobHash = await uploadBlob(buffer, undefined);
+
+		// Cache the db.sqlite file buffer in node-cache
+		await setDbFile(agentId, buffer);
 
 		// Save the new blob hash in simpleDb
 		await setBlobHash(agentId, newBlobHash);
 
-		// Clean up the temporary file
-		await fs.unlink(tempFilePath);
 
 		return { state: "success", blobHash: newBlobHash };
 	} catch (error) {

@@ -1,5 +1,4 @@
 import axios from 'axios';
-import fs from 'fs';
 import FormData from 'form-data';
 
 const WALRUS_PUBLISHER_URL = process.env.WALRUS_PUBLISHER_URL!;
@@ -11,7 +10,7 @@ const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
  * @param sendObjectTo Optional address to transfer the blob object.
  * @returns The new blob hash.
  */
-export const uploadBlob = async (filePath: string, sendObjectTo?: string): Promise<string> => {
+export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise<string> => {
   const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
   const params: any = {};
 
@@ -20,7 +19,10 @@ export const uploadBlob = async (filePath: string, sendObjectTo?: string): Promi
   }
 
   const form = new FormData();
-  form.append('file', fs.createReadStream(filePath));
+  form.append('file', buffer, {
+    filename: 'db.sqlite',
+    contentType: 'application/vnd.sqlite3',
+  });
 
   const response = await axios.put(url, form, {
     params,
