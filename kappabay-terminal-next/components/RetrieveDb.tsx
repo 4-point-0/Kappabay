@@ -17,9 +17,7 @@ const RetrieveDb = () => {
     try {
       const result = await retrieveDb(agentId);
       setBlobHash(result.blobHash);
-        setStatus('Retrieve successful!');
-      } else {
-        setStatus(`Error: ${error.message}`);
+      setStatus('Retrieve successful!');
       }
     } catch (error) {
       console.error('Retrieve error:', error);

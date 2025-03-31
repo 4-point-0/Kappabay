@@ -20,9 +20,7 @@ const UploadDb = () => {
     try {
       const result = await uploadDb(agentId, file);
       setBlobHash(result.blobHash);
-        setStatus('Upload successful!');
-      } else {
-        setStatus(`Error: ${error.message}`);
+      setStatus('Upload successful!');
       }
     } catch (error) {
       console.error('Upload error:', error);
