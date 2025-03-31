@@ -11,11 +11,12 @@ import { uploadBlob, deleteBlob } from "../../lib/walrusApi";
  */
 export async function uploadDb(agentId: string, file: File): Promise<{ state: string; blobHash: string }> {
 	try {
+		console.log("in uploadDb");
+
 		// Convert File to buffer
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
-
-
+		console.log("before getBlobHash");
 		// Check for existing blob hash
 		const existingBlobHash = await getBlobHash(agentId);
 
@@ -24,6 +25,7 @@ export async function uploadDb(agentId: string, file: File): Promise<{ state: st
 			await deleteBlob(existingBlobHash);
 			await deleteBlobHash(agentId);
 		}
+		console.log("before uploadBlob");
 
 		// Upload the new db.sqlite buffer to Walrus using the buffer
 		const newBlobHash = await uploadBlob(buffer, undefined);
@@ -33,7 +35,6 @@ export async function uploadDb(agentId: string, file: File): Promise<{ state: st
 
 		// Save the new blob hash in simpleDb
 		await setBlobHash(agentId, newBlobHash);
-
 
 		return { state: "success", blobHash: newBlobHash };
 	} catch (error) {

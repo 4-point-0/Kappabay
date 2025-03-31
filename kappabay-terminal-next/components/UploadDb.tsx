@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { uploadDb } from "../app/actions/upload-db";
+import { uploadDb } from "@/app/actions/upload-db";
 
 const UploadDb = () => {
 	const [agentId, setAgentId] = useState("");
@@ -18,10 +18,15 @@ const UploadDb = () => {
 		setStatus("Uploading...");
 
 		try {
+			console.log("before");
+
 			const result = await uploadDb(agentId, file);
+			console.log("after");
 			setBlobHash(result.blobHash);
 			setStatus("Upload successful!");
 		} catch (error) {
+			console.log("error", error);
+
 			console.error("Upload error:", error);
 			setStatus("An unexpected error occurred.");
 		}
