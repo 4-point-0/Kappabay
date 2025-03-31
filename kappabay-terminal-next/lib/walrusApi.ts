@@ -12,7 +12,10 @@ const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
  */
 export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise<string> => {
 	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
-	const params: any = {};
+	const params: any = {
+		deletable: true,
+		epochs: 10000
+	};
 
 	if (sendObjectTo) {
 		params.send_object_to = sendObjectTo;
