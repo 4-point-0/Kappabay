@@ -73,6 +73,7 @@ export const createAndSendModalCap: Action = {
             const keypair = getKeypair(settings.SUI_PRIVATE_KEY);
 
             const tx = new Transaction();
+
             tx.setGasBudget(20_000_000);
             tx.moveCall({
                 target: `${settings.SUI_PACKAGE_ID}::${SUI_MODULE_NAME}::${SUI_FUNCTION_NAME}`,

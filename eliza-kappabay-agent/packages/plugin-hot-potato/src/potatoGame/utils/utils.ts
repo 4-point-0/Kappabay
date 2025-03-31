@@ -24,7 +24,6 @@ export const getSuiClient = (network: string) => {
 export const getKeypair = (privateKey: string) => {
     return Ed25519Keypair.fromSecretKey(privateKey);
 };
-
 export const executeSuiTransaction = async (
     client: SuiClient,
     keypair: Ed25519Keypair,
