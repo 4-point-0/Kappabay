@@ -25,6 +25,7 @@ import Link from "next/link"; // Import Link from next/link
 import { usePathname } from "next/navigation"; // Import usePathname
 import { useCheckPotatoStatus } from "@/hooks/useCheckPotatoStatus";
 import { useToast } from "./ui/use-toast";
+import UploadDb from "./UploadDb";
 
 export function AppSidebar() {
 	const pathname = usePathname(); // Replace useLocation with usePathname
@@ -79,6 +80,7 @@ export function AppSidebar() {
 				<SidebarGroup>
 					<NftStatus />
 				</SidebarGroup>
+				{/* <UploadDb /> */}
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu>

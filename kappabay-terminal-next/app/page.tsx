@@ -10,7 +10,6 @@ import type { UUID } from "@elizaos/core";
 import { formatAgentName } from "@/lib/utils";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { useEffect } from "react";
 
 export default function Home() {
 	const query = useQuery({

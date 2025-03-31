@@ -1,4 +1,4 @@
-export const  potatoGameStatusCheckExample = [
+export const potatoGameStatusCheckExample = [
     [
         {
             user: "{{user1}}",
@@ -41,9 +41,9 @@ export const  potatoGameStatusCheckExample = [
             },
         },
     ],
-]
+];
 
-export const  bakeAndSendModalCapExample = [
+export const bakeAndSendModalCapExample = [
     [
         {
             user: "{{user1}}",
@@ -65,4 +65,19 @@ export const  bakeAndSendModalCapExample = [
             },
         },
     ],
-]
+];
+export const checkUniquePlayerCountExample = [
+    [
+        {
+            user: "{{user1}}",
+            content: "Check how many unique players are in the game",
+        },
+        {
+            user: "{{agent}}",
+            content: {
+                text: "I'll check the unique player count for your game.",
+                action: "CHECK_UNIQUE_PLAYER_COUNT",
+            },
+        },
+    ],
+];

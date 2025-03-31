@@ -39,3 +39,12 @@ export const OwnedObjectsSchema = z.object({
 });
 
 export type OwnedObjectsSchemaType = z.infer<typeof OwnedObjectsSchema>;
+
+export const UniquePlayerCountEventSchema = z.object({
+    count: z.string(),
+    game_id: z.string().optional(), // Optional as it might not be in all events
+});
+
+export type UniquePlayerCountEvent = z.infer<
+    typeof UniquePlayerCountEventSchema
+>;

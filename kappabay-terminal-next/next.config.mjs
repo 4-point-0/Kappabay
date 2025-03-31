@@ -21,6 +21,12 @@ const nextConfig = {
 		webpackBuildWorker: true,
 		parallelServerBuildTraces: true,
 		parallelServerCompiles: true,
+		serverActions: {
+			// Increase the body size limit to 10MB (adjust as needed)
+			bodySizeLimit: "10mb",
+			// (Optional) If you're accessing Server Actions from different origins, specify them here
+			// allowedOrigins: ['https://your-allowed-origin.com', 'https://another-origin.com'],
+		},
 	},
 };
 
