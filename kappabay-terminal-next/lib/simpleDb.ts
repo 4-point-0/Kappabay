@@ -5,15 +5,19 @@ import NodeCache from "node-cache";
 const cache = new NodeCache();
 
 export const getBlobHash = async (agentId: string): Promise<string | null> => {
+	console.log("in getBlobHash");
+
 	// Check cache first
 	const cachedHash = cache.get<string>(agentId);
 	if (cachedHash) {
 		return cachedHash;
 	}
 
+	console.log('before supabase.from("db_hashes") ');
+
 	// Fetch from Supabase
 	const { data, error } = await supabase.from("db_hashes").select("blob_hash").eq("agent_id", agentId).single();
-
+	console.log('after supabase.from("db_hashes") ');
 	if (error) {
 		if (error.code === "PGRST116") return null; // No data found
 		throw error;
@@ -26,6 +30,9 @@ export const getBlobHash = async (agentId: string): Promise<string | null> => {
 };
 
 export const setBlobHash = async (agentId: string, blobHash: string): Promise<void> => {
+	console.log("agentId", agentId);
+	console.log("blobHash", blobHash);
+
 	const { error } = await supabase
 		.from("db_hashes")
 		.upsert({ agent_id: agentId, blob_hash: blobHash }, { onConflict: "agent_id" });

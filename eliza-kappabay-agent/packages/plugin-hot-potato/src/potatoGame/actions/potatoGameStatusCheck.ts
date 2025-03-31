@@ -5,10 +5,7 @@ import {
     type Memory,
     type State,
     type HandlerCallback,
-    composeContext,
     elizaLogger,
-    generateObjectDeprecated,
-    ModelClass,
 } from "@elizaos/core";
 
 // Import SUI SDK or relevant library for blockchain interactions
@@ -39,11 +36,10 @@ export const potatoGameStatusCheck: Action = {
     ) => {
         const secrets = JSON.parse((state as any).secrets);
         const walletAddress = secrets.walletAddress;
-        const network = runtime.getSetting("SUI_NETWORK");
 
         if (!walletAddress) {
             elizaLogger.error("No wallet address found in state secrets.");
-            return; // Handle error or return appropriate message
+            return;
         }
 
         try {

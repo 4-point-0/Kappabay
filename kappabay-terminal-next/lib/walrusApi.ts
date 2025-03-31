@@ -13,31 +13,31 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
 	const params: any = {
 		deletable: true,
-		epochs: 10000,
+		epochs: 10,
 	};
 
 	if (sendObjectTo) {
 		params.send_object_to = sendObjectTo;
 	}
 
-    // Set the appropriate headers
-    const headers = {
-        "Content-Type": "application/vnd.sqlite3", // Specify the file type
-        "Content-Length": buffer.length.toString(), // Specify the content length
-    };
+	// Set the appropriate headers
+	const headers = {
+		"Content-Type": "application/vnd.sqlite3", // Specify the file type
+		"Content-Length": buffer.length.toString(), // Specify the content length
+	};
 
-    console.log("before axios.put");
-    // Send the PUT request with the buffer as the body
-    const response = await axios.put(url, buffer, { headers, params });
-    console.log("after axios.put");
+	console.log("before axios.put");
+	// Send the PUT request with the buffer as the body
+	const response = await axios.put(url, buffer, { headers, params });
+	console.log("after axios.put");
 
-    if (response.data.newlyCreated) {
-        return response.data.newlyCreated.blobObject.blobId;
-    } else if (response.data.alreadyCertified) {
-        return response.data.alreadyCertified.blobId;
-    } else {
-        throw new Error("Unexpected response from Walrus Publisher.");
-    }
+	if (response.data.newlyCreated) {
+		return response.data.newlyCreated.blobObject.blobId;
+	} else if (response.data.alreadyCertified) {
+		return response.data.alreadyCertified.blobId;
+	} else {
+		throw new Error("Unexpected response from Walrus Publisher.");
+	}
 };
 
 /**
