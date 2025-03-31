@@ -1,4 +1,7 @@
+"use client";
+
 import { useState } from 'react';
+import { uploadDb } from '../app/actions/uploadDb';
 
 const UploadDb = () => {
   const [agentId, setAgentId] = useState('');
@@ -8,27 +11,18 @@ const UploadDb = () => {
 
   const handleUpload = async () => {
     if (!agentId || !file) {
-      setStatus('agentId and db.sqlite file are required.');
+      setStatus('Agent ID and db.sqlite file are required.');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('agentId', agentId);
-    formData.append('file', file);
+    setStatus('Uploading...');
 
     try {
-      const response = await fetch('/api/upload-db', {
-        method: 'PUT',
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setBlobHash(data.blobHash);
+      const result = await uploadDb(agentId, file);
+      setBlobHash(result.blobHash);
         setStatus('Upload successful!');
       } else {
-        setStatus(`Error: ${data.error}`);
+        setStatus(`Error: ${error.message}`);
       }
     } catch (error) {
       console.error('Upload error:', error);

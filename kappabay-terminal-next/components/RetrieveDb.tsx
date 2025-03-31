@@ -1,4 +1,7 @@
+"use client";
+
 import { useState } from 'react';
+import { retrieveDb } from '../app/actions/retrieveDb';
 
 const RetrieveDb = () => {
   const [agentId, setAgentId] = useState('');
@@ -7,22 +10,16 @@ const RetrieveDb = () => {
 
   const handleRetrieve = async () => {
     if (!agentId) {
-      setStatus('agentId is required.');
+      setStatus('Agent ID is required.');
       return;
     }
 
     try {
-      const response = await fetch(`/api/retrieve-db?agentId=${agentId}`, {
-        method: 'GET',
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setBlobHash(data.blobHash);
+      const result = await retrieveDb(agentId);
+      setBlobHash(result.blobHash);
         setStatus('Retrieve successful!');
       } else {
-        setStatus(`Error: ${data.error}`);
+        setStatus(`Error: ${error.message}`);
       }
     } catch (error) {
       console.error('Retrieve error:', error);
