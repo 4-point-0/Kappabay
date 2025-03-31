@@ -14,7 +14,7 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
 	const params: any = {
 		deletable: true,
-		epochs: 10000
+		epochs: 10000,
 	};
 
 	if (sendObjectTo) {
@@ -26,12 +26,14 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 		filename: "db.sqlite",
 	});
 
+	console.log("before axios.put");
 	const response = await axios.put(url, form, {
 		params,
 		headers: {
 			...form.getHeaders(),
 		},
 	});
+	console.log("after axios.put");
 
 	if (response.data.newlyCreated) {
 		return response.data.newlyCreated.blobObject.blobId;
