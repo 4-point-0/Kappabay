@@ -1,4 +1,5 @@
 import { supabase } from '../supabase-client';
+import { cacheManager } from '../utils/cacheManager';
 
 export async function getDatabaseHash(agentId: string) {
   const { data, error } = await supabase
@@ -10,7 +11,10 @@ export async function getDatabaseHash(agentId: string) {
   if (error) throw error;
   if (!data) return { status: 'not_found' };
 
-  return { 
+  // Cache the blob hash
+  cacheManager.set(agentId, Buffer.from(data.blob_hash));
+
+  return {
     status: 'success',
     blobHash: data.blob_hash
   };

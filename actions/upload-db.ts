@@ -1,4 +1,5 @@
 import { supabase } from '../supabase-client';
+import { cacheManager } from '../utils/cacheManager';
 
 export async function uploadDatabase(agentId: string, dbFile: File) {
   // 1. Check for existing blob hash
@@ -25,7 +26,10 @@ export async function uploadDatabase(agentId: string, dbFile: File) {
   });
   const { hash: newHash } = await uploadRes.json();
 
-  // 4. Store new hash in Supabase
+  // 4. Cache the new blob hash
+  cacheManager.set(agentId, Buffer.from(newHash));
+
+  // 5. Store new hash in Supabase
   const { error } = await supabase
     .from('walrus_blobs')
     .upsert({ 
