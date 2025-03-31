@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { uploadDb } from '../app/actions/uploadDb';
+import { uploadDb } from '../app/actions/upload-db';
 
 const UploadDb = () => {
   const [agentId, setAgentId] = useState('');

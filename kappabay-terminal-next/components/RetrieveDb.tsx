@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { retrieveDb } from '../app/actions/retrieveDb';
+import { retrieveDb } from '../app/actions/retrieve-db';
 
 const RetrieveDb = () => {
   const [agentId, setAgentId] = useState('');
