@@ -28,6 +28,20 @@ const nextConfig = {
 			// allowedOrigins: ['https://your-allowed-origin.com', 'https://another-origin.com'],
 		},
 	},
+  async headers() {
+    return [
+      {
+        // Apply CORS headers only to the addAgent API route
+        source: "/api/addAgent",
+        headers: [
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Access-Control-Allow-Origin", value: "*" }, // Replace '*' with specific origins in production
+          { key: "Access-Control-Allow-Methods", value: "POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type" },
+        ],
+      },
+    ];
+  },
 };
 
 mergeConfig(nextConfig, userConfig);
