@@ -29,7 +29,7 @@ import UploadDb from "./UploadDb";
 
 export function AppSidebar() {
 	const pathname = usePathname(); // Replace useLocation with usePathname
-	const { modalObjects, capObjects, nftObjects } = useOwnedObjects();
+	const { modalObjects, capObjects, nftObjects, agentCapObjects } = useOwnedObjects();
 	const modalObjId = modalObjects?.[0]?.data?.objectId;
 	const capObjId = capObjects?.[0]?.data?.objectId;
 	const potatoObjId = nftObjects?.[0]?.data?.objectId;
@@ -43,6 +43,8 @@ export function AppSidebar() {
 
 	const isPotatoOwned = capObjId && potatoObjId;
 	const isModalOwned = modalObjId;
+
+	console.log("agentCapObjects", agentCapObjects);
 
 	return (
 		<Sidebar>
