@@ -24,6 +24,7 @@ import { BakeModal } from "./bake-modal";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useWallet } from "@suiet/wallet-kit";
+import UploadDb from "./UploadDb";
 
 export function AppSidebar() {
 	const pathname = usePathname();
@@ -81,7 +82,7 @@ export function AppSidebar() {
 				<SidebarGroup>
 					<NftStatus />
 				</SidebarGroup>
-				{/* <UploadDb /> */}
+				<UploadDb />
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu>

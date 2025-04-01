@@ -41,17 +41,6 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 };
 
 /**
- * Deletes a blob from Walrus (assuming Walrus API supports deletion).
- * @param blobHash The hash of the blob to delete.
- */
-export const deleteBlob = async (blobHash: string): Promise<void> => {
-	// Assuming Walrus has a DELETE endpoint for blobs
-	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs/${blobHash}`;
-
-	await axios.delete(url);
-};
-
-/**
  * Retrieves a blob hash from Walrus Aggregator.
  * @param blobHash The hash of the blob to retrieve.
  * @returns The blob content.

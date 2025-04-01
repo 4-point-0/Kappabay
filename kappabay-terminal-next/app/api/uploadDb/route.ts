@@ -6,30 +6,33 @@ import { z } from "zod";
 const schema = z.object({
 	agentId: z.string().min(1, "agentId is required"),
 	file: z
-		.instanceof(File, "file must be a valid File object")
-		.refine((file) => file.type === "application/vnd.sqlite3", "Only .sqlite files are allowed"),
+		.instanceof(File)
+		.refine(
+			(file) => file.type === "application/vnd.sqlite3" || file.name.endsWith(".sqlite"),
+			"Only .sqlite files are allowed"
+		),
 });
 
 export async function POST(req: Request) {
-    // Parse form data
-    const formData = await req.formData();
-    const agentId = formData.get("agentId");
-    const file = formData.get("file");
+	// Parse form data
+	const formData = await req.formData();
+	const agentId = formData.get("agentId");
+	const file = formData.get("file");
 
-    // Validate form data
-    if (typeof agentId !== "string" || !file || !(file instanceof File)) {
-        return NextResponse.json({ success: false, message: "Invalid form data." }, { status: 400 });
-    }
+	// Validate form data
+	if (typeof agentId !== "string" || !file || !(file instanceof File)) {
+		return NextResponse.json({ success: false, message: "Invalid form data." }, { status: 400 });
+	}
 
-    const parseResult = schema.safeParse({ agentId, file });
-    if (!parseResult.success) {
-        const errorMessage = parseResult.error.errors[0].message;
-        return NextResponse.json({ success: false, message: errorMessage }, { status: 400 });
-    }
+	const parseResult = schema.safeParse({ agentId, file });
+	if (!parseResult.success) {
+		const errorMessage = parseResult.error.errors[0].message;
+		return NextResponse.json({ success: false, message: errorMessage }, { status: 400 });
+	}
 
-    // Convert file to number[]
-    const arrayBuffer = await file.arrayBuffer();
-    const bufferArray = Array.from(new Uint8Array(arrayBuffer));
+	// Convert file to number[]
+	const arrayBuffer = await file.arrayBuffer();
+	const bufferArray = Array.from(new Uint8Array(arrayBuffer));
 
 	try {
 		const result = await uploadDb(agentId, bufferArray as number[]);
