@@ -21,24 +21,23 @@ export async function addAgent(
 		// Fetch the agent cap object from SUI
 		const agentCapObject: any = await client.getObject({
 			id: agentCapId,
-			options: { showContent: true },
+			options: { showContent: true, showOwner: true },
 		});
 
 		// Validate the retrieved object
-		if (!agentCapObject || !agentCapObject.details || !agentCapObject.details.data.fields) {
+		if (!agentCapObject || !agentCapObject.data?.content?.fields) {
 			throw new Error("Invalid agent cap object data.");
 		}
 
 		// Extract owner information from the agent cap object
-		const owner = agentCapObject.details.data.owner;
+		const owner = agentCapObject.data.owner?.AddressOwner;
 
 		// Check if the owner matches the provided SUI wallet address
 		if (owner !== suiWalletAddress) {
 			// Adjust property access if necessary
 			throw new Error("The agent cap object does not belong to the provided SUI wallet address.");
 		}
-		const fields = agentCapObject.details.data.fields;
-		const agentId = fields?.agentId;
+		const agentId = agentCapObject.data.content.fields?.agent_id;
 
 		if (!agentId) {
 			throw new Error("agentId not found in the agent cap object.");
@@ -54,11 +53,11 @@ export async function addAgent(
 		}
 
 		return { success: true };
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Failed to add agent:", error);
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : "Unknown error",
+			error: error.message ?? "Unknown error",
 		};
 	}
 }
