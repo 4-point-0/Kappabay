@@ -155,6 +155,7 @@ export function PotatoBakeModal({
 				sendMessageMutation.mutate({
 					message: input,
 					selectedFile: null,
+					walletAddress: address || "",
 				});
 				timeoutId = null;
 			}, 500);

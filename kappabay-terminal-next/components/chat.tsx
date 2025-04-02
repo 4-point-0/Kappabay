@@ -104,7 +104,8 @@ export default function Page({ agentId }: { agentId: UUID }) {
 
 		sendMessageMutation.mutate({
 			message: input,
-			selectedFile: selectedFile ? selectedFile : null,
+			selectedFile: selectedFile || null,
+			walletAddress: walletAddress || "",
 		});
 
 		setSelectedFile(null);
@@ -135,6 +136,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 				sendMessageMutation.mutate({
 					message: input,
 					selectedFile: null,
+					walletAddress: walletAddress || "",
 				});
 			}, 500);
 		}
