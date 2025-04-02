@@ -9,7 +9,8 @@ import { Transaction } from "@mysten/sui/transactions";
 import { useSuiClient, useWallet } from "@suiet/wallet-kit";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { registerPotato } from "@/app/actions/register-potato";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
 import { ContentWithUser } from "./chat";
 import { UUID } from "@elizaos/core";
 import { apiClient } from "@/lib/api";
@@ -47,29 +48,7 @@ export function PotatoBakeModal({
 		return;
 	}
 
-	const sendMessageMutation = useMutation({
-		mutationKey: ["send_message", agentId],
-		mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) =>
-			apiClient.sendMessage(agentId, message, address || "", selectedFile),
-		onSuccess: (newMessages: ContentWithUser[]) => {
-			console.log("newMessages", newMessages);
-
-			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
-				...old.filter((msg) => !msg.isLoading),
-				...newMessages.map((msg) => ({
-					...msg,
-					createdAt: Date.now(),
-				})),
-			]);
-		},
-		onError: (e: any) => {
-			toast({
-				variant: "destructive",
-				title: "Unable to send message",
-				description: e.message,
-			});
-		},
-	});
+	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const handleBake = async () => {
 		setIsLoading(true);

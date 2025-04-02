@@ -7,7 +7,8 @@ import { useTransition, animated, type AnimatedProps } from "@react-spring/web";
 import { Paperclip, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Content, UUID } from "@elizaos/core";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
 import { apiClient } from "@/lib/api";
 import { cn, moment } from "@/lib/utils";
 import { Avatar, AvatarImage } from "./ui/avatar";
@@ -151,27 +152,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 		}
 	}, []);
 
-	const sendMessageMutation = useMutation({
-		mutationKey: ["send_message", agentId],
-		mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) =>
-			apiClient.sendMessage(agentId, message, walletAddress || "", selectedFile),
-		onSuccess: (newMessages: ContentWithUser[]) => {
-			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
-				...old.filter((msg) => !msg.isLoading),
-				...newMessages.map((msg) => ({
-					...msg,
-					createdAt: Date.now(),
-				})),
-			]);
-		},
-		onError: (e: any) => {
-			toast({
-				variant: "destructive",
-				title: "Unable to send message",
-				description: e.message,
-			});
-		},
-	});
+	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
