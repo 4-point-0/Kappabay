@@ -7,7 +7,7 @@ import { useTransition, animated, type AnimatedProps } from "@react-spring/web";
 import { Paperclip, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Content, UUID } from "@elizaos/core";
-import { useQueryClient } from "@tanstack/react-query";
+import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
 import { apiClient } from "@/lib/api";
 import { cn, moment } from "@/lib/utils";
@@ -51,10 +51,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 	const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
 		smooth: true,
 	});
-
 	useEffect(() => {
-		console.log('in queryClient.getQueryData(["messages", agentId])', queryClient.getQueryData(["messages", agentId]));
-
 		scrollToBottom();
 	}, [queryClient.getQueryData(["messages", agentId])]);
 
