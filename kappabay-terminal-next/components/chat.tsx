@@ -37,7 +37,6 @@ type AnimatedDivProps = AnimatedProps<{ style: React.CSSProperties }> & {
 };
 
 export default function Page({ agentId }: { agentId: UUID }) {
-	const { toast } = useToast();
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [input, setInput] = useState("");
 	const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -45,7 +44,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 	const formRef = useRef<HTMLFormElement>(null);
 	const { address: walletAddress } = useWallet();
 	const queryClient = useQueryClient();
-	// const { hasCapabilities, hasNfts } = useOwnedObjects();
+	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const getMessageVariant = (role: string) => (role !== "user" ? "received" : "sent");
 
@@ -153,8 +152,6 @@ export default function Page({ agentId }: { agentId: UUID }) {
 			inputRef.current.focus();
 		}
 	}, []);
-
-	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];

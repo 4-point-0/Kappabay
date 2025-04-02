@@ -51,6 +51,7 @@ export function PotatoBakeModal({
 	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const handleBake = async () => {
+		let timeoutId: NodeJS.Timeout | null = null;
 		setIsLoading(true);
 		try {
 			// const tx = new Transaction();
@@ -139,7 +140,7 @@ export function PotatoBakeModal({
 			// }
 
 			onBakeSuccess();
-			let timeoutId: NodeJS.Timeout | null = null;
+
 			timeoutId = setTimeout(() => {
 				const input = "Check the Hot Potato game status for my address.";
 				const newMessages = [
@@ -157,8 +158,7 @@ export function PotatoBakeModal({
 					selectedFile: null,
 					walletAddress: address || "",
 				});
-				timeoutId = null;
-			}, 500);
+			}, 300);
 
 			// return response.digest;
 		} catch (error) {
@@ -171,6 +171,7 @@ export function PotatoBakeModal({
 		} finally {
 			setIsLoading(false);
 			setOpen(false);
+			timeoutId = null;
 		}
 	};
 
