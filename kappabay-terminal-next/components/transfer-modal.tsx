@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useWallet } from "@suiet/wallet-kit";
+import { useWallet, useSuiClient } from "@suiet/wallet-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import {
 	Dialog,
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { recordTransfer } from "@/app/actions/record-transfer";
 import { PotatoTransferModal } from "./nft-transfer-modal";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
+import { SuiClient } from "@mysten/sui/client";
 
 interface TransferModalProps {
 	nftObjectId: string;
@@ -24,6 +25,7 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 	const [open, setOpen] = useState(false);
 	const { toast } = useToast();
 	const wallet = useWallet();
+	const client: SuiClient = useSuiClient();
 	const { checkObjects } = useOwnedObjects();
 
 	const handleSendNFT = async (toAddress: string) => {
@@ -49,6 +51,32 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 			const result = await wallet.signAndExecuteTransaction({
 				transaction: txb,
 			});
+			const txInfo = await client.waitForTransaction({ digest: result.digest, options: { showEvents: true } });
+			// const txInfo = await client.getTransactionBlock({
+			// 	digest: result.digest,
+			// 	options: {
+			// 		showEvents: true,
+			// 	},
+			// });
+			console.log("txInfo", txInfo);
+			let transferEvent;
+			let expiredEvent;
+			txInfo.events?.forEach((event) => {
+				if (event.type === `${process.env.NEXT_PUBLIC_PACKAGE_ID!}::hot_potato::PotatoExpired`) {
+					expiredEvent = event;
+				}
+				if (event.type === `${process.env.NEXT_PUBLIC_PACKAGE_ID!}::hot_potato::PotatoTransferred`) {
+					transferEvent = event;
+				}
+			});
+
+			if (expiredEvent) {
+				throw new Error("Potato expired");
+			}
+
+			if (!transferEvent) {
+				throw new Error("Unknown transfer error");
+			}
 
 			// Record the transfer with the game manager
 			const recordResult = await recordTransfer(potatoId, toAddress);

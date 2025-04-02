@@ -34,7 +34,7 @@ export function BakeModal({ agentId }: { agentId: UUID }) {
 		setCurrentStep("register");
 		toast({
 			title: "Baking Complete!",
-			description: "Your potato is ready to be registered.",
+			description: "Your potato is baked and in your wallet.",
 		});
 	};
 

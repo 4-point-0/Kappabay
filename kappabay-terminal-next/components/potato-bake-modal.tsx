@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { useWallet } from "@suiet/wallet-kit";
+import { useSuiClient, useWallet } from "@suiet/wallet-kit";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { registerPotato } from "@/app/actions/register-potato";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -36,6 +36,7 @@ export function PotatoBakeModal({
 	const { checkObjects } = useOwnedObjects();
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
+	const client: SuiClient = useSuiClient();
 
 	if (!address) {
 		return;
@@ -51,6 +52,8 @@ export function PotatoBakeModal({
 		mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) =>
 			apiClient.sendMessage(agentId, message, address || "", selectedFile),
 		onSuccess: (newMessages: ContentWithUser[]) => {
+			console.log("newMessages", newMessages);
+
 			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
 				...old.filter((msg) => !msg.isLoading),
 				...newMessages.map((msg) => ({
@@ -71,100 +74,113 @@ export function PotatoBakeModal({
 	const handleBake = async () => {
 		setIsLoading(true);
 		try {
-			const tx = new Transaction();
-			const requiredAmount = 0.5 * 1e9; // 0.5 SUI in mist
-			tx.setGasBudget(requiredAmount + 20000000);
+			// const tx = new Transaction();
+			// const requiredAmount = 0.5 * 1e9; // 0.5 SUI in mist
+			// tx.setGasBudget(requiredAmount + 20000000);
 
-			// Constants
-			const bakePotatoArgs = {
-				ovenId: OVEN_ID,
-				gameManagerId: GAME_MANAGER_ID,
-				clockId: "0x6",
-				randomnessId: "0x8",
-			};
+			// // Constants
+			// const bakePotatoArgs = {
+			// 	ovenId: OVEN_ID,
+			// 	gameManagerId: GAME_MANAGER_ID,
+			// 	clockId: "0x6",
+			// 	randomnessId: "0x8",
+			// };
 
-			// Helper function to create the moveCall
-			const makeBakeCall = (paymentArg: any) => {
-				tx.moveCall({
-					target: `${PACKAGE_ID}::hot_potato::bake_potato`,
-					arguments: [
-						tx.object(bakePotatoArgs.ovenId),
-						tx.object(bakePotatoArgs.gameManagerId),
-						paymentArg,
-						tx.object(bakePotatoArgs.clockId),
-						tx.object(bakePotatoArgs.randomnessId),
-						tx.pure.address(address),
-						tx.pure.vector("u8", []),
-					],
-				});
-			};
-			const provider = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
-			// Check balance
-			const walletBalance = await provider.getBalance({ owner: address });
-			const totalBalance = Number(walletBalance.totalBalance);
+			// // Helper function to create the moveCall
+			// const makeBakeCall = (paymentArg: any) => {
+			// 	tx.moveCall({
+			// 		target: `${PACKAGE_ID}::hot_potato::bake_potato`,
+			// 		arguments: [
+			// 			tx.object(bakePotatoArgs.ovenId),
+			// 			tx.object(bakePotatoArgs.gameManagerId),
+			// 			paymentArg,
+			// 			tx.object(bakePotatoArgs.clockId),
+			// 			tx.object(bakePotatoArgs.randomnessId),
+			// 			tx.pure.address(address),
+			// 			tx.pure.vector("u8", []),
+			// 		],
+			// 	});
+			// };
+			// const provider = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
+			// // Check balance
+			// const walletBalance = await provider.getBalance({ owner: address });
+			// const totalBalance = Number(walletBalance.totalBalance);
 
-			if (totalBalance < requiredAmount) {
-				throw new Error("Insufficient balance. You need at least 0.5 SUI to bake.");
-			}
+			// if (totalBalance < requiredAmount) {
+			// 	throw new Error("Insufficient balance. You need at least 0.5 SUI to bake.");
+			// }
 
-			const payment = tx.splitCoins(tx.gas, [tx.pure.u64(requiredAmount)])[0];
-			makeBakeCall(payment);
+			// const payment = tx.splitCoins(tx.gas, [tx.pure.u64(requiredAmount)])[0];
+			// makeBakeCall(payment);
 
-			const response = await signAndExecuteTransaction({
-				transaction: tx,
-			});
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			// const response = await signAndExecuteTransaction({
+			// 	transaction: tx,
+			// });
 
-			// Wait for transaction to complete and check for new potato
-			const checkForPotato = async () => {
-				const objects = await checkObjects();
-				const potatoObject = objects?.data?.nftObjects?.[0];
+			// const txInfo = await client.waitForTransaction({
+			// 	digest: response.digest,
+			// 	options: { showEvents: true, showEffects: true },
+			// });
 
-				if (potatoObject?.data?.objectId) {
-					const registration = await registerPotato(potatoObject.data.objectId);
-					console.log("registration", registration);
+			// if (txInfo.effects?.status?.status === "failure" || txInfo.effects?.status?.status !== "success") {
+			// 	throw new Error(txInfo.effects?.status?.error);
+			// }
+			// await new Promise((resolve) => setTimeout(resolve, 2000));
 
-					if (!registration.success) {
-						throw new Error(registration.error || "Failed to register potato");
-					}
-					return potatoObject.data.objectId;
-				}
-				return null;
-			};
+			// // Wait for transaction to complete and check for new potato
+			// const checkForPotato = async () => {
+			// 	const objects = await checkObjects();
+			// 	const potatoObject = objects?.data?.nftObjects?.[0];
 
-			// Try checking for potato with retries
-			let retries = 10;
-			let potatoId = null;
-			while (retries > 0 && !potatoId) {
-				potatoId = await checkForPotato();
-				if (!potatoId) {
-					await new Promise((resolve) => setTimeout(resolve, 5000));
-					retries--;
-				}
-			}
+			// 	if (potatoObject?.data?.objectId) {
+			// 		const registration = await registerPotato(potatoObject.data.objectId);
+			// 		console.log("registration", registration);
 
-			if (!potatoId) {
-				throw new Error("Potato not found in wallet after baking");
-			}
+			// 		if (!registration.success) {
+			// 			throw new Error(registration.error || "Failed to register potato");
+			// 		}
+			// 		return potatoObject.data.objectId;
+			// 	}
+			// 	return null;
+			// };
+
+			// // Try checking for potato with retries
+			// let retries = 5;
+			// let potatoId = null;
+			// while (retries > 0 && !potatoId) {
+			// 	potatoId = await checkForPotato();
+			// 	if (!potatoId) {
+			// 		await new Promise((resolve) => setTimeout(resolve, 800));
+			// 		retries--;
+			// 	}
+			// }
+
+			// if (!potatoId) {
+			// 	throw new Error("Potato not found in wallet after baking");
+			// }
 
 			onBakeSuccess();
-			console.log("Baking and registration complete", response);
-			const input = "Check the Hot Potato game status for my address.";
-			const newMessages = [
-				{
-					text: input,
-					user: "system",
-					isLoading: true,
-					createdAt: Date.now(),
-				},
-			];
+			let timeoutId: NodeJS.Timeout | null = null;
+			timeoutId = setTimeout(() => {
+				const input = "Check the Hot Potato game status for my address.";
+				const newMessages = [
+					{
+						text: input,
+						user: "system",
+						isLoading: true,
+						createdAt: Date.now(),
+					},
+				];
 
-			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [...old, ...newMessages]);
-			sendMessageMutation.mutate({
-				message: input,
-				selectedFile: null,
-			});
-			return response.digest;
+				queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [...old, ...newMessages]);
+				sendMessageMutation.mutate({
+					message: input,
+					selectedFile: null,
+				});
+				timeoutId = null;
+			}, 500);
+
+			// return response.digest;
 		} catch (error) {
 			console.error("Baking failed:", error);
 			toast({

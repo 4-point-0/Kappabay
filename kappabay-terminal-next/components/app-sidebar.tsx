@@ -44,8 +44,6 @@ export function AppSidebar() {
 	const isPotatoOwned = capObjId && potatoObjId;
 	const isModalOwned = modalObjId;
 
-	console.log("agentCapObjects", agentCapObjects);
-
 	return (
 		<Sidebar>
 			<SidebarContent className="pt-[5vh]">
@@ -82,7 +80,7 @@ export function AppSidebar() {
 				<SidebarGroup>
 					<NftStatus />
 				</SidebarGroup>
-				<UploadDb />
+				{/* <UploadDb /> */}
 			</SidebarContent>
 			<SidebarFooter>
 				<SidebarMenu>

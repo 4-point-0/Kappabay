@@ -53,6 +53,8 @@ export default function Page({ agentId }: { agentId: UUID }) {
 	});
 
 	useEffect(() => {
+		console.log('in queryClient.getQueryData(["messages", agentId])', queryClient.getQueryData(["messages", agentId]));
+
 		scrollToBottom();
 	}, [queryClient.getQueryData(["messages", agentId])]);
 

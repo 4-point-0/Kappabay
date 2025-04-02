@@ -91,8 +91,8 @@ export function useOwnedObjects() {
 		queryKey: ["ownedObjects", walletAddress],
 		queryFn: fetchObjects,
 		enabled: !!walletAddress,
-		staleTime: 30000, // 30 seconds
-		refetchInterval: 30000, // Auto-refresh every 30 seconds
+		staleTime: 10_000, // 10 seconds
+		refetchInterval: 10_000, // Auto-refresh every 10 seconds
 	});
 
 	return {
