@@ -81,3 +81,19 @@ export const checkUniquePlayerCountExample = [
         },
     ],
 ];
+
+export const checkGameTransferCountExample = [
+    [
+        {
+            user: "{{user1}}",
+            content: "Check how many total transfer are in the game.",
+        },
+        {
+            user: "{{agent}}",
+            content: {
+                text: "I'll check the total transfers count for your game.",
+                action: "CHECK_GAME_TRANSFER_COUNT",
+            },
+        },
+    ],
+];

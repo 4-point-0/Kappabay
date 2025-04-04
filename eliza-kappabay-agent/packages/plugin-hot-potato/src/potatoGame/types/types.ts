@@ -48,3 +48,6 @@ export const UniquePlayerCountEventSchema = z.object({
 export type UniquePlayerCountEvent = z.infer<
     typeof UniquePlayerCountEventSchema
 >;
+
+export const GameTransferCountEventSchema = UniquePlayerCountEventSchema;
+export type GameTransferCountEvent = UniquePlayerCountEvent;
