@@ -47,7 +47,6 @@ export default function Page({ agentId }: { agentId: UUID }) {
 	const sendMessageMutation = useSendMessageMutation(agentId);
 	const getMessageVariant = (role: string) => (role !== "user" ? "received" : "sent");
 	const currentAddress = walletAddress ?? enokiAddress;
-	console.log("currentAddress", currentAddress);
 
 	const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
 		smooth: true,

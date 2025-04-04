@@ -26,10 +26,8 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 		"Content-Length": buffer.length.toString(), // Specify the content length
 	};
 
-	console.log("before axios.put");
 	// Send the PUT request with the buffer as the body
 	const response = await axios.put(url, buffer, { headers, params });
-	console.log("after axios.put");
 
 	if (response.data.newlyCreated) {
 		return response.data.newlyCreated.blobObject.blobId;

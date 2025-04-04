@@ -20,7 +20,6 @@ export async function uploadDb(agentId: string, bufferArray: number[]): Promise<
 			// Delete the existing blob from Walrus
 			await deleteBlobHash(agentId);
 		}
-		console.log("before uploadBlob");
 
 		// Upload the new db.sqlite buffer to Walrus using the buffer
 		const newBlobHash = await uploadBlob(buffer, undefined);
