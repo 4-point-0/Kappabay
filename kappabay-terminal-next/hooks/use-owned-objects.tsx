@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@suiet/wallet-kit";
 import { useZkLogin } from "@mysten/enoki/react";
 import { useToast } from "@/hooks/use-toast";
-import { SuiClient, SuiObjectResponse } from "@mysten/sui/client";
+import { getFullnodeUrl, SuiClient, SuiObjectResponse } from "@mysten/sui/client";
 
 const PACKAGE_ID = process.env.NEXT_PUBLIC_PACKAGE_ID;
 
@@ -15,7 +15,7 @@ export function useOwnedObjects() {
 	const fetchObjects = async () => {
 		if (!walletAddress) return null;
 
-		const suiClient = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
+		const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
 		const objects = await suiClient.getOwnedObjects({
 			owner: walletAddress,
 			options: {
@@ -91,8 +91,8 @@ export function useOwnedObjects() {
 		queryKey: ["ownedObjects", walletAddress],
 		queryFn: fetchObjects,
 		enabled: !!walletAddress,
-		staleTime: 10_000, // 10 seconds
-		refetchInterval: 10_000, // Auto-refresh every 10 seconds
+		staleTime: 10_000,
+		refetchInterval: 10_000,
 	});
 
 	return {

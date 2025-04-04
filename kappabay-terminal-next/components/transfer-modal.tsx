@@ -15,20 +15,27 @@ import { recordTransfer } from "@/app/actions/record-transfer";
 import { PotatoTransferModal } from "./nft-transfer-modal";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { SuiClient } from "@mysten/sui/client";
+import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+import { ContentWithUser } from "./chat";
 
 interface TransferModalProps {
 	nftObjectId: string;
 	capObjectId: string;
+	agentId: string;
 }
 
-export default function TransferModal({ nftObjectId, capObjectId }: TransferModalProps) {
+export default function TransferModal({ nftObjectId, capObjectId, agentId }: TransferModalProps) {
 	const [open, setOpen] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 	const { toast } = useToast();
 	const wallet = useWallet();
 	const client: SuiClient = useSuiClient();
 	const { checkObjects } = useOwnedObjects();
+	const queryClient = useQueryClient();
 
 	const handleSendNFT = async (toAddress: string) => {
+		setIsLoading(true);
 		try {
 			if (!wallet.connected) {
 				throw new Error("Wallet not connected");
@@ -52,15 +59,11 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 				transaction: txb,
 			});
 			const txInfo = await client.waitForTransaction({ digest: result.digest, options: { showEvents: true } });
-			// const txInfo = await client.getTransactionBlock({
-			// 	digest: result.digest,
-			// 	options: {
-			// 		showEvents: true,
-			// 	},
-			// });
+
 			console.log("txInfo", txInfo);
 			let transferEvent;
 			let expiredEvent;
+			let burnEvent;
 			txInfo.events?.forEach((event) => {
 				if (event.type === `${process.env.NEXT_PUBLIC_PACKAGE_ID!}::hot_potato::PotatoExpired`) {
 					expiredEvent = event;
@@ -68,10 +71,15 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 				if (event.type === `${process.env.NEXT_PUBLIC_PACKAGE_ID!}::hot_potato::PotatoTransferred`) {
 					transferEvent = event;
 				}
+				if (event.type === `${process.env.NEXT_PUBLIC_PACKAGE_ID!}::hot_potato::PotatoBurned`) {
+					burnEvent = event;
+				}
 			});
 
 			if (expiredEvent) {
-				throw new Error("Potato expired");
+				throw new Error("Potato held for to long and Expired");
+			} else if (burnEvent) {
+				throw new Error("Potato held for to long and Burned");
 			}
 
 			if (!transferEvent) {
@@ -88,16 +96,22 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 				title: "Transfer Complete",
 				description: (
 					<div>
-						<p>Potato transferred to {toAddress}</p>
-						<p className="text-xs mt-1">Transaction: {result.digest}</p>
-						<p className="text-xs">Recorded: {recordResult.digest}</p>
+						<p>To: {toAddress}</p>
+						<p className="text-xs mt-1">
+							Transaction:{" "}
+							<Link
+								href={`https://suiscan.xyz/testnet/tx/${result.digest}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-blue-500 hover:underline"
+							>
+								{result.digest}
+							</Link>
+						</p>
 					</div>
 				),
 			});
 
-			setOpen(false);
-
-			await checkObjects();
 			return { transferResult: result, recordResult };
 		} catch (error) {
 			console.error("Transfer failed:", error);
@@ -107,16 +121,11 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 				variant: "destructive",
 			});
 			throw error;
+		} finally {
+			await checkObjects();
+			setOpen(false);
+			setIsLoading(false);
 		}
-	};
-
-	const handleBakeCapability = () => {
-		// Implement capability baking logic
-		toast({
-			title: "Baking Complete",
-			description: "New hot potato received!",
-		});
-		setOpen(false);
 	};
 
 	return (
@@ -138,84 +147,85 @@ export default function TransferModal({ nftObjectId, capObjectId }: TransferModa
 						capObjectId={capObjectId}
 						onCancel={() => setOpen(false)}
 						onSend={handleSendNFT}
+						isLoading={isLoading}
 					/>
 				</DialogContent>
 			</Dialog>
 			{/* Add the CSS for the hot potato animation */}
 			<style>{`
-				.hotPotato {
-					/* Establish a new stacking context */
-					position: relative;
-					z-index: 0;
+					.hotPotato {
+						/* Establish a new stacking context */
+						position: relative;
+						z-index: 0;
 
-					width: 100px;
-					height: 100px;
-					background: url("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/hotpotato-3tRFF6fMBqYKU492fLdATEro3Frpdp.png")
-						no-repeat center/cover;
-					border-radius: 50%;
-					cursor: pointer;
+						width: 100px;
+						height: 100px;
+						background: url("https://hebbkx1anhila5yf.public.blob.vercel-storage.com/hotpotato-3tRFF6fMBqYKU492fLdATEro3Frpdp.png")
+							no-repeat center/cover;
+						border-radius: 50%;
+						cursor: pointer;
+
+						/* Example float animation */
+						animation: float 3s ease-in-out infinite;
+
+						/* Place it somewhere on the screen */
+						position: fixed;
+						bottom: 5rem;
+						left: 4.5rem;
+					}
+
+					/* The flame or glow goes behind the potato via z-index: -1 */
+					.hotPotato::after {
+						content: "";
+						position: absolute;
+						z-index: -1; /* Ensures this sits behind the .hotPotato background */
+						top: -7px;
+						left: -12px;
+						width: 125px;
+						height: 125px;
+						border-radius: 50%;
+
+						/* A simple radial gradient for a glow or flame-like effect */
+						background: radial-gradient(
+							circle,
+							rgba(255, 165, 0, 0.5) 0%,
+							rgba(255, 69, 0, 0.5) 70%,
+							rgba(255, 140, 0, 0) 100%
+						);
+						filter: blur(3px);
+						opacity: 0.8;
+
+						/* Flicker animation (optional) */
+						animation: flicker 1s infinite;
+					}
 
 					/* Example float animation */
-					animation: float 3s ease-in-out infinite;
-
-					/* Place it somewhere on the screen */
-					position: fixed;
-					bottom: 5rem;
-					left: 4.5rem;
-				}
-
-				/* The flame or glow goes behind the potato via z-index: -1 */
-				.hotPotato::after {
-					content: "";
-					position: absolute;
-					z-index: -1; /* Ensures this sits behind the .hotPotato background */
-					top: -7px;
-					left: -12px;
-					width: 125px;
-					height: 125px;
-					border-radius: 50%;
-
-					/* A simple radial gradient for a glow or flame-like effect */
-					background: radial-gradient(
-						circle,
-						rgba(255, 165, 0, 0.5) 0%,
-						rgba(255, 69, 0, 0.5) 70%,
-						rgba(255, 140, 0, 0) 100%
-					);
-					filter: blur(3px);
-					opacity: 0.8;
-
-					/* Flicker animation (optional) */
-					animation: flicker 1s infinite;
-				}
-
-				/* Example float animation */
-				@keyframes float {
-					0%,
-					100% {
-						transform: translateY(0);
+					@keyframes float {
+						0%,
+						100% {
+							transform: translateY(0);
+						}
+						50% {
+							transform: translateY(-10px);
+						}
 					}
-					50% {
-						transform: translateY(-10px);
-					}
-				}
 
-				/* Flicker or pulsing glow effect */
-				@keyframes flicker {
-					0% {
-						transform: scale(1);
-						opacity: 0.8;
+					/* Flicker or pulsing glow effect */
+					@keyframes flicker {
+						0% {
+							transform: scale(1);
+							opacity: 0.8;
+						}
+						50% {
+							transform: scale(1.1);
+							opacity: 1;
+						}
+						100% {
+							transform: scale(1);
+							opacity: 0.8;
+						}
 					}
-					50% {
-						transform: scale(1.1);
-						opacity: 1;
-					}
-					100% {
-						transform: scale(1);
-						opacity: 0.8;
-					}
-				}
-			`}</style>
+				`}</style>
 		</>
 	);
 }

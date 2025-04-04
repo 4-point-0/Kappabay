@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { SuiClient } from "@mysten/sui/client";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { useSuiClient, useWallet } from "@suiet/wallet-kit";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
@@ -56,7 +56,7 @@ export function PotatoBakeModal({
 		try {
 			const tx = new Transaction();
 			const requiredAmount = 0.5 * 1e9; // 0.5 SUI in mist
-			tx.setGasBudget(requiredAmount + 20000000);
+			// tx.setGasBudget(requiredAmount + 20000000);
 
 			// Constants
 			const bakePotatoArgs = {
@@ -81,7 +81,7 @@ export function PotatoBakeModal({
 					],
 				});
 			};
-			const provider = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
+			const provider = new SuiClient({ url: getFullnodeUrl("testnet") });
 			// Check balance
 			const walletBalance = await provider.getBalance({ owner: address });
 			const totalBalance = Number(walletBalance.totalBalance);
@@ -140,6 +140,23 @@ export function PotatoBakeModal({
 			}
 
 			onBakeSuccess();
+
+			const input = "Check the Hot Potato game status for my address.";
+			const newMessages = [
+				{
+					text: input,
+					user: "system",
+					isLoading: true,
+					createdAt: Date.now(),
+				},
+			];
+
+			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [...old, ...newMessages]);
+			sendMessageMutation.mutate({
+				message: input,
+				selectedFile: null,
+				walletAddress: address || "",
+			});
 			return response.digest;
 		} catch (error) {
 			console.error("Baking failed:", error);
@@ -153,36 +170,6 @@ export function PotatoBakeModal({
 			setOpen(false);
 		}
 	};
-
-	useEffect(() => {
-		let timeoutId: NodeJS.Timeout | null = null;
-		if (!isLoading) {
-			timeoutId = setTimeout(() => {
-				const input = "Check the Hot Potato game status for my address.";
-				const newMessages = [
-					{
-						text: input,
-						user: "system",
-						isLoading: true,
-						createdAt: Date.now(),
-					},
-				];
-
-				queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [...old, ...newMessages]);
-				sendMessageMutation.mutate({
-					message: input,
-					selectedFile: null,
-					walletAddress: address || "",
-				});
-			}, 500);
-		}
-
-		return () => {
-			if (timeoutId) {
-				clearTimeout(timeoutId); // Clean up the timeout if component unmounts before it fires
-			}
-		};
-	}, [isLoading]);
 
 	return (
 		<>

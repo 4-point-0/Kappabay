@@ -7,21 +7,18 @@ import { useTransition, animated, type AnimatedProps } from "@react-spring/web";
 import { Paperclip, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Content, UUID } from "@elizaos/core";
-import { useIsFetching, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
-import { apiClient } from "@/lib/api";
 import { cn, moment } from "@/lib/utils";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import CopyButton from "./copy-button";
 import ChatTtsButton from "./ui/chat/chat-tts-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
 import AIWriter from "react-aiwriter";
 import type { IAttachment } from "@/types";
 import { AudioRecorder } from "./audio-recorder";
 import { Badge } from "./ui/badge";
 import { useAutoScroll } from "./ui/chat/hooks/useAutoScroll";
-import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { useWallet } from "@suiet/wallet-kit";
 
 type ExtraContentFields = {
@@ -39,21 +36,37 @@ type AnimatedDivProps = AnimatedProps<{ style: React.CSSProperties }> & {
 export default function Page({ agentId }: { agentId: UUID }) {
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [input, setInput] = useState("");
+	const [messages, setMessages] = useState<ContentWithUser[]>([]);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const formRef = useRef<HTMLFormElement>(null);
 	const { address: walletAddress } = useWallet();
 	const queryClient = useQueryClient();
 	const sendMessageMutation = useSendMessageMutation(agentId);
-
 	const getMessageVariant = (role: string) => (role !== "user" ? "received" : "sent");
 
 	const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
 		smooth: true,
 	});
+
+	useEffect(() => {
+		const cachedMessages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
+		setMessages(cachedMessages);
+
+		const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+			const updatedMessages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
+
+			setMessages(updatedMessages);
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	}, [queryClient, agentId]);
+
 	useEffect(() => {
 		scrollToBottom();
-	}, [queryClient.getQueryData(["messages", agentId])]);
+	}, [messages]);
 
 	useEffect(() => {
 		scrollToBottom();
@@ -156,8 +169,6 @@ export default function Page({ agentId }: { agentId: UUID }) {
 			setSelectedFile(file);
 		}
 	};
-
-	const messages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
 
 	const transitions = useTransition(messages, {
 		keys: (message) => `${message.createdAt}-${message.user}-${message.text}`,
