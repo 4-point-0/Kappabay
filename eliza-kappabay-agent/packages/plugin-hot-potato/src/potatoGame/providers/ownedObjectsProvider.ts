@@ -20,6 +20,8 @@ export const ownedObjectsProvider: Provider = {
                 | "mainnet"
                 | "testnet"
                 | "devnet";
+
+            const packageId = runtime.getSetting("SUI_PACKAGE_ID");
             const secrets = JSON.parse((state as any).secrets);
 
             const suiClient = new SuiClient({
@@ -38,7 +40,7 @@ export const ownedObjectsProvider: Provider = {
             const findAndValidateObject = <T extends z.ZodTypeAny>(
                 schema: T
             ) => {
-                const obj = ownedObjects.data.find((obj) => {
+                const matchingObjects = ownedObjects.data.filter((obj) => {
                     if (schema instanceof z.ZodLiteral) {
                         return obj.data?.type?.includes(schema.value);
                     } else if (
@@ -57,7 +59,17 @@ export const ownedObjectsProvider: Provider = {
                     return false;
                 });
 
-                return obj?.data ? schema.parse(obj.data) : null;
+                const sorted = matchingObjects.sort((a, b) => {
+                    const timeA =
+                        (a.data?.content as any)?.fields
+                            ?.last_transfer_time_ms || 0;
+                    const timeB =
+                        (b.data?.content as any)?.fields
+                            ?.last_transfer_time_ms || 0;
+                    return timeB - timeA;
+                });
+
+                return sorted[0]?.data ? schema.parse(sorted[0].data) : null;
             };
 
             return OwnedObjectsSchema.parse({
