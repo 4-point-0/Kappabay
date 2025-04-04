@@ -28,7 +28,11 @@ export const ownedObjectsProvider: Provider = {
 
             const ownedObjects = await suiClient.getOwnedObjects({
                 owner: secrets.walletAddress,
-                options: { showType: true },
+                options: {
+                    showType: true,
+                    showDisplay: true,
+                    showContent: true,
+                },
             });
 
             const findAndValidateObject = <T extends z.ZodTypeAny>(
@@ -52,6 +56,7 @@ export const ownedObjectsProvider: Provider = {
                     }
                     return false;
                 });
+
                 return obj?.data ? schema.parse(obj.data) : null;
             };
 
