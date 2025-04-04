@@ -14,10 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { recordTransfer } from "@/app/actions/record-transfer";
 import { PotatoTransferModal } from "./nft-transfer-modal";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
-import { SuiClient } from "@mysten/sui/client";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ContentWithUser } from "./chat";
+import { useEnokiFlow, useZkLogin } from "@mysten/enoki/react";
 
 interface TransferModalProps {
 	nftObjectId: string;
@@ -30,14 +31,14 @@ export default function TransferModal({ nftObjectId, capObjectId, agentId }: Tra
 	const [isLoading, setIsLoading] = useState(false);
 	const { toast } = useToast();
 	const wallet = useWallet();
-	const client: SuiClient = useSuiClient();
+	const enokiFlow = useEnokiFlow();
+	const { address: enokiAddress } = useZkLogin();
 	const { checkObjects } = useOwnedObjects();
-	const queryClient = useQueryClient();
 
 	const handleSendNFT = async (toAddress: string) => {
 		setIsLoading(true);
 		try {
-			if (!wallet.connected) {
+			if (!wallet.address && !enokiAddress) {
 				throw new Error("Wallet not connected");
 			}
 
@@ -53,12 +54,26 @@ export default function TransferModal({ nftObjectId, capObjectId, agentId }: Tra
 				target: `${process.env.NEXT_PUBLIC_PACKAGE_ID}::hot_potato::transfer_potato`,
 				arguments: [txb.object(potatoId), txb.object(gameCapId), txb.object("0x6"), txb.pure.address(toAddress)],
 			});
-
+			const provider = new SuiClient({ url: getFullnodeUrl("testnet") });
 			// Execute transfer transaction
-			const result = await wallet.signAndExecuteTransaction({
-				transaction: txb,
-			});
-			const txInfo = await client.waitForTransaction({ digest: result.digest, options: { showEvents: true } });
+			let result;
+			if (wallet.address) {
+				result = await wallet.signAndExecuteTransaction({
+					transaction: txb,
+				});
+			} else if (enokiAddress) {
+				const keypair = await enokiFlow.getKeypair({ network: "testnet" });
+				result = await provider.signAndExecuteTransaction({
+					signer: keypair,
+					transaction: txb,
+				});
+			}
+
+			if (!result) {
+				throw new Error("Failed to sign and execute transaction");
+			}
+
+			const txInfo = await provider.waitForTransaction({ digest: result.digest, options: { showEvents: true } });
 
 			console.log("txInfo", txInfo);
 			let transferEvent;

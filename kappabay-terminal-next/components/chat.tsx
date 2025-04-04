@@ -20,6 +20,7 @@ import { AudioRecorder } from "./audio-recorder";
 import { Badge } from "./ui/badge";
 import { useAutoScroll } from "./ui/chat/hooks/useAutoScroll";
 import { useWallet } from "@suiet/wallet-kit";
+import { useZkLogin } from "@mysten/enoki/react";
 
 type ExtraContentFields = {
 	user: string;
@@ -41,9 +42,12 @@ export default function Page({ agentId }: { agentId: UUID }) {
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const formRef = useRef<HTMLFormElement>(null);
 	const { address: walletAddress } = useWallet();
+	const { address: enokiAddress } = useZkLogin();
 	const queryClient = useQueryClient();
 	const sendMessageMutation = useSendMessageMutation(agentId);
 	const getMessageVariant = (role: string) => (role !== "user" ? "received" : "sent");
+	const currentAddress = walletAddress ?? enokiAddress;
+	console.log("currentAddress", currentAddress);
 
 	const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
 		smooth: true,
@@ -114,7 +118,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 		sendMessageMutation.mutate({
 			message: input,
 			selectedFile: selectedFile || null,
-			walletAddress: walletAddress || "",
+			walletAddress: currentAddress || "",
 		});
 
 		setSelectedFile(null);
@@ -145,7 +149,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 				sendMessageMutation.mutate({
 					message: input,
 					selectedFile: null,
-					walletAddress: walletAddress || "",
+					walletAddress: currentAddress || "",
 				});
 			}, 500);
 		}
