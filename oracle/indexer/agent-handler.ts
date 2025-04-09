@@ -18,66 +18,142 @@ type PromptCreatedEvent = {
 };
 
 /**
+ * Helper function to throttle concurrent operations
+ */
+async function withThrottling<T>(
+  tasks: (() => Promise<T>)[], 
+  concurrencyLimit: number
+): Promise<T[]> {
+  const results: T[] = [];
+  const runningTasks = new Set<Promise<void>>();
+  
+  // Create a queue of tasks
+  const taskQueue = [...tasks];
+  
+  // Process the next task in the queue
+  let taskPromise: Promise<void>;
+
+  async function processNext(): Promise<void> {
+    if (taskQueue.length === 0) return;
+    
+    const task = taskQueue.shift()!;
+    
+    taskPromise = (async () => {
+      try {
+        const result = await task();
+        results.push(result);
+      } catch (error) {
+        console.error('Task failed:', error);
+      } finally {
+        runningTasks.delete(taskPromise);
+        // Process next task when this one completes
+        await processNext();
+      }
+    })();
+    
+    runningTasks.add(taskPromise);
+  }
+  
+  // Start initial batch of tasks up to concurrency limit
+  const initialBatch = Math.min(concurrencyLimit, tasks.length);
+  for (let i = 0; i < initialBatch; i++) {
+    await processNext();
+  }
+  
+  // Wait for all tasks to complete
+  await Promise.all(Array.from(runningTasks));
+  
+  return results;
+}
+
+/**
  * Handles the PROMPT_CREATED event emitted by the `agent` module.
  */
 export const handleAgentPromptCreated = async (
   events: SuiEvent[],
   type: string
 ) => {
-  const updates: Record<string, Prisma.PromptCreateInput> = {};
-
-  const signer = createSignerFromPrivateKey(CONFIG.PRIVATE_KEY);
+  // First, validate all events and extract data
+  const eventData: {
+    data: PromptCreatedEvent;
+    timestamp: number;
+  }[] = [];
 
   for (const event of events) {
     if (!event.type.startsWith(type)) throw new Error("Invalid event type");
     console.log("Event:", event);
+    
     const data = event.parsedJson as PromptCreatedEvent;
-    const timestamp = event?.timestampMs;
+    const timestamp = event?.timestampMs ? Number(event.timestampMs) : 112312312;
+    
+    eventData.push({ data, timestamp });
+  }
 
-    updates[data.id] = {
-      objectId: data.id,
+  // Create database records first (fast operation)
+  const dbUpdates = eventData.map(({ data, timestamp }) => {
+    const update: Prisma.PromptCreateInput = {
+      objectId: data?.objectId,
       creator: data?.sender,
       promptText: data?.question,
-      timestamp: new Date(Number(timestamp) || 112312312),
+      timestamp: new Date(timestamp),
     };
-
-    try {
-      // call the agent-client API
-      const response = await apiClient.sendMessage(
-        CONFIG.AGENT_ID,
-        data?.question,
-        data?.sender,
-        null
-      );
-
-      if (data?.callback) {
-        // execute the callback things
-        await executeCallback(data.callback, data.question, response, signer, data.objectId, data.sender);
-      } else {
-        // populate the object with the response
-        await populateAgentObject(
-          data?.question,
-          data?.sender,
-          data?.objectId,
-          response?.[0]?.text,
-          signer,
-        );
-      }
-    } catch (error) {
-      console.error("Failed to call external API:", error);
-    }
-  }
-  // Upsert all prompts to the database
-  const promises = Object.values(updates).map((update) =>
-    prisma.prompt.upsert({
-      where: {
-        objectId: update.objectId,
-      },
+    
+    return prisma.prompt.upsert({
+      where: { objectId: data?.objectId },
       create: update,
       update,
-    })
-  );
-  await Promise.all(promises);
+    });
+  });
+
+  // Save all records to database concurrently
+  await Promise.all(dbUpdates);
+
+  // Create a shared signer instance to use for all events
+  const signer = createSignerFromPrivateKey(CONFIG.PRIVATE_KEY);
+
+  // Define processing tasks
+  const processingTasks = eventData.map(({ data }) => {
+    return async () => {
+      try {
+        // Call the agent-client API
+        const response = await apiClient.sendMessage(
+          CONFIG.AGENT_ID,
+          data?.question,
+          data?.sender,
+          null
+        );
+
+        // Process the response based on whether we have a callback
+        if (data?.callback) {
+          return executeCallback(
+            data.callback, 
+            data.question, 
+            response, 
+            signer, 
+            data.objectId, 
+            data.sender
+          );
+        } else {
+          return populateAgentObject(
+            data?.question,
+            data?.sender,
+            data?.objectId,
+            response?.[0]?.text,
+            signer
+          );
+        }
+      } catch (error) {
+        console.error(`Failed to process event ${data.id}:`, error);
+        // Don't throw so other events can continue processing
+        return null;
+      }
+    };
+  });
+
+  // Process with throttling - adjust the concurrency limit based on RPC limits
+  // A value of 3-5 is usually safe for most RPC providers
+  const concurrencyLimit = 3;
+  await withThrottling(processingTasks, concurrencyLimit);
 };
 
 /**
@@ -106,18 +182,16 @@ async function executeCallback(
 
     // Create a transaction block to call the function
     const client = getClient(CONFIG.NETWORK);
-    const tx = new Transaction();
-
-    // Call the move function with the prompt and response as parameters
-    tx.moveCall({
+    
+    // Create and execute the callback transaction
+    const callbackTx = new Transaction();
+    callbackTx.moveCall({
       target: `${packageId}::${module}::${method}`,
-      arguments: [tx.pure.string(prompt), tx.pure.string(response)],
+      arguments: [callbackTx.pure.string(prompt), callbackTx.pure.string(response)],
     });
 
-    // Sign and execute the transaction
-    // Note: You'll need to have a signer configured in your client
-    const result = await client.signAndExecuteTransaction({
-      transaction: tx,
+    const callbackResult = await client.signAndExecuteTransaction({
+      transaction: callbackTx,
       options: {
         showEffects: true,
         showEvents: true,
@@ -125,19 +199,21 @@ async function executeCallback(
       signer,
     });
 
-     // Call the populate_prompt method on the agent contract
-     tx.moveCall({
+    console.log(`Callback executed successfully: ${callbackResult.digest}`);
+    
+    // Create and execute the populate transaction (separate transaction)
+    const populateTx = new Transaction();
+    populateTx.moveCall({
       target: `${CONFIG.AGENT_CONTRACT.packageId}::agent::populate_prompt`,
       arguments: [
-        tx.object(objectId), // The Prompt object itself
-        tx.pure.string(response), // The response
-        tx.pure.address(creator), // The receiver address
+        populateTx.object(objectId),
+        populateTx.pure.string(response),
+        populateTx.pure.address(creator),
       ],
     });
 
-    // Sign and execute the transaction
-    const result1 = await client.signAndExecuteTransaction({
-      transaction: tx,
+    const populateResult = await client.signAndExecuteTransaction({
+      transaction: populateTx,
       options: {
         showEffects: true,
         showEvents: true,
@@ -145,8 +221,8 @@ async function executeCallback(
       signer,
     });
 
-    console.log(`Callback executed successfully: ${result.digest} and populate successfully: ${result1.digest}`);
-    return result;
+    console.log(`Prompt populated successfully: ${populateResult.digest}`);
+    return { callbackResult, populateResult };
   } catch (error) {
     console.error(`Failed to execute callback: ${error}`);
     throw error;
@@ -179,9 +255,9 @@ async function populateAgentObject(
     tx.moveCall({
       target: `${CONFIG.AGENT_CONTRACT.packageId}::agent::populate_prompt`,
       arguments: [
-        tx.object(objectId), // The Prompt object itself
-        tx.pure.string(response), // The response
-        tx.pure.address(creator), // The receiver address
+        tx.object(objectId),
+        tx.pure.string(response),
+        tx.pure.address(creator),
       ],
     });
 

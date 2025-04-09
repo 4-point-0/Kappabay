@@ -8,7 +8,7 @@ console.log(`Using network: ${process.env.NETWORK}`);
  * */
 export const CONFIG = {
 	/// Look for events every 1s
-	POLLING_INTERVAL_MS: 1000,
+	POLLING_INTERVAL_MS: 3000,
 	DEFAULT_LIMIT: 50,
 	NETWORK: (process.env.NETWORK as Network) || 'testnet',
 	AGENT_CONTRACT: {
