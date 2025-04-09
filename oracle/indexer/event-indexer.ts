@@ -55,7 +55,6 @@ const EVENTS_TO_TRACK: EventTracker[] = [
   //       }
   //     : undefined,
   // }
-  // You can add more events here as needed
 ];
 
 const executeEventJob = async (

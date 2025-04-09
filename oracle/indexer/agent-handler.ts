@@ -52,18 +52,17 @@ export const handleAgentPromptCreated = async (
 
       if (data?.callback) {
         // execute the callback things
-        await executeCallback(data.callback, data.question, response, signer);
+        await executeCallback(data.callback, data.question, response, signer, data.objectId, data.sender);
       } else {
         // populate the object with the response
         await populateAgentObject(
-          data.question,
+          data?.question,
           data?.sender,
           data?.objectId,
-          response,
-          signer
+          response?.[0]?.text,
+          signer,
         );
       }
-      console.log(`API call would be made for prompt: ${data.id}`);
     } catch (error) {
       console.error("Failed to call external API:", error);
     }
@@ -91,7 +90,9 @@ async function executeCallback(
   callbackInfo: string,
   prompt: string,
   response: string,
-  signer: any
+  signer: any,
+  objectId: string,
+  creator: string
 ) {
   try {
     // Parse the callback string to get package, module and function
@@ -124,7 +125,27 @@ async function executeCallback(
       signer,
     });
 
-    console.log(`Callback executed successfully: ${result.digest}`);
+     // Call the populate_prompt method on the agent contract
+     tx.moveCall({
+      target: `${CONFIG.AGENT_CONTRACT.packageId}::agent::populate_prompt`,
+      arguments: [
+        tx.object(objectId), // The Prompt object itself
+        tx.pure.string(response), // The response
+        tx.pure.address(creator), // The receiver address
+      ],
+    });
+
+    // Sign and execute the transaction
+    const result1 = await client.signAndExecuteTransaction({
+      transaction: tx,
+      options: {
+        showEffects: true,
+        showEvents: true,
+      },
+      signer,
+    });
+
+    console.log(`Callback executed successfully: ${result.digest} and populate successfully: ${result1.digest}`);
     return result;
   } catch (error) {
     console.error(`Failed to execute callback: ${error}`);
@@ -148,7 +169,7 @@ async function populateAgentObject(
   signer: any
 ) {
   try {
-    console.log(`Populating object ${objectId} with ${prompt}and ${response}`);
+    console.log(`Populating object: ${objectId} with prompt: ${prompt} and response: ${response}`);
 
     // Create a transaction block
     const client = getClient(CONFIG.NETWORK);
