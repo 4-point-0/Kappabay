@@ -18,12 +18,17 @@ import { defaultAgentConfig } from "@/lib/default-config"
 import type { AgentConfig } from "@/lib/types"
 import { useWallet } from "@suiet/wallet-kit"
 import { Deploy } from "@/lib/actions/deploy"
+import { Transaction } from "@mysten/sui/transactions"
+import { serializeAgentConfig } from "@/lib/utils"
+import { bcs } from "@mysten/sui/bcs"
+import { toast } from "@/hooks/use-toast"
 
 export default function AgentDeployer() {
-  const { connected, account, disconnect } = useWallet()
+  const wallet = useWallet()
+  const { connected, account, disconnect} = useWallet()
   const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
+ 
   const handleChange = (field: string, value: any) => {
     setAgentConfig((prev) => ({
       ...prev,
@@ -66,6 +71,8 @@ export default function AgentDeployer() {
     }))
   }
 
+ 
+  
   const exportConfig = () => {
     const dataStr = JSON.stringify(agentConfig, null, 2)
     const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
@@ -99,10 +106,51 @@ export default function AgentDeployer() {
     reader.readAsText(file)
   }
 
-  const handleDeploy = () => {
-    alert("Deploying agent: " + JSON.stringify(agentConfig, null, 2))
+  const handleDeploy = async () => {
+    //alert("Deploying agent: " + JSON.stringify(agentConfig, null, 2))
 
     // PTB here
+    const tx = new Transaction()
+    
+    const [coin] = tx.splitCoins(tx.gas, [1 * 10000000])
+
+    tx.moveCall({
+      target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
+      arguments: [
+        tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(Buffer.from(serializeAgentConfig(agentConfig))))),
+        coin,
+        tx.pure.string("a"),
+         
+      ],
+    });
+    
+
+    console.log(process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID)
+    console.log(serializeAgentConfig(agentConfig))
+    console.log(wallet)
+    console.log(coin)
+    console.log(tx)
+    try {
+       
+        const result = await wallet.signAndExecuteTransaction({
+          transaction: tx,
+        })
+        
+        console.log("Transaction result:", result)
+        
+      
+    } catch (error: unknown) {
+      toast({
+        title: `${error}`,
+        description: "Failed to deploy",
+        variant: "destructive",
+      })
+      console.error(error)
+      throw error
+    }
+
+
+    
 
     // Call Deploy() server action after PTB is successful
     Deploy(/*AgentObjID, AgentCapID, wallet   */);

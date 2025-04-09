@@ -26,11 +26,11 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body>
-				<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+				
 					<EnokiFlowProvider apiKey={process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? ""}>
 						<WalletProvider>{children}</WalletProvider>
 					</EnokiFlowProvider>
-				</SuiClientProvider>
+				
 			</body>
 		</html>
 	);
