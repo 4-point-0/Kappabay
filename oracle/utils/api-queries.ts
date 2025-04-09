@@ -2,7 +2,7 @@ import { CONFIG } from "../config";
 
 export type ApiPagination = {
   take?: number;
-  orderBy: {
+  orderBy?: {
     id: "asc" | "desc";
   };
   cursor?: {
@@ -34,7 +34,7 @@ export const PROMPT_ACCEPTED_PARAMS: WhereParam[] = [
  * A helper to prepare pagination based on `req.query`.
  * We are doing only primary key cursor + ordering for this example.
  */
-export const parsePaginationForQuery = (body: Record<string, any>) => {
+export const parsePaginationForQuery = (body: Record<string, any>): ApiPagination => {
   const pagination: ApiPagination = {
     orderBy: {
       id:
@@ -73,7 +73,7 @@ export const parsePaginationForQuery = (body: Record<string, any>) => {
 export const parseWhereStatement = (
   query: Record<string, any>,
   acceptedParams: WhereParam[]
-) => {
+): Record<string, any> => {
   const params: Record<string, any> = {};
   for (const key of Object.keys(query)) {
     const whereParam = acceptedParams.find((x) => x.key === key);
@@ -115,12 +115,12 @@ export const parseWhereStatement = (
 };
 
 export const getResponseCursor = (results: any[]): number | undefined => {
-  return results[results.length - 1]?.id || undefined;
+  return results.length > 0 ? results[results.length - 1]?.id : undefined;
 };
 
 /**
  * Helper to format a paginated response.
- *  Assumes `id` as the primary key that we're using the cursor against.
+ * Assumes `id` as the primary key that we're using the cursor against.
  */
 export const formatPaginatedResponse = (data: any[]) => {
   return {
@@ -134,12 +134,15 @@ export const formatPaginatedResponse = (data: any[]) => {
  */
 export const getPromptsWithFilters = async (
   prisma: any,
-  where: any,
+  where: Record<string, any>,
   pagination: ApiPagination
 ) => {
   return prisma.prompt.findMany({
     where,
-    ...pagination,
+    orderBy: pagination.orderBy || { id: "desc" },
+    take: pagination.take,
+    skip: pagination.skip,
+    cursor: pagination.cursor,
   });
 };
 
@@ -161,7 +164,7 @@ export const getLatestPrompts = async (
 ) => {
   return prisma.prompt.findMany({
     orderBy: { timestamp: "desc" },
-    take: pagination?.take,
+    take: pagination?.take || CONFIG.DEFAULT_LIMIT,
     cursor: pagination?.cursor,
     skip: pagination?.skip,
   });
@@ -177,6 +180,9 @@ export const getPromptsByCreator = async (
 ) => {
   return prisma.prompt.findMany({
     where: { creator },
-    ...pagination,
+    orderBy: pagination.orderBy || { timestamp: "desc" },
+    take: pagination.take || CONFIG.DEFAULT_LIMIT,
+    cursor: pagination.cursor,
+    skip: pagination.skip,
   });
 };
