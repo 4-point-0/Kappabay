@@ -11,7 +11,6 @@ export const fetcher = async ({
 	body?: object | FormData;
 	headers?: HeadersInit;
 }) => {
-	console.log(body)
 	const options: RequestInit = {
 		method: method ?? "GET",
 		headers: headers
