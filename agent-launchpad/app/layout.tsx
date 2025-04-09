@@ -8,9 +8,8 @@ import { WalletProvider } from "@suiet/wallet-kit";
 import { getFullnodeUrl } from "@mysten/sui/client";
 
 const metadata: Metadata = {
-	title: "v0 App",
-	description: "Created with v0",
-	generator: "v0.dev",
+	title: "Kappabay",
+	description: "Created with love by 4PTO Labs"
 };
 
 const { networkConfig } = createNetworkConfig({

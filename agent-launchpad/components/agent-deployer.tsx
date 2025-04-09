@@ -16,8 +16,11 @@ import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react"
 import PluginSelector from "@/components/plugin-selector"
 import { defaultAgentConfig } from "@/lib/default-config"
 import type { AgentConfig } from "@/lib/types"
+import { useWallet } from "@suiet/wallet-kit"
+import { Deploy } from "@/lib/actions/deploy"
 
 export default function AgentDeployer() {
+  const { connected, account, disconnect } = useWallet()
   const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -98,6 +101,13 @@ export default function AgentDeployer() {
 
   const handleDeploy = () => {
     alert("Deploying agent: " + JSON.stringify(agentConfig, null, 2))
+
+    // PTB here
+
+    // Call Deploy() server action after PTB is successful
+    Deploy(/*AgentObjID, AgentCapID, wallet   */);
+
+
   }
 
   return (
