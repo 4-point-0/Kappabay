@@ -21,6 +21,17 @@ export const HotPotatoSchema = SuiObjectDataSchema.extend({
     type: z.literal(
         "0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6::hot_potato::HotPotato"
     ),
+    display: z.object({
+        data: z.object({
+            description: z.string(),
+            flavor: z.string(),
+            image_url: z.string(),
+            name: z.string(),
+            potato_type: z.string(),
+            temperature: z.string(),
+            time_remaining: z.string(),
+        }),
+    }),
     // Add HotPotato specific fields if any
 });
 
@@ -48,3 +59,6 @@ export const UniquePlayerCountEventSchema = z.object({
 export type UniquePlayerCountEvent = z.infer<
     typeof UniquePlayerCountEventSchema
 >;
+
+export const GameTransferCountEventSchema = UniquePlayerCountEventSchema;
+export type GameTransferCountEvent = UniquePlayerCountEvent;
