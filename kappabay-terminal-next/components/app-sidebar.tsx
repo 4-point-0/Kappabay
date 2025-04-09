@@ -21,15 +21,15 @@ import NftStatus from "./nft-status";
 import TransferModal from "./transfer-modal";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { BakeModal } from "./bake-modal";
-import Link from "next/link"; // Import Link from next/link
-import { usePathname } from "next/navigation"; // Import usePathname
-import { useCheckPotatoStatus } from "@/hooks/useCheckPotatoStatus";
-import { useToast } from "./ui/use-toast";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useWallet } from "@suiet/wallet-kit";
 import UploadDb from "./UploadDb";
 
 export function AppSidebar() {
-	const pathname = usePathname(); // Replace useLocation with usePathname
-	const { modalObjects, capObjects, nftObjects } = useOwnedObjects();
+	const pathname = usePathname();
+	const { modalObjects, capObjects, nftObjects, agentCapObjects } = useOwnedObjects();
+	const { address } = useWallet();
 	const modalObjId = modalObjects?.[0]?.data?.objectId;
 	const capObjId = capObjects?.[0]?.data?.objectId;
 	const potatoObjId = nftObjects?.[0]?.data?.objectId;

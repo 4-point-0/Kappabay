@@ -1,7 +1,7 @@
 "use server";
 
 import { getBlobHash, setBlobHash, deleteBlobHash, setDbFile } from "../../lib/simpleDb";
-import { uploadBlob, deleteBlob } from "../../lib/walrusApi";
+import { uploadBlob } from "../../lib/walrusApi";
 
 /**
  * Server Action to upload db.sqlite to Walrus.
@@ -11,20 +11,15 @@ import { uploadBlob, deleteBlob } from "../../lib/walrusApi";
  */
 export async function uploadDb(agentId: string, bufferArray: number[]): Promise<{ state: string; blobHash: string }> {
 	try {
-		console.log("in uploadDb");
-
 		// Reconstruct the Buffer from the array of numbers
 		const buffer = Buffer.from(bufferArray);
-		console.log("before getBlobHash");
 		// Check for existing blob hash
 		const existingBlobHash = await getBlobHash(agentId);
 
 		if (existingBlobHash) {
 			// Delete the existing blob from Walrus
-			await deleteBlob(existingBlobHash);
 			await deleteBlobHash(agentId);
 		}
-		console.log("before uploadBlob");
 
 		// Upload the new db.sqlite buffer to Walrus using the buffer
 		const newBlobHash = await uploadBlob(buffer, undefined);

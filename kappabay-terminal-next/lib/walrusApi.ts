@@ -26,10 +26,8 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 		"Content-Length": buffer.length.toString(), // Specify the content length
 	};
 
-	console.log("before axios.put");
 	// Send the PUT request with the buffer as the body
 	const response = await axios.put(url, buffer, { headers, params });
-	console.log("after axios.put");
 
 	if (response.data.newlyCreated) {
 		return response.data.newlyCreated.blobObject.blobId;
@@ -38,17 +36,6 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	} else {
 		throw new Error("Unexpected response from Walrus Publisher.");
 	}
-};
-
-/**
- * Deletes a blob from Walrus (assuming Walrus API supports deletion).
- * @param blobHash The hash of the blob to delete.
- */
-export const deleteBlob = async (blobHash: string): Promise<void> => {
-	// Assuming Walrus has a DELETE endpoint for blobs
-	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs/${blobHash}`;
-
-	await axios.delete(url);
 };
 
 /**

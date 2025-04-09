@@ -4,15 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { SuiClient } from "@mysten/sui/client";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
-import { useWallet } from "@suiet/wallet-kit";
+import { useSuiClient, useWallet } from "@suiet/wallet-kit";
 import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { registerPotato } from "@/app/actions/register-potato";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
 import { ContentWithUser } from "./chat";
 import { UUID } from "@elizaos/core";
 import { apiClient } from "@/lib/api";
+import { useEffect } from "react";
+import { useEnokiFlow, useZkLogin } from "@mysten/enoki/react";
 
 export function PotatoBakeModal({
 	agentId,
@@ -36,8 +39,10 @@ export function PotatoBakeModal({
 	const { checkObjects } = useOwnedObjects();
 	const { toast } = useToast();
 	const queryClient = useQueryClient();
+	const enokiFlow = useEnokiFlow();
+	const { address: enokiAddress } = useZkLogin();
 
-	if (!address) {
+	if (!address && !enokiAddress) {
 		return;
 	}
 
@@ -46,34 +51,18 @@ export function PotatoBakeModal({
 		return;
 	}
 
-	const sendMessageMutation = useMutation({
-		mutationKey: ["send_message", agentId],
-		mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) =>
-			apiClient.sendMessage(agentId, message, address || "", selectedFile),
-		onSuccess: (newMessages: ContentWithUser[]) => {
-			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
-				...old.filter((msg) => !msg.isLoading),
-				...newMessages.map((msg) => ({
-					...msg,
-					createdAt: Date.now(),
-				})),
-			]);
-		},
-		onError: (e: any) => {
-			toast({
-				variant: "destructive",
-				title: "Unable to send message",
-				description: e.message,
-			});
-		},
-	});
+	const sendMessageMutation = useSendMessageMutation(agentId);
 
 	const handleBake = async () => {
 		setIsLoading(true);
 		try {
+			const currentAddress = address ?? enokiAddress;
+			if (!currentAddress) {
+				throw new Error("No connected address found");
+			}
 			const tx = new Transaction();
 			const requiredAmount = 0.5 * 1e9; // 0.5 SUI in mist
-			tx.setGasBudget(requiredAmount + 20000000);
+			// tx.setGasBudget(requiredAmount + 20000000);
 
 			// Constants
 			const bakePotatoArgs = {
@@ -83,24 +72,9 @@ export function PotatoBakeModal({
 				randomnessId: "0x8",
 			};
 
-			// Helper function to create the moveCall
-			const makeBakeCall = (paymentArg: any) => {
-				tx.moveCall({
-					target: `${PACKAGE_ID}::hot_potato::bake_potato`,
-					arguments: [
-						tx.object(bakePotatoArgs.ovenId),
-						tx.object(bakePotatoArgs.gameManagerId),
-						paymentArg,
-						tx.object(bakePotatoArgs.clockId),
-						tx.object(bakePotatoArgs.randomnessId),
-						tx.pure.address(address),
-						tx.pure.vector("u8", []),
-					],
-				});
-			};
-			const provider = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
+			const provider = new SuiClient({ url: getFullnodeUrl("testnet") });
 			// Check balance
-			const walletBalance = await provider.getBalance({ owner: address });
+			const walletBalance = await provider.getBalance({ owner: currentAddress });
 			const totalBalance = Number(walletBalance.totalBalance);
 
 			if (totalBalance < requiredAmount) {
@@ -108,11 +82,44 @@ export function PotatoBakeModal({
 			}
 
 			const payment = tx.splitCoins(tx.gas, [tx.pure.u64(requiredAmount)])[0];
-			makeBakeCall(payment);
-
-			const response = await signAndExecuteTransaction({
-				transaction: tx,
+			tx.moveCall({
+				target: `${PACKAGE_ID}::hot_potato::bake_potato`,
+				arguments: [
+					tx.object(bakePotatoArgs.ovenId),
+					tx.object(bakePotatoArgs.gameManagerId),
+					payment,
+					tx.object(bakePotatoArgs.clockId),
+					tx.object(bakePotatoArgs.randomnessId),
+					tx.pure.address(currentAddress),
+					tx.pure.vector("u8", []),
+				],
 			});
+
+			let response;
+			if (address) {
+				response = await signAndExecuteTransaction({
+					transaction: tx,
+				});
+			} else if (enokiAddress) {
+				const keypair = await enokiFlow.getKeypair({ network: "testnet" });
+				response = await provider.signAndExecuteTransaction({
+					signer: keypair,
+					transaction: tx,
+				});
+			}
+
+			if (!response) {
+				throw new Error("Failed to sign and execute transaction");
+			}
+
+			const txInfo = await provider.waitForTransaction({
+				digest: response.digest,
+				options: { showEvents: true, showEffects: true },
+			});
+
+			if (txInfo.effects?.status?.status === "failure" || txInfo.effects?.status?.status !== "success") {
+				throw new Error(txInfo.effects?.status?.error);
+			}
 			await new Promise((resolve) => setTimeout(resolve, 2000));
 
 			// Wait for transaction to complete and check for new potato
@@ -133,12 +140,12 @@ export function PotatoBakeModal({
 			};
 
 			// Try checking for potato with retries
-			let retries = 10;
+			let retries = 5;
 			let potatoId = null;
 			while (retries > 0 && !potatoId) {
 				potatoId = await checkForPotato();
 				if (!potatoId) {
-					await new Promise((resolve) => setTimeout(resolve, 5000));
+					await new Promise((resolve) => setTimeout(resolve, 800));
 					retries--;
 				}
 			}
@@ -148,7 +155,7 @@ export function PotatoBakeModal({
 			}
 
 			onBakeSuccess();
-			console.log("Baking and registration complete", response);
+
 			const input = "Check the Hot Potato game status for my address.";
 			const newMessages = [
 				{
@@ -163,6 +170,7 @@ export function PotatoBakeModal({
 			sendMessageMutation.mutate({
 				message: input,
 				selectedFile: null,
+				walletAddress: currentAddress || "",
 			});
 			return response.digest;
 		} catch (error) {
@@ -185,7 +193,7 @@ export function PotatoBakeModal({
 					<Label htmlFor="bakery" className="text-right">
 						Bakery
 					</Label>
-					<Input id="bakery" value={address} className="col-span-3" readOnly />
+					<Input id="bakery" value={OVEN_ID} className="col-span-3" readOnly />
 				</div>
 				<p className="text-center text-sm text-muted-foreground">Bake and receive a new hot potato</p>
 			</div>

@@ -1,8 +1,8 @@
-import { SuiClient } from "@mysten/sui/client";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 
 export async function resolveSuinsName(address: string): Promise<string | null> {
 	try {
-		const client = new SuiClient({ url: "https://fullnode.testnet.sui.io" });
+		const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 		const response = await client.resolveNameServiceNames({
 			address,
 			limit: 1,

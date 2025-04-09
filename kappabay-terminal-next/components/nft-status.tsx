@@ -148,9 +148,7 @@ export default function NftStatus() {
 											<div className="space-y-1">
 												<p className="text-sm font-medium">Expires</p>
 												<p className="text-sm">
-													{new Date(
-														Number(potatoData.content.fields.last_transfer_time_ms) + 30 * 60 * 1000
-													).toLocaleString()}
+													{new Date(Number(potatoData.content.fields.expiry_time_ms)).toLocaleString()}
 												</p>
 											</div>
 											<div className="space-y-1">

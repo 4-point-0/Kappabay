@@ -52,14 +52,49 @@ export const potatoGameStatusCheck: Action = {
 
             let responseMessage = "";
             if (hotPotatoObject && gameCapObject) {
-                responseMessage =
-                    "You have a HOT POTATO in your wallet. Hurry up and transfer it to a friend to continue the chain, otherwise you would get burned but the HOT POTATO.";
+                responseMessage = "You have a HOT POTATO in your wallet.";
+                if (hotPotatoObject.display?.data?.time_remaining) {
+                    const timestampMatch =
+                        hotPotatoObject.display?.data?.time_remaining?.match(
+                            /\d+/
+                        );
+
+                    if (timestampMatch) {
+                        const expirationTimestamp = parseInt(
+                            timestampMatch[0],
+                            10
+                        );
+                        const currentTimestamp = Date.now();
+
+                        if (currentTimestamp > expirationTimestamp) {
+                            responseMessage += `\nThe potato has expired!\n(Expired at ${new Date(
+                                expirationTimestamp
+                            ).toLocaleString()})`;
+                        } else {
+                            const timeLeftMs =
+                                expirationTimestamp - currentTimestamp;
+                            const timeLeftSeconds = Math.floor(
+                                timeLeftMs / 1000
+                            );
+                            const timeLeftMinutes = Math.floor(
+                                timeLeftSeconds / 60
+                            );
+                            const hours = Math.floor(timeLeftMinutes / 60);
+                            const minutes = timeLeftMinutes % 60;
+                            const seconds = timeLeftSeconds % 60;
+
+                            responseMessage += `\nThe potato is still hot!\nTime remaining: ${hours}h ${minutes}m ${seconds}s (Expires at ${new Date(
+                                expirationTimestamp
+                            ).toLocaleString()})`;
+                        }
+                    }
+                }
             } else if (modalObject) {
                 responseMessage =
-                    "You have a Modal object in your wallet. You can bake and recieve a New HOT POTATO to start the chain.";
+                    "You have a Modal object in your wallet.\nYou can bake and recieve a New HOT POTATO to start the chain.";
             } else {
                 responseMessage =
-                    'Explain Hot Potato Game rules in dept. Would you like to receive a Modal Cap, which will give you capability to bake a New HOT POTATO and start a chain?\n\nPlease type "Create and send a Modal Cap to me." and I will perform the action for you.';
+                    'Explain Hot Potato Game rules in dept.\nWould you like to receive a Modal Cap, which will give you capability to bake a New HOT POTATO and start a chain?\n\nPlease type \n\n"Create and send a Modal Cap to me."\n\n and I will perform the action for you.';
             }
 
             if (callback) {

@@ -1,9 +1,14 @@
-import { useWallet } from "@suiet/wallet-kit";
+import { useSuiClient, useWallet } from "@suiet/wallet-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { useOwnedObjects } from "./use-owned-objects";
+import { useEnokiFlow, useZkLogin } from "@mysten/enoki/react";
+import { SuiClient } from "@mysten/sui/client";
 
 export function useCheckPotatoStatus() {
-	const { connected, signAndExecuteTransaction } = useWallet();
+	const { connected, signAndExecuteTransaction, address } = useWallet();
+	const client: SuiClient = useSuiClient();
+	const enokiFlow = useEnokiFlow();
+	const { address: enokiAddress } = useZkLogin();
 	const { capObjects, nftObjects } = useOwnedObjects();
 	const gameCapId = capObjects?.[0]?.data?.objectId;
 	const potatoId = nftObjects?.[0]?.data?.objectId;
@@ -23,9 +28,22 @@ export function useCheckPotatoStatus() {
 					txb.object("0x6"), // Clock object
 				],
 			});
-			const result = await signAndExecuteTransaction({
-				transaction: txb,
-			});
+			let result;
+			if (address) {
+				result = await signAndExecuteTransaction({
+					transaction: txb,
+				});
+			} else if (enokiAddress) {
+				const keypair = await enokiFlow.getKeypair({ network: "testnet" });
+				result = await client.signAndExecuteTransaction({
+					signer: keypair,
+					transaction: txb,
+				});
+			}
+
+			if (!result) {
+				throw new Error("Failed to sign and execute transaction");
+			}
 			// Parse events to determine registration status
 			const registrationEvent = (result as any).events?.find((event: any) => event.type.includes("PotatoStatusCheck"));
 

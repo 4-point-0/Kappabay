@@ -7,21 +7,20 @@ import { useTransition, animated, type AnimatedProps } from "@react-spring/web";
 import { Paperclip, Send, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Content, UUID } from "@elizaos/core";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSendMessageMutation } from "@/hooks/useSendMessageMutation";
 import { cn, moment } from "@/lib/utils";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import CopyButton from "./copy-button";
 import ChatTtsButton from "./ui/chat/chat-tts-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { useToast } from "@/hooks/use-toast";
 import AIWriter from "react-aiwriter";
 import type { IAttachment } from "@/types";
 import { AudioRecorder } from "./audio-recorder";
 import { Badge } from "./ui/badge";
 import { useAutoScroll } from "./ui/chat/hooks/useAutoScroll";
-import { useOwnedObjects } from "@/hooks/use-owned-objects";
 import { useWallet } from "@suiet/wallet-kit";
+import { useZkLogin } from "@mysten/enoki/react";
 
 type ExtraContentFields = {
 	user: string;
@@ -36,25 +35,41 @@ type AnimatedDivProps = AnimatedProps<{ style: React.CSSProperties }> & {
 };
 
 export default function Page({ agentId }: { agentId: UUID }) {
-	const { toast } = useToast();
 	const [selectedFile, setSelectedFile] = useState<File | null>(null);
 	const [input, setInput] = useState("");
+	const [messages, setMessages] = useState<ContentWithUser[]>([]);
 	const inputRef = useRef<HTMLTextAreaElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const formRef = useRef<HTMLFormElement>(null);
 	const { address: walletAddress } = useWallet();
+	const { address: enokiAddress } = useZkLogin();
 	const queryClient = useQueryClient();
-	// const { hasCapabilities, hasNfts } = useOwnedObjects();
-
+	const sendMessageMutation = useSendMessageMutation(agentId);
 	const getMessageVariant = (role: string) => (role !== "user" ? "received" : "sent");
+	const currentAddress = walletAddress ?? enokiAddress;
 
 	const { scrollRef, isAtBottom, scrollToBottom, disableAutoScroll } = useAutoScroll({
 		smooth: true,
 	});
 
 	useEffect(() => {
+		const cachedMessages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
+		setMessages(cachedMessages);
+
+		const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+			const updatedMessages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
+
+			setMessages(updatedMessages);
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	}, [queryClient, agentId]);
+
+	useEffect(() => {
 		scrollToBottom();
-	}, [queryClient.getQueryData(["messages", agentId])]);
+	}, [messages]);
 
 	useEffect(() => {
 		scrollToBottom();
@@ -101,7 +116,8 @@ export default function Page({ agentId }: { agentId: UUID }) {
 
 		sendMessageMutation.mutate({
 			message: input,
-			selectedFile: selectedFile ? selectedFile : null,
+			selectedFile: selectedFile || null,
+			walletAddress: currentAddress || "",
 		});
 
 		setSelectedFile(null);
@@ -132,6 +148,7 @@ export default function Page({ agentId }: { agentId: UUID }) {
 				sendMessageMutation.mutate({
 					message: input,
 					selectedFile: null,
+					walletAddress: currentAddress || "",
 				});
 			}, 500);
 		}
@@ -149,36 +166,12 @@ export default function Page({ agentId }: { agentId: UUID }) {
 		}
 	}, []);
 
-	const sendMessageMutation = useMutation({
-		mutationKey: ["send_message", agentId],
-		mutationFn: ({ message, selectedFile }: { message: string; selectedFile?: File | null }) =>
-			apiClient.sendMessage(agentId, message, walletAddress || "", selectedFile),
-		onSuccess: (newMessages: ContentWithUser[]) => {
-			queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [
-				...old.filter((msg) => !msg.isLoading),
-				...newMessages.map((msg) => ({
-					...msg,
-					createdAt: Date.now(),
-				})),
-			]);
-		},
-		onError: (e: any) => {
-			toast({
-				variant: "destructive",
-				title: "Unable to send message",
-				description: e.message,
-			});
-		},
-	});
-
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (file?.type.startsWith("image/")) {
 			setSelectedFile(file);
 		}
 	};
-
-	const messages = queryClient.getQueryData<ContentWithUser[]>(["messages", agentId]) || [];
 
 	const transitions = useTransition(messages, {
 		keys: (message) => `${message.createdAt}-${message.user}-${message.text}`,
