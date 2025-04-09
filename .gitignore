@@ -1,2 +1,3 @@
 .aider*
 /contracts/build
+node_modules/

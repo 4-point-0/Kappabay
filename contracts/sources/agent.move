@@ -31,7 +31,8 @@ module nft_template::agent {
         id: ID,
         question: String,
         sender: address,
-        callback: String
+        callback: String,
+        objectId: ID
     }
 
     public struct ResponsePopulated has copy, drop {
@@ -61,7 +62,8 @@ module nft_template::agent {
         private_funds: Balance<SUI>, // For agent-only use
         public_funds: Balance<SUI>,  // For public distribution
         objects: Bag,              // Storage for game objects and rewards
-        owner: address
+        owner: address,
+        image: String
     }
 
     public struct Prompt has key, store {
@@ -81,6 +83,7 @@ module nft_template::agent {
     public entry fun create_agent(
         configuration: vector<u8>,
         initial_gas: Coin<SUI>,
+        image: String,
         ctx: &mut TxContext
     ) {
         let sender = tx_context::sender(ctx);
@@ -94,7 +97,8 @@ module nft_template::agent {
             private_funds: balance::zero<SUI>(),
             public_funds: balance::zero<SUI>(),
             objects: bag::new(ctx),
-            owner: sender
+            owner: sender,
+            image: image
         };
         
         // Create the admin capability
@@ -141,7 +145,8 @@ module nft_template::agent {
             id: object::id(&prompt),
             question,
             sender,
-            callback: utf8(b"")
+            callback: utf8(b""),
+            objectId: object::id(&prompt)
         });
         
         // Transfer prompt to agent address for processing
@@ -170,7 +175,8 @@ module nft_template::agent {
             id: object::id(&prompt),
             question,
             sender,
-            callback
+            callback,
+            objectId: object::id(&prompt)
         });
         
         // Transfer prompt to agent address for processing
