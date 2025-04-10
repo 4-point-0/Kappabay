@@ -6,6 +6,8 @@ import { EnokiFlowProvider } from "@mysten/enoki/react";
 import { SuiClientProvider, createNetworkConfig } from "@mysten/dapp-kit";
 import { WalletProvider } from "@suiet/wallet-kit";
 import { getFullnodeUrl } from "@mysten/sui/client";
+import Providers from "@/app/providers";
+
 
 const metadata: Metadata = {
 	title: "Kappabay",
@@ -27,9 +29,9 @@ export default function RootLayout({
 		<html lang="en">
 			<body>
 				
-					<EnokiFlowProvider apiKey={process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? ""}>
-						<WalletProvider>{children}</WalletProvider>
-					</EnokiFlowProvider>
+					<Providers>
+						{children}	
+					</Providers>
 				
 			</body>
 		</html>

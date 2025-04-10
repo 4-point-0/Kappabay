@@ -1,11 +1,15 @@
 "use client";
-import { ConnectModal, useWallet } from "@suiet/wallet-kit";
+// import { ConnectModal, useWallet } from "@suiet/wallet-kit";
+import { useCurrentAccount, useCurrentWallet, useDisconnectWallet, ConnectModal, useWallets, useAutoConnectWallet } from "@mysten/dapp-kit"
 import { useCallback, useEffect, useState, useRef } from "react";
 import { resolveSuinsName } from "@/lib/suins";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEnokiFlow, useZkLoginSession } from "@mysten/enoki/react";
 import { Root, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import Link from "next/link"; // Import Link from next/link
+import { Button } from "./ui/button";
+
+import '@mysten/dapp-kit/dist/index.css';
 
 // In Next.js, for client-side environment variables, use NEXT_PUBLIC_ prefix
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -16,8 +20,10 @@ const ConnectButton = () => {
 	const [connectMethod, setConnectMethod] = useState<"enoki" | "walletKit" | null>(null);
 	const [walletName, setWalletName] = useState<string | null>(null);
 	const [isAuthSuccess, setIsAuthSuccess] = useState<boolean | undefined>(undefined);
-
-	const { connected, account, disconnect } = useWallet();
+	const wallet=useCurrentWallet();
+	const account = useCurrentAccount();
+	const { mutate: disconnect } = useDisconnectWallet();
+	const autoConnectionStatus = useAutoConnectWallet();
 	const zkSession = useZkLoginSession();
 	const enokiFlow = useEnokiFlow();
 	const [suinsName, setSuinsName] = useState<string | null>(null);
@@ -42,21 +48,21 @@ const ConnectButton = () => {
 	}, [walletAddress]);
 
 	useEffect(() => {
-		setIsAuthSuccess(connected || zkSession?.jwt ? true : undefined);
-	}, [connected, account, walletName, zkSession?.jwt]);
+		setIsAuthSuccess(wallet.connectionStatus=="connected" || zkSession?.jwt ? true : undefined);
+	}, [wallet.connectionStatus, account, walletName, zkSession?.jwt]);
 
 	useEffect(() => {
 		if (isAuthSuccess === false) {
 			setShowConnectOptions(false);
 			setIsMenuOpen(false);
-			if (connected) {
+			if (wallet.connectionStatus=="connected" ) {
 				disconnect();
 			}
 			if (zkSession?.jwt) {
 				enokiFlow.logout();
 			}
 		}
-	}, [isAuthSuccess, connected, disconnect, zkSession?.jwt, enokiFlow]);
+	}, [isAuthSuccess, wallet.connectionStatus, disconnect, zkSession?.jwt, enokiFlow]);
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -104,7 +110,7 @@ const ConnectButton = () => {
 
 	return (
 		<>
-			{(connected || zkSession?.jwt) && isAuthSuccess ? (
+			{(wallet.connectionStatus=="connected"  || zkSession?.jwt) && isAuthSuccess ? (
 				<div className="relative h-full flex items-center gap-2">
 					{suinsName && (
 						<div className="hidden sm:block text-lg font-medium text-gray-700 dark:text-gray-300">{suinsName}</div>
@@ -171,7 +177,7 @@ const ConnectButton = () => {
 									Connect with Enoki
 								</motion.button>
 								<ConnectModal
-									className="bg-wkit-bg text-wkit-onBg"
+									/*
 									open={connectMethod === "walletKit"}
 									onOpenChange={(open) => {
 										if (!open) {
@@ -187,17 +193,13 @@ const ConnectButton = () => {
 									onConnectError={(error) => {
 										console.error("Connection Error:", error);
 										setConnectMethod(null);
-									}}
-								>
-									<motion.button
-										className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-										whileHover={{ scale: 1.05 }}
-										whileTap={{ scale: 0.95 }}
-										onClick={handleWalletKitConnection}
-									>
-										Connect with Wallet Kit
-									</motion.button>
-								</ConnectModal>
+									}}*/
+								
+									trigger={
+									<Button>
+										Connect with Wallet
+									</Button>}
+								/>
 								<motion.button
 									className="mt-4  hover:text-gray-400"
 									whileHover={{ scale: 1.05 }}

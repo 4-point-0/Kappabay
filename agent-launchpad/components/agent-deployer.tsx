@@ -27,17 +27,25 @@ import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react";
 import PluginSelector from "@/components/plugin-selector";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
-import { useWallet } from "@suiet/wallet-kit";
+//import { useWallet } from "@suiet/wallet-kit";
 import { Deploy } from "@/lib/actions/deploy";
 import { Transaction } from "@mysten/sui/transactions";
 import { serializeAgentConfig } from "@/lib/utils";
 import { bcs } from "@mysten/sui/bcs";
 import { toast } from "@/hooks/use-toast";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { useCurrentAccount, useCurrentWallet, useDisconnectWallet, useSuiClient, useSignAndExecuteTransaction, useSignTransaction } from "@mysten/dapp-kit";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 export default function AgentDeployer() {
-  const wallet = useWallet();
-  const { connected, account, disconnect } = useWallet();
+  const client = useSuiClient();
+  const wallet = useCurrentWallet();
+  const account = useCurrentAccount();
+  const signAndExec = useSignExecuteAndWaitForTransaction();
+
+  const { mutate: disconnect } = useDisconnectWallet();
+
+
   const [agentConfig, setAgentConfig] =
     useState<AgentConfig>(defaultAgentConfig);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -143,9 +151,9 @@ export default function AgentDeployer() {
     });
 
     try {
-      const txResult = await wallet.signAndExecuteTransaction({
-        transaction: tx,
-      });
+      const txResult = await signAndExec(
+        tx,
+      );
 
       console.log("Transaction result:", txResult);
 
@@ -231,9 +239,9 @@ export default function AgentDeployer() {
         );
 
         // Execute the transfer
-        await wallet.signAndExecuteTransaction({
-          transaction: transferTx,
-        });
+        await signAndExec(
+        transferTx,
+        );
 
         toast({
           title: "Agent deployed successfully",
