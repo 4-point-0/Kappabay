@@ -95,13 +95,29 @@ async function createOracleEnvFile(
   privateSeed: string,
   port: number
 ): Promise<void> {
-  const envContent = `BASE_URL='${agentUrl}'
+   // Ensure the URL has a protocol
+   const normalizedUrl = agentUrl.startsWith('http://') || agentUrl.startsWith('https://')
+   ? agentUrl
+   : `http://${agentUrl}`;
+
+ let baseUrl: string;
+
+ try {
+   const parsedUrl = new URL(normalizedUrl);
+   baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+ } catch (error) {
+   console.error("Invalid agentUrl:", agentUrl);
+   throw error;
+ }
+
+  const envContent = `BASE_URL='${baseUrl}'
 INITIAL_TRANSACTION_DIGEST='${txDigest}'
 PACKAGE_ID='${packageId}'
 NETWORK='${network}'
 AGENT_ID='${agentId}'
 PRIVATE_SEED='${privateSeed}'
 PORT='${port}'
+LAUNCHPAD_URL='${process.env.LAUNCHPAD_URL}'
 `;
 
   const envPath = path.join(oracleDir, ".env");
