@@ -26,7 +26,8 @@ model Agent {
   updatedAt        DateTime  @updatedAt
   billingStatus    String    @default("ACTIVE")
   lastBilled       DateTime?
-  // Add these new fields
   agentWalletAddress String?
   agentWalletKey     String?  // Will be encrypted
+  port             Int?      // Port the agent is running on
+  pid              Int?      // Process ID of the running agent
 }

@@ -6,8 +6,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { DeploymentData } from "@/lib/types";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { toBase64 } from "@mysten/sui/utils";
+import * as net from "net";
 
 // Environment variables
 const AGENT_REPO_URL =
@@ -38,9 +37,53 @@ async function createAgentConfig(agentDir: string, config: any): Promise<void> {
   await fs.writeFile(configPath, JSON.stringify(config, null, 2));
 }
 
+async function findAvailablePort(start: number, end: number): Promise<number> {
+  for (let port = start; port <= end; port++) {
+    try {
+      // Check if port is in use
+      const inUse = await new Promise<boolean>((resolve) => {
+        const server = net
+          .createServer()
+          .once("error", (err: any) => {
+            // If error is not EADDRINUSE, it might be another issue
+            resolve(err.code !== "EADDRINUSE" ? false : true);
+          })
+          .once("listening", () => {
+            server.close();
+            resolve(false);
+          })
+          .listen(port);
+      });
+
+      if (!inUse) {
+        // Additional check against database to ensure no agent is using this port
+        const existingAgent = await prisma.agent.findFirst({
+          where: { port },
+        });
+
+        if (!existingAgent) {
+          return port;
+        }
+      }
+    } catch (error) {
+      // Continue to next port if there's an error
+      continue;
+    }
+  }
+
+  throw new Error(`No available ports found between ${start} and ${end}`);
+}
+
 // Function to build agent
-async function buildAgent(agentDir: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+async function buildAndStartAgent(
+  agentDir: string,
+  agentId: string
+): Promise<{ port: number; pid: number }> {
+  // First, find an available port
+  const port = await findAvailablePort(3000, 5000); // Search between 3000-4000
+
+  // Build the agent
+  await new Promise<void>((resolve, reject) => {
     exec(`cd ${agentDir} && pnpm install && pnpm build`, (error) => {
       if (error) {
         reject(error);
@@ -49,6 +92,36 @@ async function buildAgent(agentDir: string): Promise<void> {
       resolve();
     });
   });
+
+  // Start the agent as a background process
+  const process = await new Promise<{ pid: number }>((resolve, reject) => {
+    // Use SERVER_PORT environment variable to start the client
+    const command = `cd ${agentDir} && SERVER_PORT=${port} pnpm start:client > ${agentDir}/logs/agent.log 2>&1 &`;
+
+    exec(command, (error, stdout) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      // Get the process ID
+      exec(`pgrep -f "SERVER_PORT=${port}"`, (err, pidOutput) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const pid = parseInt(pidOutput.trim(), 10);
+        resolve({ pid });
+      });
+    });
+  });
+
+  // Return both port and pid
+  return {
+    port,
+    pid: process.pid,
+  };
 }
 
 export async function Deploy(deploymentData: DeploymentData) {
@@ -62,8 +135,11 @@ export async function Deploy(deploymentData: DeploymentData) {
     // Create agent configuration file
     await createAgentConfig(agentDir, deploymentData.agentConfig);
 
-    // Build agent
-    await buildAgent(agentDir);
+    // Create logs directory
+    await fs.mkdir(path.join(agentDir, "logs"), { recursive: true });
+
+    // Build and start the agent
+    const { port, pid } = await buildAndStartAgent(agentDir, agentId);
 
     // Get agent wallet info from the deployment data
     const { address: agentWalletAddress, privateKey: agentWalletKey } =
@@ -80,8 +156,10 @@ export async function Deploy(deploymentData: DeploymentData) {
         txDigest: deploymentData.onChainData.txDigest,
         config: deploymentData.agentConfig as any,
         status: "ACTIVE",
-        agentWalletAddress, // Add the new fields
+        agentWalletAddress,
         agentWalletKey,
+        port,
+        pid,
       },
     });
 
@@ -89,6 +167,8 @@ export async function Deploy(deploymentData: DeploymentData) {
       success: true,
       agentId: agent.id,
       agentWallet: deploymentData.agentWallet,
+      port, // Return the port so it can be displayed to the user
+      agentUrl: `http://localhost:${port}`, // Add the full agent URL
     };
   } catch (error) {
     console.error("Agent backend deployment failed:", error);
