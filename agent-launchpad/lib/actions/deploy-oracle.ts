@@ -115,7 +115,7 @@ async function setupAndStartOracle(
 ): Promise<{ oraclePid: number }> {
   // Create logs directory
   await fs.mkdir(path.join(oracleDir, "logs"), { recursive: true });
-  
+
   // Install dependencies
   await new Promise<void>((resolve, reject) => {
     exec(`cd ${oracleDir} && pnpm install`, (error) => {
@@ -138,31 +138,46 @@ async function setupAndStartOracle(
     });
   });
 
-  // Start the oracle as a background process
-  const process = await new Promise<{ pid: number }>((resolve, reject) => {
-    const command = `cd ${oracleDir} && pnpm dev > ${oracleDir}/logs/oracle.log 2>&1 &`;
-
-    exec(command, (error, stdout) => {
-      if (error) {
-        reject(error);
-        return;
+  // Start the oracle using PM2
+  await new Promise<void>((resolve, reject) => {
+    exec(
+      `cd ${oracleDir} && pm2 start "pnpm dev" --name="oracle-${path.basename(
+        oracleDir
+      )}" --log="${oracleDir}/logs/oracle.log"`,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
       }
+    );
+  });
 
-      // Get the process ID - may need adjustment based on your system
-      exec(`pgrep -f "cd ${oracleDir} && pnpm dev"`, (err, pidOutput) => {
-        if (err) {
-          reject(err);
+  // Get the PM2 process info
+  const processInfo = await new Promise<{ pid: number }>((resolve, reject) => {
+    exec(
+      `pm2 show oracle-${path.basename(oracleDir)} --format json`,
+      (error, stdout) => {
+        if (error) {
+          console.warn("Could not get PM2 process info, using default PID");
+          resolve({ pid: 0 });
           return;
         }
 
-        const pid = parseInt(pidOutput.trim(), 10);
-        resolve({ pid });
-      });
-    });
+        try {
+          const info = JSON.parse(stdout);
+          resolve({ pid: info.pid || 0 });
+        } catch (err) {
+          console.warn("Could not parse PM2 process info, using default PID");
+          resolve({ pid: 0 });
+        }
+      }
+    );
   });
 
   return {
-    oraclePid: process.pid,
+    oraclePid: processInfo.pid,
   };
 }
 
@@ -219,7 +234,6 @@ export async function DeployOracle(
       oracleUrl: `http://localhost:${oraclePort}`,
       oraclePid,
     };
-    
   } catch (error) {
     console.error("Oracle deployment failed:", error);
     return {

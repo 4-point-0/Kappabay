@@ -34,7 +34,14 @@ import { serializeAgentConfig } from "@/lib/utils";
 import { bcs } from "@mysten/sui/bcs";
 import { toast } from "@/hooks/use-toast";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { useCurrentAccount, useCurrentWallet, useDisconnectWallet, useSuiClient, useSignAndExecuteTransaction, useSignTransaction } from "@mysten/dapp-kit";
+import {
+  useCurrentAccount,
+  useCurrentWallet,
+  useDisconnectWallet,
+  useSuiClient,
+  useSignAndExecuteTransaction,
+  useSignTransaction,
+} from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 export default function AgentDeployer() {
@@ -44,7 +51,6 @@ export default function AgentDeployer() {
   const signAndExec = useSignExecuteAndWaitForTransaction();
 
   const { mutate: disconnect } = useDisconnectWallet();
-
 
   const [agentConfig, setAgentConfig] =
     useState<AgentConfig>(defaultAgentConfig);
@@ -151,11 +157,13 @@ export default function AgentDeployer() {
     });
 
     try {
-      const txResult = await signAndExec(
-        tx,
-      );
+      const txResult = await signAndExec(tx);
 
       console.log("Transaction result:", txResult);
+      console.log(
+        "Transaction result structure:",
+        JSON.stringify(txResult, null, 2)
+      );
 
       // Extract object IDs from transaction result
       let agentObjectId = "";
@@ -166,27 +174,27 @@ export default function AgentDeployer() {
       // Let's inspect the structure more carefully
       const txResultStr = JSON.stringify(txResult);
       console.log("Full transaction result:", txResultStr);
+      console.log(
+        "Conditional:",
+        txResult.objectChanges && Array.isArray(txResult.objectChanges)
+      );
 
-      // Try to find the created objects by parsing the JSON string
-      // This is a more robust approach that doesn't depend on the exact structure
-      const createdMatches = [
-        ...txResultStr.matchAll(
-          /"objectType"\s*:\s*"([^"]+)"\s*,\s*"objectId"\s*:\s*"([^"]+)"/g
-        ),
-      ];
-
-      for (const match of createdMatches) {
-        const [_, objectType, objectId] = match;
-
-        if (objectType.includes("::agent::Agent")) {
-          agentObjectId = objectId;
-        } else if (objectType.includes("::agent::AgentCap")) {
-          agentCapId = objectId;
-        } else if (objectType.includes("::agent::AdminCap")) {
-          adminCapId = objectId;
+      if (txResult.objectChanges && Array.isArray(txResult.objectChanges)) {
+        for (const change of txResult.objectChanges) {
+          if (change.type === "created") {
+            if (change.objectType.includes("::agent::AgentCap")) {
+              agentCapId = change.objectId;
+            } else if (change.objectType.includes("::agent::AdminCap")) {
+              adminCapId = change.objectId;
+            } else if (change.objectType.includes("::agent::Agent")) {
+              agentObjectId = change.objectId;
+            }
+          }
         }
       }
-
+      console.log("AgentObjectId: ", agentObjectId);
+      console.log("AgentCapId: ", agentCapId);
+      console.log("AdminCapId: ", adminCapId);
       // If we still couldn't find the objects, try another approach
       if (!agentObjectId || !agentCapId || !adminCapId) {
         // Attempt to get the digest and then use the Sui explorer API or blockchain API
@@ -239,9 +247,7 @@ export default function AgentDeployer() {
         );
 
         // Execute the transfer
-        await signAndExec(
-        transferTx,
-        );
+        await signAndExec(transferTx);
 
         toast({
           title: "Agent deployed successfully",

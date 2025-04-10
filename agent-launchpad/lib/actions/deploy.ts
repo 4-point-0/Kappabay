@@ -11,22 +11,38 @@ import { DeployOracle } from "./deploy-oracle";
 
 // Environment variables
 const AGENT_REPO_URL =
-  process.env.AGENT_REPO_URL || "https://github.com/your-org/elizaagent.git";
+  process.env.AGENT_REPO_URL || "https://github.com/elizaagent.git";
 const AGENT_BASE_DIR = process.env.AGENT_BASE_DIR || "./agents";
 
 // Function to clone agent repo
 async function cloneAgentRepo(agentId: string): Promise<string> {
-  const agentDir = path.join(AGENT_BASE_DIR, `${agentId}-agent`);
+  const tempDir = path.join(AGENT_REPO_URL, `temp-${agentId}`);
+  const agentDir = path.join(AGENT_BASE_DIR, `${agentId}-agents`);
 
+  // Create directories
+  await fs.mkdir(tempDir, { recursive: true });
   await fs.mkdir(agentDir, { recursive: true });
 
+  // Clone the repo to a temporary directory
   return new Promise((resolve, reject) => {
-    exec(`git clone ${AGENT_REPO_URL} ${agentDir}`, (error) => {
+    exec(`git clone ${AGENT_REPO_URL} ${tempDir}`, async (error) => {
       if (error) {
         reject(error);
         return;
       }
-      resolve(agentDir);
+
+      try {
+        await fs.cp(path.join(tempDir, "eliza-kappabay-agent"), agentDir, {
+          recursive: true,
+        });
+
+        // Clean up temp directory
+        await fs.rm(tempDir, { recursive: true, force: true });
+
+        resolve(agentDir);
+      } catch (err) {
+        reject(err);
+      }
     });
   });
 }
@@ -81,7 +97,7 @@ async function buildAndStartAgent(
   agentId: string
 ): Promise<{ port: number; pid: number }> {
   // First, find an available port
-  const port = await findAvailablePort(3000, 5000); // Search between 3000-4000
+  const port = await findAvailablePort(3000, 5000);
 
   // Build the agent
   await new Promise<void>((resolve, reject) => {
@@ -94,34 +110,42 @@ async function buildAndStartAgent(
     });
   });
 
-  // Start the agent as a background process
-  const process = await new Promise<{ pid: number }>((resolve, reject) => {
-    // Use SERVER_PORT environment variable to start the client
-    const command = `cd ${agentDir} && SERVER_PORT=${port} pnpm start:client > ${agentDir}/logs/agent.log 2>&1 &`;
+  // Start the agent using PM2
+  await new Promise<void>((resolve, reject) => {
+    exec(
+      `cd ${agentDir} && pm2 start "SERVER_PORT=${port} pnpm start:client" --name="agent-${agentId}" --log="${agentDir}/logs/agent.log"`,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      }
+    );
+  });
 
-    exec(command, (error, stdout) => {
+  // Get the PM2 process info
+  const processInfo = await new Promise<{ pid: number }>((resolve, reject) => {
+    exec(`pm2 show agent-${agentId} --format json`, (error, stdout) => {
       if (error) {
-        reject(error);
+        console.warn("Could not get PM2 process info, using default PID");
+        resolve({ pid: 0 });
         return;
       }
 
-      // Get the process ID
-      exec(`pgrep -f "SERVER_PORT=${port}"`, (err, pidOutput) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        const pid = parseInt(pidOutput.trim(), 10);
-        resolve({ pid });
-      });
+      try {
+        const info = JSON.parse(stdout);
+        resolve({ pid: info.pid || 0 });
+      } catch (err) {
+        console.warn("Could not parse PM2 process info, using default PID");
+        resolve({ pid: 0 });
+      }
     });
   });
 
-  // Return both port and pid
   return {
     port,
-    pid: process.pid,
+    pid: processInfo.pid,
   };
 }
 
@@ -164,10 +188,9 @@ export async function Deploy(deploymentData: DeploymentData) {
         oraclePort: 0, // Set to 0 for now
       },
     });
-    
-    const agentUrl = `http://localhost:${port}`
-    
-    
+
+    const agentUrl = `http://localhost:${port}`;
+
     // Deploy the Oracle using the separate function
     try {
       const oracleResult = await DeployOracle(
@@ -187,7 +210,7 @@ export async function Deploy(deploymentData: DeploymentData) {
       };
     } catch (oracleError) {
       console.error("Oracle deployment failed:", oracleError);
-      
+
       // Return with agent details but note oracle failure
       return {
         success: true,
@@ -197,11 +220,13 @@ export async function Deploy(deploymentData: DeploymentData) {
         agentUrl,
         oracle: {
           success: false,
-          error: oracleError instanceof Error ? oracleError.message : "Unknown error during oracle deployment",
+          error:
+            oracleError instanceof Error
+              ? oracleError.message
+              : "Unknown error during oracle deployment",
         },
       };
     }
-
   } catch (error) {
     console.error("Agent backend deployment failed:", error);
     return {
