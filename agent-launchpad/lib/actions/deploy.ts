@@ -149,6 +149,25 @@ async function buildAndStartAgent(
   };
 }
 
+// Function to copy environment file
+async function copyEnvFile(agentDir: string): Promise<void> {
+  try {
+    const sourceEnvPath = path.resolve("../../env.agent");
+    const destEnvPath = path.join(agentDir, ".env");
+    
+    // Check if source file exists
+    await fs.access(sourceEnvPath);
+    
+    // Copy the file
+    await fs.copyFile(sourceEnvPath, destEnvPath);
+    
+    console.log(`Successfully copied env file to ${destEnvPath}`);
+  } catch (error) {
+    console.error("Failed to copy env file:", error);
+    throw error;
+  }
+}
+
 export async function Deploy(deploymentData: DeploymentData) {
   try {
     // Generate a UUID for the agent's backend identifier
@@ -162,6 +181,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 
     // Create logs directory
     await fs.mkdir(path.join(agentDir, "logs"), { recursive: true });
+
+    await copyEnvFile(agentDir);
 
     // Build and start the agent
     const { port, pid } = await buildAndStartAgent(agentDir, agentId);
