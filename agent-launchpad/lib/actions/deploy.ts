@@ -153,15 +153,21 @@ async function buildAndStartAgent(
 // Function to copy environment file
 async function copyEnvFile(agentDir: string): Promise<void> {
   try {
-    const sourceEnvPath = path.resolve("../../env.agent");
+    // Use a path relative to the current working directory
+    const sourceEnvPath = path.resolve(process.cwd(), ".env.agent");
     const destEnvPath = path.join(agentDir, ".env");
-    
+
     // Check if source file exists
-    await fs.access(sourceEnvPath);
-    
+    try {
+      await fs.access(sourceEnvPath);
+    } catch (error) {
+      console.error(`Source env file not found at ${sourceEnvPath}`);
+      throw error;
+    }
+
     // Copy the file
     await fs.copyFile(sourceEnvPath, destEnvPath);
-    
+
     console.log(`Successfully copied env file to ${destEnvPath}`);
   } catch (error) {
     console.error("Failed to copy env file:", error);
