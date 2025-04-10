@@ -8,23 +8,35 @@ import {
   getLatestPrompts,
   getPromptsByCreator,
   getPromptByObjectId,
+  getPromptsWithFilters,
 } from "./api-queries";
 
 export const router = express.Router();
 
 /**
- * Get prompts with filtering
+ * Get latest prompts
+ * Note: This specific route must come before the /:objectId route
  */
-router.get("/", async (req: Request, res: any) => {
+router.get("/latest", async (req: Request, res: any) => {
   try {
     const pagination = parsePaginationForQuery(req.query);
-    const where = parseWhereStatement(req.query, PROMPT_ACCEPTED_PARAMS);
+    const prompts = await getLatestPrompts(prisma, pagination);
+    return res.json(formatPaginatedResponse(prompts));
+  } catch (e) {
+    console.error(e);
+    return res.status(400).json({ error: (e as Error).message });
+  }
+});
 
-    const prompts = await prisma.prompt.findMany({
-      where,
-      ...pagination,
-    });
-
+/**
+ * Get prompts by creator address
+ * Note: This specific route must come before the /:objectId route
+ */
+router.get("/creator/:address", async (req: Request, res: any) => {
+  try {
+    const { address } = req.params;
+    const pagination = parsePaginationForQuery(req.query);
+    const prompts = await getPromptsByCreator(prisma, address, pagination);
     return res.json(formatPaginatedResponse(prompts));
   } catch (e) {
     console.error(e);
@@ -52,31 +64,15 @@ router.get("/:objectId", async (req: Request, res: any) => {
 });
 
 /**
- * Get prompts by creator address
+ * Get prompts with filtering
  */
-router.get("/creator/:address", async (req: Request, res: any) => {
-  try {
-    const { address } = req.params;
-    const pagination = parsePaginationForQuery(req.query);
-
-    const prompts = await getPromptsByCreator(prisma, address, pagination);
-
-    return res.json(formatPaginatedResponse(prompts));
-  } catch (e) {
-    console.error(e);
-    return res.status(400).json({ error: (e as Error).message });
-  }
-});
-
-/**
- * Get latest prompts
- */
-router.get("/latest", async (req: Request, res: any) => {
+router.get("/", async (req: Request, res: any) => {
   try {
     const pagination = parsePaginationForQuery(req.query);
-
-    const prompts = await getLatestPrompts(prisma, pagination);
-
+    const where = parseWhereStatement(req.query, PROMPT_ACCEPTED_PARAMS);
+    
+    const prompts = await getPromptsWithFilters(prisma, where, pagination);
+    
     return res.json(formatPaginatedResponse(prompts));
   } catch (e) {
     console.error(e);
