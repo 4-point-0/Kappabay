@@ -90,7 +90,7 @@ async function createOracleEnvFile(
   agentId: string,
   agentUrl: string,
   txDigest: string,
-  packageId: string = "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
+  packageId: string = "0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d",
   network: string = "testnet",
   privateSeed: string,
   port: number
@@ -208,7 +208,7 @@ export async function DeployOracle(
       agentId,
       agentUrl,
       agent.txDigest || "2gZwa7szKotFxBeLrng12p9rbtVDqXiu7HbbWdTrbZ6a",
-      "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
+      "0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d",
       NETWORK,
       privateSeed,
       oraclePort
