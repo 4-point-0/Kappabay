@@ -212,14 +212,6 @@ export default function AgentDeployer() {
         return;
       }
 
-      // Generate a new wallet for the agent
-      const agentKeypair = Ed25519Keypair.generate();
-      const agentAddress = agentKeypair.getPublicKey().toSuiAddress();
-      const agentPrivateKey = Buffer.from(
-        agentKeypair.getSecretKey(),
-        "hex"
-      ).toString("base64");
-
       // Call Deploy server action
       const deployResult = await Deploy({
         agentConfig,
@@ -230,21 +222,24 @@ export default function AgentDeployer() {
           ownerWallet: account?.address || "",
           txDigest: txResult.digest,
         },
-        agentWallet: {
-          address: agentAddress,
-          privateKey: agentPrivateKey,
-        },
       });
 
       if (deployResult.success) {
         // Create a second transaction to transfer the caps to the agent wallet
         const transferTx = new Transaction();
-
-        // Transfer AdminCap
-        transferTx.transferObjects(
-          [transferTx.object(adminCapId)],
-          transferTx.pure.address(agentAddress)
-        );
+        if (deployResult.agentWallet) {
+          // Transfer AdminCap
+          transferTx.transferObjects(
+            [transferTx.object(adminCapId)],
+            transferTx.pure.address(deployResult.agentWallet)
+          );
+        } else {
+          toast({
+            title: "No Agent Wallet Found",
+            description: deployResult.error || "Unknown error occurred",
+            variant: "destructive",
+          });
+        }
 
         // Execute the transfer
         await signAndExec(transferTx);

@@ -8,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { DeploymentData } from "@/lib/types";
 import * as net from "net";
 import { DeployOracle } from "./deploy-oracle";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 // Environment variables
 const AGENT_REPO_URL =
@@ -179,6 +180,12 @@ export async function Deploy(deploymentData: DeploymentData) {
     // Create agent configuration file
     await createAgentConfig(agentDir, deploymentData.agentConfig);
 
+    // Generate a new wallet for the agent
+    const agentKeypair = Ed25519Keypair.generate();
+    const agentWalletAddress = agentKeypair.getPublicKey().toSuiAddress();
+
+    const agentWalletKey = agentKeypair.getSecretKey();
+
     // Create logs directory
     await fs.mkdir(path.join(agentDir, "logs"), { recursive: true });
 
@@ -186,10 +193,6 @@ export async function Deploy(deploymentData: DeploymentData) {
 
     // Build and start the agent
     const { port, pid } = await buildAndStartAgent(agentDir, agentId);
-
-    // Get agent wallet info from the deployment data
-    const { address: agentWalletAddress, privateKey: agentWalletKey } =
-      deploymentData.agentWallet || { address: "", privateKey: "" };
 
     // Create the database record
     const agent = await prisma.agent.create({
@@ -224,7 +227,7 @@ export async function Deploy(deploymentData: DeploymentData) {
       return {
         success: true,
         agentId: agent.id,
-        agentWallet: deploymentData.agentWallet,
+        agentWallet: agentWalletAddress,
         port,
         agentUrl,
         oracle: oracleResult,
@@ -236,7 +239,7 @@ export async function Deploy(deploymentData: DeploymentData) {
       return {
         success: true,
         agentId: agent.id,
-        agentWallet: deploymentData.agentWallet,
+        agentWallet: agentWalletAddress,
         port,
         agentUrl,
         oracle: {

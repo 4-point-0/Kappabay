@@ -34,13 +34,8 @@ export interface DeploymentData {
   onChainData: {
     agentObjectId: string;
     agentCapId: string;
-    adminCapId: string; // Added this
+    adminCapId: string;
     ownerWallet: string;
     txDigest: string;
-  };
-  // We can add agent wallet information here
-  agentWallet?: {
-    address: string;
-    privateKey: string; // Will be encrypted in the database
   };
 }
