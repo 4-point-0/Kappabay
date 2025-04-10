@@ -6,6 +6,8 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { DeploymentData } from "@/lib/types";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { toBase64 } from "@mysten/sui/utils";
 
 // Environment variables
 const AGENT_REPO_URL =
@@ -63,27 +65,30 @@ export async function Deploy(deploymentData: DeploymentData) {
     // Build agent
     await buildAgent(agentDir);
 
-    // Extract on-chain deployment details
-    const { agentObjectId, agentCapId, ownerWallet, txDigest } =
-      deploymentData.onChainData;
+    // Get agent wallet info from the deployment data
+    const { address: agentWalletAddress, privateKey: agentWalletKey } =
+      deploymentData.agentWallet || { address: "", privateKey: "" };
 
-    // Store agent in database
+    // Create the database record
     const agent = await prisma.agent.create({
       data: {
         id: agentId,
         name: deploymentData.agentConfig.name,
-        objectId: agentObjectId,
-        capId: agentCapId,
-        ownerWallet: ownerWallet,
-        txDigest: txDigest,
+        objectId: deploymentData.onChainData.agentObjectId,
+        capId: deploymentData.onChainData.agentCapId,
+        ownerWallet: deploymentData.onChainData.ownerWallet,
+        txDigest: deploymentData.onChainData.txDigest,
         config: deploymentData.agentConfig as any,
         status: "ACTIVE",
+        agentWalletAddress, // Add the new fields
+        agentWalletKey,
       },
     });
 
     return {
       success: true,
       agentId: agent.id,
+      agentWallet: deploymentData.agentWallet,
     };
   } catch (error) {
     console.error("Agent backend deployment failed:", error);

@@ -1,40 +1,53 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Badge } from "@/components/ui/badge"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react"
-import PluginSelector from "@/components/plugin-selector"
-import { defaultAgentConfig } from "@/lib/default-config"
-import type { AgentConfig } from "@/lib/types"
-import { useWallet } from "@suiet/wallet-kit"
-import { Deploy } from "@/lib/actions/deploy"
-import { Transaction } from "@mysten/sui/transactions"
-import { serializeAgentConfig } from "@/lib/utils"
-import { bcs } from "@mysten/sui/bcs"
-import { toast } from "@/hooks/use-toast"
+import { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react";
+import PluginSelector from "@/components/plugin-selector";
+import { defaultAgentConfig } from "@/lib/default-config";
+import type { AgentConfig } from "@/lib/types";
+import { useWallet } from "@suiet/wallet-kit";
+import { Deploy } from "@/lib/actions/deploy";
+import { Transaction } from "@mysten/sui/transactions";
+import { serializeAgentConfig } from "@/lib/utils";
+import { bcs } from "@mysten/sui/bcs";
+import { toast } from "@/hooks/use-toast";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 export default function AgentDeployer() {
-  const wallet = useWallet()
-  const { connected, account, disconnect} = useWallet()
-  const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig)
-  const fileInputRef = useRef<HTMLInputElement>(null)
- 
+  const wallet = useWallet();
+  const { connected, account, disconnect } = useWallet();
+  const [agentConfig, setAgentConfig] =
+    useState<AgentConfig>(defaultAgentConfig);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleChange = (field: string, value: any) => {
     setAgentConfig((prev) => ({
       ...prev,
       [field]: value,
-    }))
-  }
+    }));
+  };
 
   const handleNestedChange = (parent: string, field: string, value: any) => {
     setAgentConfig((prev) => ({
@@ -43,133 +56,224 @@ export default function AgentDeployer() {
         ...prev[parent],
         [field]: value,
       },
-    }))
-  }
+    }));
+  };
 
   const handleArrayChange = (field: string, index: number, value: string) => {
     setAgentConfig((prev) => {
-      const newArray = [...prev[field]]
-      newArray[index] = value
+      const newArray = [...prev[field]];
+      newArray[index] = value;
       return {
         ...prev,
         [field]: newArray,
-      }
-    })
-  }
+      };
+    });
+  };
 
   const handleArrayAdd = (field: string) => {
     setAgentConfig((prev) => ({
       ...prev,
       [field]: [...prev[field], ""],
-    }))
-  }
+    }));
+  };
 
   const handleArrayRemove = (field: string, index: number) => {
     setAgentConfig((prev) => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index),
-    }))
-  }
+    }));
+  };
 
- 
-  
   const exportConfig = () => {
-    const dataStr = JSON.stringify(agentConfig, null, 2)
-    const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr)
+    const dataStr = JSON.stringify(agentConfig, null, 2);
+    const dataUri =
+      "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
 
-    const exportFileDefaultName = `${agentConfig.name.toLowerCase().replace(/\s+/g, "-")}-config.json`
+    const exportFileDefaultName = `${agentConfig.name
+      .toLowerCase()
+      .replace(/\s+/g, "-")}-config.json`;
 
-    const linkElement = document.createElement("a")
-    linkElement.setAttribute("href", dataUri)
-    linkElement.setAttribute("download", exportFileDefaultName)
-    linkElement.click()
-  }
+    const linkElement = document.createElement("a");
+    linkElement.setAttribute("href", dataUri);
+    linkElement.setAttribute("download", exportFileDefaultName);
+    linkElement.click();
+  };
 
   const importConfig = () => {
-    fileInputRef.current?.click()
-  }
+    fileInputRef.current?.click();
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const config = JSON.parse(e.target?.result as string)
-        setAgentConfig(config)
+        const config = JSON.parse(e.target?.result as string);
+        setAgentConfig(config);
       } catch (error) {
-        console.error("Error parsing JSON:", error)
-        alert("Invalid JSON file")
+        console.error("Error parsing JSON:", error);
+        alert("Invalid JSON file");
       }
-    }
-    reader.readAsText(file)
-  }
+    };
+    reader.readAsText(file);
+  };
 
   const handleDeploy = async () => {
-    //alert("Deploying agent: " + JSON.stringify(agentConfig, null, 2))
+    const tx = new Transaction();
 
-    // PTB here
-    const tx = new Transaction()
-    
-    const [coin] = tx.splitCoins(tx.gas, [1 * 10000000])
+    const [coin] = tx.splitCoins(tx.gas, [1 * 10000000]);
 
     tx.moveCall({
       target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
       arguments: [
-        tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(Buffer.from(serializeAgentConfig(agentConfig))))),
+        tx.pure(
+          bcs
+            .vector(bcs.u8())
+            .serialize(
+              Array.from(Buffer.from(serializeAgentConfig(agentConfig)))
+            )
+        ),
         coin,
-        tx.pure.string("a"),
-         
+        tx.pure.string(
+          agentConfig.image || "https://example.com/placeholder.png"
+        ),
       ],
     });
-    
 
-    console.log(process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID)
-    console.log(serializeAgentConfig(agentConfig))
-    console.log(wallet)
-    console.log(coin)
-    console.log(tx)
     try {
-       
-        const result = await wallet.signAndExecuteTransaction({
-          transaction: tx,
-        })
-        
-        console.log("Transaction result:", result)
-        
-      
+      const txResult = await wallet.signAndExecuteTransaction({
+        transaction: tx,
+      });
+
+      console.log("Transaction result:", txResult);
+
+      // Extract object IDs from transaction result
+      let agentObjectId = "";
+      let agentCapId = "";
+      let adminCapId = "";
+
+      // The structure of txResult can vary between SDK versions
+      // Let's inspect the structure more carefully
+      const txResultStr = JSON.stringify(txResult);
+      console.log("Full transaction result:", txResultStr);
+
+      // Try to find the created objects by parsing the JSON string
+      // This is a more robust approach that doesn't depend on the exact structure
+      const createdMatches = [
+        ...txResultStr.matchAll(
+          /"objectType"\s*:\s*"([^"]+)"\s*,\s*"objectId"\s*:\s*"([^"]+)"/g
+        ),
+      ];
+
+      for (const match of createdMatches) {
+        const [_, objectType, objectId] = match;
+
+        if (objectType.includes("::agent::Agent")) {
+          agentObjectId = objectId;
+        } else if (objectType.includes("::agent::AgentCap")) {
+          agentCapId = objectId;
+        } else if (objectType.includes("::agent::AdminCap")) {
+          adminCapId = objectId;
+        }
+      }
+
+      // If we still couldn't find the objects, try another approach
+      if (!agentObjectId || !agentCapId || !adminCapId) {
+        // Attempt to get the digest and then use the Sui explorer API or blockchain API
+        const txDigest = txResult.digest;
+        console.error(
+          "Could not extract objects directly. Transaction digest:",
+          txDigest
+        );
+        toast({
+          title: "Deployment Warning",
+          description:
+            "Could not automatically extract object IDs. Please check the console and input them manually.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate a new wallet for the agent
+      const agentKeypair = Ed25519Keypair.generate();
+      const agentAddress = agentKeypair.getPublicKey().toSuiAddress();
+      const agentPrivateKey = Buffer.from(
+        agentKeypair.getSecretKey(),
+        "hex"
+      ).toString("base64");
+
+      // Call Deploy server action
+      const deployResult = await Deploy({
+        agentConfig,
+        onChainData: {
+          agentObjectId,
+          agentCapId,
+          adminCapId,
+          ownerWallet: account?.address || "",
+          txDigest: txResult.digest,
+        },
+        agentWallet: {
+          address: agentAddress,
+          privateKey: agentPrivateKey,
+        },
+      });
+
+      if (deployResult.success) {
+        // Create a second transaction to transfer the caps to the agent wallet
+        const transferTx = new Transaction();
+
+        // Transfer AdminCap
+        transferTx.transferObjects(
+          [transferTx.object(adminCapId)],
+          transferTx.pure.address(agentAddress)
+        );
+
+        // Execute the transfer
+        await wallet.signAndExecuteTransaction({
+          transaction: transferTx,
+        });
+
+        toast({
+          title: "Agent deployed successfully",
+          description: `Agent ID: ${deployResult.agentId}`,
+        });
+      } else {
+        toast({
+          title: "Backend Deployment Error",
+          description: deployResult.error || "Unknown error occurred",
+          variant: "destructive",
+        });
+      }
     } catch (error: unknown) {
       toast({
         title: `${error}`,
         description: "Failed to deploy",
         variant: "destructive",
-      })
-      console.error(error)
-      throw error
+      });
+      console.error(error);
     }
-
-
-    
-
-    // Call Deploy() server action after PTB is successful
-    Deploy(/*AgentObjID, AgentCapID, wallet   */);
-
-
-  }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div className="space-y-1">
           <h2 className="text-2xl font-semibold">Agent Configuration</h2>
-          <p className="text-sm text-gray-500">Configure your agent parameters</p>
+          <p className="text-sm text-gray-500">
+            Configure your agent parameters
+          </p>
         </div>
         <div className="flex space-x-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" className="opacity-50 cursor-not-allowed" disabled>
+                <Button
+                  variant="outline"
+                  className="opacity-50 cursor-not-allowed"
+                  disabled
+                >
                   <Wand2 className="mr-2 h-4 w-4" />
                   AI Assist
                 </Button>
@@ -188,7 +292,13 @@ export default function AgentDeployer() {
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".json" className="hidden" />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json"
+            className="hidden"
+          />
         </div>
       </div>
 
@@ -219,7 +329,9 @@ export default function AgentDeployer() {
                   <Label htmlFor="modelProvider">Model Provider</Label>
                   <Select
                     value={agentConfig.modelProvider}
-                    onValueChange={(value) => handleChange("modelProvider", value)}
+                    onValueChange={(value) =>
+                      handleChange("modelProvider", value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select model provider" />
@@ -250,16 +362,26 @@ export default function AgentDeployer() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Select
                     value={agentConfig.settings.voice.model}
-                    onValueChange={(value) => handleNestedChange("settings", "voice", { model: value })}
+                    onValueChange={(value) =>
+                      handleNestedChange("settings", "voice", { model: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select voice model" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="en_US-male-medium">US Male (Medium)</SelectItem>
-                      <SelectItem value="en_US-female-medium">US Female (Medium)</SelectItem>
-                      <SelectItem value="en_UK-male-medium">UK Male (Medium)</SelectItem>
-                      <SelectItem value="en_UK-female-medium">UK Female (Medium)</SelectItem>
+                      <SelectItem value="en_US-male-medium">
+                        US Male (Medium)
+                      </SelectItem>
+                      <SelectItem value="en_US-female-medium">
+                        US Female (Medium)
+                      </SelectItem>
+                      <SelectItem value="en_UK-male-medium">
+                        UK Male (Medium)
+                      </SelectItem>
+                      <SelectItem value="en_UK-female-medium">
+                        UK Female (Medium)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -275,18 +397,31 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Bio</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("bio")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("bio")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 {agentConfig.bio.map((item, index) => (
-                  <div key={`bio-${index}`} className="flex items-center space-x-2">
+                  <div
+                    key={`bio-${index}`}
+                    className="flex items-center space-x-2"
+                  >
                     <Input
                       value={item}
-                      onChange={(e) => handleArrayChange("bio", index, e.target.value)}
+                      onChange={(e) =>
+                        handleArrayChange("bio", index, e.target.value)
+                      }
                       placeholder="Enter bio line"
                     />
-                    <Button variant="ghost" size="icon" onClick={() => handleArrayRemove("bio", index)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleArrayRemove("bio", index)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -297,18 +432,31 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Lore</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("lore")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("lore")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 {agentConfig.lore.map((item, index) => (
-                  <div key={`lore-${index}`} className="flex items-center space-x-2">
+                  <div
+                    key={`lore-${index}`}
+                    className="flex items-center space-x-2"
+                  >
                     <Input
                       value={item}
-                      onChange={(e) => handleArrayChange("lore", index, e.target.value)}
+                      onChange={(e) =>
+                        handleArrayChange("lore", index, e.target.value)
+                      }
                       placeholder="Enter lore line"
                     />
-                    <Button variant="ghost" size="icon" onClick={() => handleArrayRemove("lore", index)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleArrayRemove("lore", index)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -319,18 +467,31 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Knowledge</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("knowledge")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("knowledge")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 {agentConfig.knowledge.map((item, index) => (
-                  <div key={`knowledge-${index}`} className="flex items-center space-x-2">
+                  <div
+                    key={`knowledge-${index}`}
+                    className="flex items-center space-x-2"
+                  >
                     <Input
                       value={item}
-                      onChange={(e) => handleArrayChange("knowledge", index, e.target.value)}
+                      onChange={(e) =>
+                        handleArrayChange("knowledge", index, e.target.value)
+                      }
                       placeholder="Enter knowledge line"
                     />
-                    <Button variant="ghost" size="icon" onClick={() => handleArrayRemove("knowledge", index)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleArrayRemove("knowledge", index)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -341,13 +502,20 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Topics</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("topics")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("topics")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {agentConfig.topics.map((topic, index) => (
-                    <Badge key={`topic-${index}`} className="flex items-center gap-1 px-3 py-1">
+                    <Badge
+                      key={`topic-${index}`}
+                      className="flex items-center gap-1 px-3 py-1"
+                    >
                       {topic}
                       <Button
                         variant="ghost"
@@ -364,9 +532,13 @@ export default function AgentDeployer() {
                     placeholder="Add topic"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && e.currentTarget.value) {
-                        handleArrayAdd("topics")
-                        handleArrayChange("topics", agentConfig.topics.length, e.currentTarget.value)
-                        e.currentTarget.value = ""
+                        handleArrayAdd("topics");
+                        handleArrayChange(
+                          "topics",
+                          agentConfig.topics.length,
+                          e.currentTarget.value
+                        );
+                        e.currentTarget.value = "";
                       }
                     }}
                   />
@@ -377,13 +549,20 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Adjectives</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("adjectives")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("adjectives")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {agentConfig.adjectives.map((adj, index) => (
-                    <Badge key={`adj-${index}`} className="flex items-center gap-1 px-3 py-1">
+                    <Badge
+                      key={`adj-${index}`}
+                      className="flex items-center gap-1 px-3 py-1"
+                    >
                       {adj}
                       <Button
                         variant="ghost"
@@ -400,9 +579,13 @@ export default function AgentDeployer() {
                     placeholder="Add adjective"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && e.currentTarget.value) {
-                        handleArrayAdd("adjectives")
-                        handleArrayChange("adjectives", agentConfig.adjectives.length, e.currentTarget.value)
-                        e.currentTarget.value = ""
+                        handleArrayAdd("adjectives");
+                        handleArrayChange(
+                          "adjectives",
+                          agentConfig.adjectives.length,
+                          e.currentTarget.value
+                        );
+                        e.currentTarget.value = "";
                       }
                     }}
                   />
@@ -433,12 +616,14 @@ export default function AgentDeployer() {
                               content: { text: "" },
                             },
                             {
-                              user: agentConfig.name.toLowerCase().replace(/\s+/g, "-"),
+                              user: agentConfig.name
+                                .toLowerCase()
+                                .replace(/\s+/g, "-"),
                               content: { text: "" },
                             },
                           ],
                         ],
-                      }))
+                      }));
                     }}
                   >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add Example
@@ -446,17 +631,24 @@ export default function AgentDeployer() {
                 </div>
 
                 {agentConfig.messageExamples.map((example, exampleIndex) => (
-                  <div key={`example-${exampleIndex}`} className="border rounded-md p-4 space-y-3">
+                  <div
+                    key={`example-${exampleIndex}`}
+                    className="border rounded-md p-4 space-y-3"
+                  >
                     <div className="flex justify-between items-center">
-                      <h4 className="font-medium">Example {exampleIndex + 1}</h4>
+                      <h4 className="font-medium">
+                        Example {exampleIndex + 1}
+                      </h4>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                           setAgentConfig((prev) => ({
                             ...prev,
-                            messageExamples: prev.messageExamples.filter((_, i) => i !== exampleIndex),
-                          }))
+                            messageExamples: prev.messageExamples.filter(
+                              (_, i) => i !== exampleIndex
+                            ),
+                          }));
                         }}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -464,23 +656,40 @@ export default function AgentDeployer() {
                     </div>
 
                     {example.map((message, messageIndex) => (
-                      <div key={`message-${exampleIndex}-${messageIndex}`} className="space-y-2">
+                      <div
+                        key={`message-${exampleIndex}-${messageIndex}`}
+                        className="space-y-2"
+                      >
                         <div className="flex items-center space-x-2">
-                          <Badge variant={message.user === "{{user1}}" ? "outline" : "default"}>
+                          <Badge
+                            variant={
+                              message.user === "{{user1}}"
+                                ? "outline"
+                                : "default"
+                            }
+                          >
                             {message.user === "{{user1}}" ? "User" : "Agent"}
                           </Badge>
                         </div>
                         <Textarea
                           value={message.content.text}
                           onChange={(e) => {
-                            const newExamples = [...agentConfig.messageExamples]
-                            newExamples[exampleIndex][messageIndex].content.text = e.target.value
+                            const newExamples = [
+                              ...agentConfig.messageExamples,
+                            ];
+                            newExamples[exampleIndex][
+                              messageIndex
+                            ].content.text = e.target.value;
                             setAgentConfig((prev) => ({
                               ...prev,
                               messageExamples: newExamples,
-                            }))
+                            }));
                           }}
-                          placeholder={message.user === "{{user1}}" ? "Enter user message" : "Enter agent response"}
+                          placeholder={
+                            message.user === "{{user1}}"
+                              ? "Enter user message"
+                              : "Enter agent response"
+                          }
                           className="min-h-[80px]"
                         />
                       </div>
@@ -493,18 +702,31 @@ export default function AgentDeployer() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label>Post Examples</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleArrayAdd("postExamples")}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleArrayAdd("postExamples")}
+                  >
                     <PlusCircle className="h-4 w-4 mr-1" /> Add
                   </Button>
                 </div>
                 {agentConfig.postExamples.map((item, index) => (
-                  <div key={`post-${index}`} className="flex items-center space-x-2">
+                  <div
+                    key={`post-${index}`}
+                    className="flex items-center space-x-2"
+                  >
                     <Textarea
                       value={item}
-                      onChange={(e) => handleArrayChange("postExamples", index, e.target.value)}
+                      onChange={(e) =>
+                        handleArrayChange("postExamples", index, e.target.value)
+                      }
                       placeholder="Enter post example"
                     />
-                    <Button variant="ghost" size="icon" onClick={() => handleArrayRemove("postExamples", index)}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleArrayRemove("postExamples", index)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -535,13 +757,16 @@ export default function AgentDeployer() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">All Contexts</h4>
                     {agentConfig.style.all.map((item, index) => (
-                      <div key={`style-all-${index}`} className="flex items-center space-x-2 mb-2">
+                      <div
+                        key={`style-all-${index}`}
+                        className="flex items-center space-x-2 mb-2"
+                      >
                         <Input
                           value={item}
                           onChange={(e) => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.all[index] = e.target.value
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.all[index] = e.target.value;
+                            handleChange("style", newStyle);
                           }}
                           placeholder="Enter style guideline"
                         />
@@ -549,9 +774,11 @@ export default function AgentDeployer() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.all = newStyle.all.filter((_, i) => i !== index)
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.all = newStyle.all.filter(
+                              (_, i) => i !== index
+                            );
+                            handleChange("style", newStyle);
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -562,9 +789,9 @@ export default function AgentDeployer() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const newStyle = { ...agentConfig.style }
-                        newStyle.all = [...newStyle.all, ""]
-                        handleChange("style", newStyle)
+                        const newStyle = { ...agentConfig.style };
+                        newStyle.all = [...newStyle.all, ""];
+                        handleChange("style", newStyle);
                       }}
                     >
                       <PlusCircle className="h-4 w-4 mr-1" /> Add
@@ -574,13 +801,16 @@ export default function AgentDeployer() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">Chat Style</h4>
                     {agentConfig.style.chat.map((item, index) => (
-                      <div key={`style-chat-${index}`} className="flex items-center space-x-2 mb-2">
+                      <div
+                        key={`style-chat-${index}`}
+                        className="flex items-center space-x-2 mb-2"
+                      >
                         <Input
                           value={item}
                           onChange={(e) => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.chat[index] = e.target.value
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.chat[index] = e.target.value;
+                            handleChange("style", newStyle);
                           }}
                           placeholder="Enter chat style guideline"
                         />
@@ -588,9 +818,11 @@ export default function AgentDeployer() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.chat = newStyle.chat.filter((_, i) => i !== index)
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.chat = newStyle.chat.filter(
+                              (_, i) => i !== index
+                            );
+                            handleChange("style", newStyle);
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -601,9 +833,9 @@ export default function AgentDeployer() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const newStyle = { ...agentConfig.style }
-                        newStyle.chat = [...newStyle.chat, ""]
-                        handleChange("style", newStyle)
+                        const newStyle = { ...agentConfig.style };
+                        newStyle.chat = [...newStyle.chat, ""];
+                        handleChange("style", newStyle);
                       }}
                     >
                       <PlusCircle className="h-4 w-4 mr-1" /> Add
@@ -613,13 +845,16 @@ export default function AgentDeployer() {
                   <div>
                     <h4 className="text-sm font-medium mb-2">Post Style</h4>
                     {agentConfig.style.post.map((item, index) => (
-                      <div key={`style-post-${index}`} className="flex items-center space-x-2 mb-2">
+                      <div
+                        key={`style-post-${index}`}
+                        className="flex items-center space-x-2 mb-2"
+                      >
                         <Input
                           value={item}
                           onChange={(e) => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.post[index] = e.target.value
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.post[index] = e.target.value;
+                            handleChange("style", newStyle);
                           }}
                           placeholder="Enter post style guideline"
                         />
@@ -627,9 +862,11 @@ export default function AgentDeployer() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            const newStyle = { ...agentConfig.style }
-                            newStyle.post = newStyle.post.filter((_, i) => i !== index)
-                            handleChange("style", newStyle)
+                            const newStyle = { ...agentConfig.style };
+                            newStyle.post = newStyle.post.filter(
+                              (_, i) => i !== index
+                            );
+                            handleChange("style", newStyle);
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -640,9 +877,9 @@ export default function AgentDeployer() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const newStyle = { ...agentConfig.style }
-                        newStyle.post = [...newStyle.post, ""]
-                        handleChange("style", newStyle)
+                        const newStyle = { ...agentConfig.style };
+                        newStyle.post = [...newStyle.post, ""];
+                        handleChange("style", newStyle);
                       }}
                     >
                       <PlusCircle className="h-4 w-4 mr-1" /> Add
@@ -661,5 +898,5 @@ export default function AgentDeployer() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
