@@ -14,16 +14,19 @@ datasource db {
 }
 
 model Agent {
-  id            String    @id @default(uuid())
-  name          String
-  objectId      String    @unique
-  capId         String    @unique
-  ownerWallet   String
-  txDigest      String
-  config        Json
-  status        String    @default("INACTIVE")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  billingStatus String    @default("ACTIVE")
-  lastBilled    DateTime?
+  id               String    @id @default(uuid())
+  name             String
+  objectId         String    @unique
+  capId            String    @unique
+  ownerWallet      String
+  txDigest         String
+  config           Json
+  status           String    @default("INACTIVE")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  billingStatus    String    @default("ACTIVE")
+  lastBilled       DateTime?
+  // Add these new fields
+  agentWalletAddress String?
+  agentWalletKey     String?  // Will be encrypted
 }
