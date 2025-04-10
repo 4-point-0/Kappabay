@@ -114,7 +114,13 @@ async function buildAndStartAgent(
   // Start the agent using PM2
   await new Promise<void>((resolve, reject) => {
     exec(
-      `cd ${agentDir} && pm2 start "SERVER_PORT=${port} pnpm start" --name="agent-${agentId}" --log="${agentDir}/logs/agent.log"`,
+      `cd ${agentDir} && pm2 start pnpm --name="agent-${agentId}" --log="${agentDir}/logs/agent.log" -- start -- --characters=/characters/agent.json`,
+      {
+        env: {
+          ...process.env,
+          SERVER_PORT: port.toString(),
+        },
+      },
       (error) => {
         if (error) {
           reject(error);
