@@ -2,7 +2,7 @@ import { fetcher } from "./fetcher";
 import type { UUID, Character } from "@elizaos/core";
 
 export const apiClient = {
-	sendMessage: (agentId: string, message: string, walletAddress: string, selectedFile?: File | null) => {
+	sendMessage: (agentId: string, message: string, walletAddress: string, selectedFile?: File | null, port?: number) => {
 		const formData = new FormData();
 		formData.append("text", message);
 		formData.append("user", "user");
@@ -15,6 +15,7 @@ export const apiClient = {
 			url: `/${agentId}/message`,
 			method: "POST",
 			body: formData,
+			port: port || 3000,
 		});
 	},
 	getAgents: () => fetcher({ url: "/agents" }),

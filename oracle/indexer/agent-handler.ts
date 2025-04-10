@@ -14,6 +14,7 @@ type PromptCreatedEvent = {
   objectId: string;
   sender: string;
   question: string;
+  walletAddress: string;
   callback?: string;
 };
 
@@ -41,13 +42,31 @@ export const handleAgentPromptCreated = async (
       timestamp: new Date(Number(timestamp) || 112312312),
     };
 
+    // get the port using the data.walletAddress
+    const response = await fetch(`${process.env.LAUNCHPAD_URL || "http://localhost:3000"}/api/get-agent-by-wallet?walletAddress=${data?.walletAddress}`)
+
+    const agentInfo = await response.json();
+    if (agentInfo.error) {
+      console.error("Failed to get agent info:", agentInfo.error);
+      return;
+    }
+    // Extract the port from the agentInfo
+    const { port } = agentInfo;
+
+    // Check if port is available, if it is not available, log an error
+    if (!port) {
+      console.error("Failed to get agent port:", agentInfo);
+      return;
+    }
+
     try {
       // call the agent-client API
       const response = await apiClient.sendMessage(
         CONFIG.AGENT_ID,
         data?.question,
         data?.sender,
-        null
+        null,
+        port
       );
 
       if (data?.callback) {
