@@ -33,7 +33,7 @@ async function cloneAgentRepo(agentId: string): Promise<string> {
       }
 
       try {
-        await fs.cp(path.join(tempDir, "eliza-kappabay-agent"), agentDir, {
+        await fs.cp(path.join(tempDir, "."), agentDir, {
           recursive: true,
         });
 
@@ -102,13 +102,16 @@ async function buildAndStartAgent(
 
   // Build the agent
   await new Promise<void>((resolve, reject) => {
-    exec(`cd ${agentDir} && pnpm install && pnpm build`, (error) => {
-      if (error) {
-        reject(error);
-        return;
+    exec(
+      `cd ${agentDir} && pnpm install --no-frozen-lockfile && pnpm build`,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
       }
-      resolve();
-    });
+    );
   });
 
   // Start the agent using PM2
