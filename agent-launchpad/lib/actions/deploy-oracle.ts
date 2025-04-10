@@ -217,14 +217,14 @@ export async function DeployOracle(
 
     // Clone oracle repository
     const oracleDir = await cloneOracleRepo(agentId);
-
+    const packageId= process.env.NEXT_PUBLIC_PACKAGE_ID || '0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170';
     // Create .env file with agent-specific configuration
     await createOracleEnvFile(
       oracleDir,
       agentId,
       agentUrl,
       agent.txDigest || "2gZwa7szKotFxBeLrng12p9rbtVDqXiu7HbbWdTrbZ6a",
-      "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
+      packageId,
       NETWORK,
       privateSeed,
       oraclePort
