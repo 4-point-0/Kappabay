@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 
 // Constants
 const PACKAGE_ID =
-  "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170";
+  "0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d";
 const CLOCK_ID = "0x6";
 const RANDOM_ID = "0x8";
 const GAME_DURATION_HOURS = 48; // Game duration in hours

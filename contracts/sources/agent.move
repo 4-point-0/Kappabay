@@ -32,7 +32,8 @@ module nft_template::agent {
         question: String,
         sender: address,
         callback: String,
-        objectId: ID
+        objectId: ID,
+        walletAddress: address
     }
 
     public struct ResponsePopulated has copy, drop {
@@ -146,7 +147,8 @@ module nft_template::agent {
             question,
             sender,
             callback: utf8(b""),
-            objectId: object::id(&prompt)
+            objectId: object::id(&prompt),
+            walletAddress: agent_wallet
         });
         
         // Transfer prompt to agent address for processing
@@ -176,7 +178,8 @@ module nft_template::agent {
             question,
             sender,
             callback,
-            objectId: object::id(&prompt)
+            objectId: object::id(&prompt),
+            walletAddress: agent_wallet
         });
         
         // Transfer prompt to agent address for processing
