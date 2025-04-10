@@ -4,12 +4,51 @@ import { exec } from "child_process";
 import fs from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
+import * as net from "net";
 
 // Environment variables
 const ORACLE_REPO_URL =
   process.env.ORACLE_REPO_URL || "https://github.com/4-point-0/Kappabay.git";
 const ORACLE_BASE_DIR = process.env.ORACLE_BASE_DIR || "./oracles";
 const NETWORK = process.env.NETWORK || "testnet";
+
+// Find available port
+async function findAvailablePort(start: number, end: number): Promise<number> {
+  for (let port = start; port <= end; port++) {
+    try {
+      // Check if port is in use
+      const inUse = await new Promise<boolean>((resolve) => {
+        const server = net
+          .createServer()
+          .once("error", (err: any) => {
+            // If error is not EADDRINUSE, it might be another issue
+            resolve(err.code !== "EADDRINUSE" ? false : true);
+          })
+          .once("listening", () => {
+            server.close();
+            resolve(false);
+          })
+          .listen(port);
+      });
+
+      if (!inUse) {
+        // Additional check against database to ensure no agent is using this port
+        const existingAgent = await prisma.agent.findFirst({
+          where: { oraclePort: port },
+        });
+
+        if (!existingAgent) {
+          return port;
+        }
+      }
+    } catch (error) {
+      // Continue to next port if there's an error
+      continue;
+    }
+  }
+
+  throw new Error(`No available ports found between ${start} and ${end}`);
+}
 
 // Function to clone oracle repo and extract specific folder
 async function cloneOracleRepo(agentId: string): Promise<string> {
@@ -45,19 +84,19 @@ async function cloneOracleRepo(agentId: string): Promise<string> {
   });
 }
 
-// Function to create .env file
-async function createEnvFile(
+// Function to create .env file for oracle
+async function createOracleEnvFile(
   oracleDir: string,
   agentId: string,
-  baseUrl: string = "http://192.168.12.89:3000",
-  transactionDigest: string = "2gZwa7szKotFxBeLrng12p9rbtVDqXiu7HbbWdTrbZ6a",
+  agentUrl: string,
+  txDigest: string,
   packageId: string = "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
   network: string = "testnet",
-  privateSeed: string = "your_private_seed_here",
-  port: number = 3000
+  privateSeed: string,
+  port: number
 ): Promise<void> {
-  const envContent = `BASE_URL='${baseUrl}'
-INITIAL_TRANSACTION_DIGEST='${transactionDigest}'
+  const envContent = `BASE_URL='${agentUrl}'
+INITIAL_TRANSACTION_DIGEST='${txDigest}'
 PACKAGE_ID='${packageId}'
 NETWORK='${network}'
 AGENT_ID='${agentId}'
@@ -69,11 +108,68 @@ PORT='${port}'
   await fs.writeFile(envPath, envContent);
 }
 
+// Function to setup and start oracle
+async function setupAndStartOracle(
+  oracleDir: string,
+  port: number
+): Promise<{ oraclePid: number }> {
+  // Create logs directory
+  await fs.mkdir(path.join(oracleDir, "logs"), { recursive: true });
+  
+  // Install dependencies
+  await new Promise<void>((resolve, reject) => {
+    exec(`cd ${oracleDir} && pnpm install`, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
+  // Setup database
+  await new Promise<void>((resolve, reject) => {
+    exec(`cd ${oracleDir} && pnpm db:setup:dev`, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
+  // Start the oracle as a background process
+  const process = await new Promise<{ pid: number }>((resolve, reject) => {
+    const command = `cd ${oracleDir} && pnpm dev > ${oracleDir}/logs/oracle.log 2>&1 &`;
+
+    exec(command, (error, stdout) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+
+      // Get the process ID - may need adjustment based on your system
+      exec(`pgrep -f "cd ${oracleDir} && pnpm dev"`, (err, pidOutput) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+
+        const pid = parseInt(pidOutput.trim(), 10);
+        resolve({ pid });
+      });
+    });
+  });
+
+  return {
+    oraclePid: process.pid,
+  };
+}
+
 export async function DeployOracle(
   agentId: string,
-  privateSeed: string,
   agentUrl: string,
-  port: number = 3000
+  privateSeed: string
 ) {
   try {
     // Get agent details from database
@@ -85,11 +181,14 @@ export async function DeployOracle(
       throw new Error(`Agent with ID ${agentId} not found`);
     }
 
-    // Clone oracle repository and get the oracle folder
+    // Find an available port for the oracle
+    const oraclePort = await findAvailablePort(5001, 7000);
+
+    // Clone oracle repository
     const oracleDir = await cloneOracleRepo(agentId);
 
     // Create .env file with agent-specific configuration
-    await createEnvFile(
+    await createOracleEnvFile(
       oracleDir,
       agentId,
       agentUrl,
@@ -97,14 +196,18 @@ export async function DeployOracle(
       "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
       NETWORK,
       privateSeed,
-      port,
+      oraclePort
     );
+
+    // Setup and start the oracle
+    const { oraclePid } = await setupAndStartOracle(oracleDir, oraclePort);
 
     // Update agent in database to include oracle information
     await prisma.agent.update({
       where: { id: agentId },
       data: {
-        oraclePath: oracleDir,
+        oraclePort,
+        oraclePid,
         hasOracle: true,
       },
     });
@@ -112,7 +215,11 @@ export async function DeployOracle(
     return {
       success: true,
       oraclePath: oracleDir,
+      oraclePort,
+      oracleUrl: `http://localhost:${oraclePort}`,
+      oraclePid,
     };
+    
   } catch (error) {
     console.error("Oracle deployment failed:", error);
     return {
