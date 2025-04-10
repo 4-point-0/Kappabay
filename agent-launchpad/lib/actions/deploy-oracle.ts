@@ -53,7 +53,8 @@ async function createEnvFile(
   transactionDigest: string = "2gZwa7szKotFxBeLrng12p9rbtVDqXiu7HbbWdTrbZ6a",
   packageId: string = "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
   network: string = "testnet",
-  privateSeed: string = "your_private_seed_here"
+  privateSeed: string = "your_private_seed_here",
+  port: number = 3000
 ): Promise<void> {
   const envContent = `BASE_URL='${baseUrl}'
 INITIAL_TRANSACTION_DIGEST='${transactionDigest}'
@@ -61,6 +62,7 @@ PACKAGE_ID='${packageId}'
 NETWORK='${network}'
 AGENT_ID='${agentId}'
 PRIVATE_SEED='${privateSeed}'
+PORT='${port}'
 `;
 
   const envPath = path.join(oracleDir, ".env");
@@ -70,7 +72,8 @@ PRIVATE_SEED='${privateSeed}'
 export async function DeployOracle(
   agentId: string,
   privateSeed: string,
-  agentUrl: string
+  agentUrl: string,
+  port: number = 3000
 ) {
   try {
     // Get agent details from database
@@ -93,7 +96,8 @@ export async function DeployOracle(
       agent.txDigest || "2gZwa7szKotFxBeLrng12p9rbtVDqXiu7HbbWdTrbZ6a",
       "0x0c4671462cacb9605bb026c4a1cae8745f04d0bbab6836c146235ef4bc8c2170",
       NETWORK,
-      privateSeed
+      privateSeed,
+      port,
     );
 
     // Update agent in database to include oracle information
