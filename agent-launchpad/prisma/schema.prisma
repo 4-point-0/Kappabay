@@ -30,4 +30,8 @@ model Agent {
   agentWalletKey     String?  // Will be encrypted
   port             Int?      // Port the agent is running on
   pid              Int?      // Process ID of the running agent
+   // Oracle related fields
+  hasOracle         Boolean   @default(false)
+  oraclePort        Int?      // Port the oracle is running on
+  oraclePid         Int?      // Process ID of the running oracle
 }

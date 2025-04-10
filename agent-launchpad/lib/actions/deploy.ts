@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { DeploymentData } from "@/lib/types";
 import * as net from "net";
+import { DeployOracle } from "./deploy-oracle";
 
 // Environment variables
 const AGENT_REPO_URL =
@@ -160,16 +161,47 @@ export async function Deploy(deploymentData: DeploymentData) {
         agentWalletKey,
         port,
         pid,
+        oraclePort: 0, // Set to 0 for now
       },
     });
+    
+    const agentUrl = `http://localhost:${port}`
+    
+    
+    // Deploy the Oracle using the separate function
+    try {
+      const oracleResult = await DeployOracle(
+        agentId,
+        agentUrl,
+        agentWalletKey // Using the agent wallet private key for the oracle
+      );
 
-    return {
-      success: true,
-      agentId: agent.id,
-      agentWallet: deploymentData.agentWallet,
-      port, // Return the port so it can be displayed to the user
-      agentUrl: `http://localhost:${port}`, // Add the full agent URL
-    };
+      // Return all details including oracle information
+      return {
+        success: true,
+        agentId: agent.id,
+        agentWallet: deploymentData.agentWallet,
+        port,
+        agentUrl,
+        oracle: oracleResult,
+      };
+    } catch (oracleError) {
+      console.error("Oracle deployment failed:", oracleError);
+      
+      // Return with agent details but note oracle failure
+      return {
+        success: true,
+        agentId: agent.id,
+        agentWallet: deploymentData.agentWallet,
+        port,
+        agentUrl,
+        oracle: {
+          success: false,
+          error: oracleError instanceof Error ? oracleError.message : "Unknown error during oracle deployment",
+        },
+      };
+    }
+
   } catch (error) {
     console.error("Agent backend deployment failed:", error);
     return {
