@@ -346,7 +346,7 @@ export default function AgentDeployer() {
                       <SelectValue placeholder="Select model provider" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="deepseek">OpenAI</SelectItem>
+                      <SelectItem value="deepseek">deepseek</SelectItem>
                       <SelectItem value="openai">Anthropic</SelectItem>
                       <SelectItem value="mistral">Mistral AI</SelectItem>
                       <SelectItem value="llama">Llama</SelectItem>
