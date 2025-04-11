@@ -76,7 +76,7 @@ async function findAvailablePort(start: number, end: number): Promise<number> {
 async function buildAndStartAgent(
   agentDir: string,
   agentId: string
-): Promise<{ port: number; pid: number }> {
+): Promise<{ port: number; portTerminal:number; pid: number }> {
   // First, find an available port
   const port = await findAvailablePort(3000, 5000);
 
@@ -95,6 +95,20 @@ async function buildAndStartAgent(
   await new Promise<void>((resolve, reject) => {
     exec(
       `cd ${agentDir} && SERVER_PORT=${port} pm2 start pnpm --name="agent-${agentId}" --log="${agentDir}/logs/agent.log" -- start`,
+      (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      }
+    );
+  });
+  const portTerminal = await findAvailablePort(7000, 9000);
+
+  await new Promise<void>((resolve, reject) => {
+    exec(
+      `cd ${agentDir} && pm2 start "SERVER_PORT=${port} pnpm start:client --port ${portTerminal}" --name="agentTerminal-${agentId}"`,
       (error) => {
         if (error) {
           reject(error);
@@ -123,7 +137,7 @@ async function buildAndStartAgent(
     });
   });
 
-  return { port, pid: processInfo.pid };
+  return { port, portTerminal, pid: processInfo.pid };
 }
 
 // Function to copy environment file
@@ -165,7 +179,7 @@ export async function Deploy(deploymentData: DeploymentData) {
     await copyEnvFile(agentDir);
 
     // Build and start the agent
-    const { port, pid } = await buildAndStartAgent(agentDir, agentId);
+    const { port, portTerminal, pid } = await buildAndStartAgent(agentDir, agentId);
 
     // Create the database record
     const agent = await prisma.agent.create({
@@ -186,13 +200,14 @@ export async function Deploy(deploymentData: DeploymentData) {
       },
     });
 
-    const agentUrl = `http://localhost:${port}`;
+    const agentUrl = `http://localhost:${portTerminal}`;
+    const apiAgentUrl = `http://localhost:${port}`;
 
     // Deploy the Oracle using the separate function
     try {
       const oracleResult = await DeployOracle(
         agentId,
-        agentUrl,
+        apiAgentUrl,
         agentWalletKey // Using the agent wallet private key for the oracle
       );
 
