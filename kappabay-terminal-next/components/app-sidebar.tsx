@@ -52,15 +52,19 @@ export function AppSidebar() {
 									{agents?.map((agent: { id: UUID; name: string }) => (
 										<SidebarMenuItem key={agent.id}>
 											<Link href={`/chat/${agent.id}`} passHref>
-												<SidebarMenuButton isActive={pathname?.includes(agent.id)}>
+												<SidebarMenuButton
+													isActive={pathname?.includes(agent.id)}
+													className="flex items-center justify-start w-full flex-grow"
+												>
 													<User />
-													<div className="flex flex-col items-center">
-														<span>{agent.name}</span>
+													<div className="flex flex-col items-center w-full">
+														<span className="text-center">{agent.name}</span>
 														<Image
 															src="/KappaBayTransparent.ico"
 															alt={`${agent.name} avatar`}
-															width={32}
-															height={32}
+															width={80} // 5em * 16px/em
+															height={80} // 5em * 16px/em
+															style={{ width: "5em", height: "5em" }}
 															className="mt-2 rounded-full"
 														/>
 													</div>
