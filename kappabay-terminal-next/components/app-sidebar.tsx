@@ -16,6 +16,7 @@ import {
 import { apiClient } from "@/lib/api";
 import type { UUID } from "@elizaos/core";
 import { User } from "lucide-react";
+import KappaBayAvatar from "@/assets/KappaBayTransparent.ico";
 import ConnectionStatus from "./connection-status";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -53,7 +54,14 @@ export function AppSidebar() {
 											<Link href={`/chat/${agent.id}`} passHref>
 												<SidebarMenuButton isActive={pathname?.includes(agent.id)}>
 													<User />
-													<span>{agent.name}</span>
+													<div className="flex flex-col items-center">
+														<span>{agent.name}</span>
+														<img
+															src={KappaBayAvatar}
+															alt={`${agent.name} avatar`}
+															className="w-8 h-8 mt-2 rounded-full"
+														/>
+													</div>
 												</SidebarMenuButton>
 											</Link>
 										</SidebarMenuItem>
