@@ -16,7 +16,6 @@ import {
 import { apiClient } from "@/lib/api";
 import type { UUID } from "@elizaos/core";
 import { User } from "lucide-react";
-import KappaBayAvatar from "@/assets/KappaBayTransparent.ico";
 import Image from "next/image";
 import ConnectionStatus from "./connection-status";
 import Link from "next/link";
@@ -58,7 +57,7 @@ export function AppSidebar() {
 													<div className="flex flex-col items-center">
 														<span>{agent.name}</span>
 														<Image
-															src={KappaBayAvatar}
+															src="/KappaBayTransparent.ico"
 															alt={`${agent.name} avatar`}
 															width={32}
 															height={32}
