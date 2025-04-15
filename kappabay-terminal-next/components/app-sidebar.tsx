@@ -65,7 +65,7 @@ export function AppSidebar() {
 															width={80} // 5em * 16px/em
 															height={80} // 5em * 16px/em
 															style={{ width: "5em", height: "5em" }}
-															className="mt-2 rounded-full"
+															className="mt-2 rounded-full  transition-transform duration-300 hover:scale-105 z-10"
 														/>
 													</div>
 												</SidebarMenuButton>
