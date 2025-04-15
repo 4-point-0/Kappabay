@@ -125,41 +125,6 @@ export default function Page({ agentId }: { agentId: UUID }) {
 		formRef.current?.reset();
 	};
 
-	const initialMessageSent = useRef(false);
-
-	useEffect(() => {
-		let timeoutId: NodeJS.Timeout | null = null;
-
-		if (!initialMessageSent.current) {
-			timeoutId = setTimeout(() => {
-				initialMessageSent.current = true;
-
-				const input = "Check the Hot Potato game status for my address.";
-				const newMessages = [
-					{
-						text: input,
-						user: "system",
-						isLoading: true,
-						createdAt: Date.now(),
-					},
-				];
-
-				queryClient.setQueryData(["messages", agentId], (old: ContentWithUser[] = []) => [...old, ...newMessages]);
-				sendMessageMutation.mutate({
-					message: input,
-					selectedFile: null,
-					walletAddress: currentAddress || "",
-				});
-			}, 500);
-		}
-
-		return () => {
-			if (timeoutId) {
-				clearTimeout(timeoutId); // Clean up the timeout if component unmounts before it fires
-			}
-		};
-	}, [agentId]);
-
 	useEffect(() => {
 		if (inputRef.current) {
 			inputRef.current.focus();
