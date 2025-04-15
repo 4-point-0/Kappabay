@@ -54,7 +54,7 @@ export function AppSidebar() {
 											<Link href={`/chat/${agent.id}`} passHref>
 												<SidebarMenuButton
 													isActive={pathname?.includes(agent.id)}
-													className="flex items-center justify-start w-full flex-grow"
+													className="flex items-center justify-start w-full flex-grow h-[10em]"
 												>
 													<User />
 													<div className="flex flex-col items-center w-full">
