@@ -3,52 +3,91 @@
 import { exec } from "child_process";
 import fs from "fs/promises";
 import path from "path";
+import crypto from "crypto";
+import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import { DeploymentData } from "@/lib/types";
 import * as net from "net";
 import { DeployOracle } from "./deploy-oracle";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { homedir } from "os";
 
-// Environment variables
-// AGENT_REPO_URL is still defined for backward compatibility but is no longer used in deployment.
-const AGENT_REPO_URL =
-  process.env.AGENT_REPO_URL || "https://github.com/elizaagent.git";
-const AGENT_BASE_DIR = process.env.AGENT_BASE_DIR || "./agents";
+// -----------------
+// Encryption Helpers
+// -----------------
 
-// Function to copy agent repo from a local path instead of cloning it from remote
-async function cloneAgentRepo(agentId: string): Promise<string> {
-  // Locate the local repository at ~/elizarepo
-  const localRepoPath = path.join(homedir(), "elizarepo");
-  const agentDir = path.join(AGENT_BASE_DIR, `${agentId}-agents`);
-
-  // Create the target directory if it does not exist
-  await fs.mkdir(agentDir, { recursive: true });
-  
-  // Copy the entire local repository into agentDir.
-  // This replaces the previous logic that copied a specific subfolder.
-  await fs.cp(localRepoPath, agentDir, { recursive: true });
-
-  return agentDir;
+function encrypt(text: string): string {
+  const algorithm = "aes-256-cbc";
+  const keyHex = process.env.ENCRYPTION_KEY;
+  if (!keyHex) {
+    throw new Error("ENCRYPTION_KEY environment variable not set.");
+  }
+  const key = Buffer.from(keyHex, "hex"); // Must be 32 bytes (64 hex characters)
+  const iv = crypto.randomBytes(16); // Initialization vector (16 bytes)
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+  const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
+  // Combine the IV with the encrypted text (separated by a colon)
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
 }
 
-// Function to create agent config file
-async function createAgentConfig(agentDir: string, config: any): Promise<void> {
-  const configPath = path.join(agentDir, "characters", "agent.json");
-  await fs.mkdir(path.join(agentDir, "characters"), { recursive: true });
-  await fs.writeFile(configPath, JSON.stringify(config, null, 2));
+function decrypt(text: string): string {
+  const algorithm = "aes-256-cbc";
+  const keyHex = process.env.ENCRYPTION_KEY;
+  if (!keyHex) {
+    throw new Error("ENCRYPTION_KEY environment variable not set.");
+  }
+  const key = Buffer.from(keyHex, "hex");
+  const [ivHex, encryptedHex] = text.split(":");
+  const iv = Buffer.from(ivHex, "hex");
+  const encryptedText = Buffer.from(encryptedHex, "hex");
+  const decipher = crypto.createDecipheriv(algorithm, key, iv);
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+  return decrypted.toString("utf8");
 }
+
+// -----------------
+// Docker Config for Agent JSON
+// -----------------
+
+/**
+ * Creates a Docker config from the agent configuration.
+ * The config will be mounted inside the container at /characters/agent.json.
+ * @param agentId A unique identifier for this agent
+ * @param agentConfig The agent configuration object
+ * @returns A promise resolving to the Docker config name
+ */
+async function createDockerConfigFromAgentConfig(agentId: string, agentConfig: any): Promise<string> {
+  const tmpDir = os.tmpdir();
+  const configFilePath = path.join(tmpDir, `agentconfig_${agentId}.json`);
+  const configContent = JSON.stringify(agentConfig, null, 2);
+  await fs.writeFile(configFilePath, configContent, { encoding: "utf8" });
+  const configName = `agent_config_${agentId}`;
+  await new Promise<void>((resolve, reject) => {
+    exec(`docker config create ${configName} ${configFilePath}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Docker config creation error:", stderr);
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+  await fs.unlink(configFilePath); // Clean up the temporary file
+  return configName;
+}
+
+// -----------------
+// Port Discovery Helper
+// -----------------
 
 async function findAvailablePort(start: number, end: number): Promise<number> {
   for (let port = start; port <= end; port++) {
     try {
-      // Check if port is in use
       const inUse = await new Promise<boolean>((resolve) => {
         const server = net
           .createServer()
           .once("error", (err: any) => {
-            resolve(err.code !== "EADDRINUSE" ? false : true);
+            resolve(err.code === "EADDRINUSE");
           })
           .once("listening", () => {
             server.close();
@@ -56,132 +95,113 @@ async function findAvailablePort(start: number, end: number): Promise<number> {
           })
           .listen(port);
       });
-
       if (!inUse) {
-        // Additional check against database to ensure no agent is using this port
         const existingAgent = await prisma.agent.findFirst({ where: { port } });
         if (!existingAgent) {
           return port;
         }
       }
     } catch (error) {
-      // Continue to next port if there's an error
       continue;
     }
   }
   throw new Error(`No available ports found between ${start} and ${end}`);
 }
 
-// Function to build agent
-async function buildAndStartAgent(
-  agentDir: string,
-  agentId: string
-): Promise<{ port: number; portTerminal:number; pid: number }> {
-  // First, find an available port
-  const port = await findAvailablePort(3000, 5000);
+// -----------------
+// Docker Service Deployment
+// -----------------
 
-  // Build the agent
+/**
+ * Builds and starts the agent as a Docker service using pre-built images.
+ * This deploys the container as a Docker service (Swarm mode) and injects both:
+ *   - A Docker secret for the wallet key (mounted at /run/secrets/WALLET_KEY)
+ *   - A Docker config for agent.json (mounted at /characters/agent.json)
+ * @param agentId The unique agent identifier
+ * @param walletKey The plain wallet key
+ * @param configName The name of the Docker config for agent.json
+ * @returns A promise resolving to deployment info, including host ports and service ID.
+ */
+async function buildAndStartAgentDocker(
+  agentId: string,
+  walletKey: string,
+  configName: string
+): Promise<{ port: number; portTerminal: number; serviceId: string }> {
+  // Assign available host ports for the container mappings.
+  const hostPortAPI = await findAvailablePort(3000, 5000);
+  const hostPortTerminal = await findAvailablePort(7000, 9000);
+
+  // Pre-built Docker image from your registry.
+  const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
+
+  // ----- Create the Docker secret for the wallet key -----
+  // Write the wallet key to a temporary file.
+  const tmpDir = os.tmpdir();
+  const secretFilePath = path.join(tmpDir, `walletkey_${agentId}.txt`);
+  await fs.writeFile(secretFilePath, walletKey, { encoding: "utf8" });
+  const secretName = `wallet_key_${agentId}`;
   await new Promise<void>((resolve, reject) => {
-    exec(`cd ${agentDir} && pnpm install && pnpm build`, (error) => {
+    exec(`docker secret create ${secretName} ${secretFilePath}`, (error, stdout, stderr) => {
       if (error) {
+        console.error("Docker secret creation error:", stderr);
         reject(error);
         return;
       }
       resolve();
     });
   });
+  await fs.unlink(secretFilePath); // Remove temporary file
 
-  // Start the agent using PM2
-  await new Promise<void>((resolve, reject) => {
-    exec(
-      `cd ${agentDir} && SERVER_PORT=${port} pm2 start pnpm --name="agent-${agentId}" --log="${agentDir}/logs/agent.log" -- start`,
-      (error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      }
-    );
-  });
-  const portTerminal = await findAvailablePort(7000, 9000);
+  // ----- Create the Docker service with port mappings, secret, and config -----
+  // The Docker config will be mounted at /characters/agent.json,
+  // and the Docker secret will be available at /run/secrets/WALLET_KEY.
+  const serviceCreateCmd =
+    `docker service create --name agent-${agentId} ` +
+    `--publish published=${hostPortAPI},target=3000 ` +
+    `--publish published=${hostPortTerminal},target=7000 ` +
+    `--secret source=${secretName},target=WALLET_KEY ` +
+    `--config source=${configName},target=/characters/agent.json ` +
+    `-e SERVER_PORT=3000 -e CLIENT_PORT=7000 ` +
+    `${AGENT_IMAGE}`;
 
-  await new Promise<void>((resolve, reject) => {
-    exec(
-      `cd ${agentDir} && pm2 start "SERVER_PORT=${port} pnpm start:client --port ${portTerminal}" --name="agentTerminal-${agentId}"`,
-      (error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      }
-    );
-  });
-
-  // Get the PM2 process info
-  const processInfo = await new Promise<{ pid: number }>((resolve, reject) => {
-    exec(`pm2 show agent-${agentId} --format json`, (error, stdout) => {
+  const serviceId: string = await new Promise((resolve, reject) => {
+    exec(serviceCreateCmd, (error, stdout, stderr) => {
       if (error) {
-        console.warn("Could not get PM2 process info, using default PID");
-        resolve({ pid: 0 });
+        console.error("Docker service creation error:", stderr);
+        reject(error);
         return;
       }
-      try {
-        const info = JSON.parse(stdout);
-        resolve({ pid: info.pid || 0 });
-      } catch (err) {
-        console.warn("Could not parse PM2 process info, using default PID");
-        resolve({ pid: 0 });
-      }
+      resolve(stdout.trim());
     });
   });
 
-  return { port, portTerminal, pid: processInfo.pid };
+  return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
 }
 
-// Function to copy environment file
-async function copyEnvFile(agentDir: string): Promise<void> {
-  try {
-    const sourceEnvPath = path.resolve(".env.agent");
-    const destEnvPath = path.join(agentDir, ".env");
-
-    // Check if source file exists
-    await fs.access(sourceEnvPath);
-
-    // Copy the file
-    await fs.copyFile(sourceEnvPath, destEnvPath);
-    console.log(`Successfully copied env file to ${destEnvPath}`);
-  } catch (error) {
-    console.error("Failed to copy env file:", error);
-    throw error;
-  }
-}
+// -----------------
+// Main Deployment Function
+// -----------------
 
 export async function Deploy(deploymentData: DeploymentData) {
   try {
-    // Generate a UUID for the agent's backend identifier
+    // Generate a unique ID for the agent.
     const agentId = uuidv4();
 
-    // Copy agent repository from the local path ~/elizarepo
-    const agentDir = await cloneAgentRepo(agentId);
+    // Create the Docker config for the agent.json configuration.
+    const configName = await createDockerConfigFromAgentConfig(agentId, deploymentData.agentConfig);
 
-    // Create agent configuration file
-    await createAgentConfig(agentDir, deploymentData.agentConfig);
-
-    // Generate a new wallet for the agent
+    // Generate a new wallet for the agent.
     const agentKeypair = Ed25519Keypair.generate();
     const agentWalletAddress = agentKeypair.getPublicKey().toSuiAddress();
     const agentWalletKey = agentKeypair.getSecretKey();
 
-    // Create logs directory
-    await fs.mkdir(path.join(agentDir, "logs"), { recursive: true });
-    await copyEnvFile(agentDir);
+    // Encrypt the wallet key for storage.
+    const encryptedWalletKey = encrypt(agentWalletKey);
 
-    // Build and start the agent
-    const { port, portTerminal, pid } = await buildAndStartAgent(agentDir, agentId);
+    // Build and start the agent container via Docker using Docker secrets and configs.
+    const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(agentId, agentWalletKey, configName);
 
-    // Create the database record
+    // Create the database record with the deployment information.
     const agent = await prisma.agent.create({
       data: {
         id: agentId,
@@ -193,25 +213,24 @@ export async function Deploy(deploymentData: DeploymentData) {
         config: deploymentData.agentConfig as any,
         status: "ACTIVE",
         agentWalletAddress,
-        agentWalletKey,
-        port,
-        pid,
-        oraclePort: 0, // Set to 0 for now
+        agentWalletKey: encryptedWalletKey, // Stored in encrypted form
+        port, // Host port mapped to the API
+        containerId: serviceId, // Storing the Docker service ID
+        oraclePort: 0, // For now
       },
     });
 
     const agentUrl = `http://localhost:${portTerminal}`;
     const apiAgentUrl = `http://localhost:${port}`;
 
-    // Deploy the Oracle using the separate function
+    // Deploy the Oracle using the separate function.
     try {
       const oracleResult = await DeployOracle(
         agentId,
         apiAgentUrl,
-        agentWalletKey // Using the agent wallet private key for the oracle
+        agentWalletKey // Pass the plain wallet key for oracle setup
       );
 
-      // Return all details including oracle information
       return {
         success: true,
         agentId: agent.id,
