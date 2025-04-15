@@ -17,6 +17,7 @@ import { apiClient } from "@/lib/api";
 import type { UUID } from "@elizaos/core";
 import { User } from "lucide-react";
 import KappaBayAvatar from "@/assets/KappaBayTransparent.ico";
+import Image from "next/image";
 import ConnectionStatus from "./connection-status";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -56,10 +57,12 @@ export function AppSidebar() {
 													<User />
 													<div className="flex flex-col items-center">
 														<span>{agent.name}</span>
-														<img
+														<Image
 															src={KappaBayAvatar}
 															alt={`${agent.name} avatar`}
-															className="w-8 h-8 mt-2 rounded-full"
+															width={32}
+															height={32}
+															className="mt-2 rounded-full"
 														/>
 													</div>
 												</SidebarMenuButton>
