@@ -18,6 +18,7 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 
 function encrypt(text: string): string {
   const algorithm = "aes-256-cbc";
+
   const keyHex = process.env.ENCRYPTION_KEY;
   if (!keyHex) {
     throw new Error("ENCRYPTION_KEY environment variable not set.");
@@ -102,6 +103,7 @@ async function findAvailablePort(start: number, end: number): Promise<number> {
         }
       }
     } catch (error) {
+      console.log(error)
       continue;
     }
   }
@@ -140,6 +142,7 @@ async function buildAndStartAgentDocker(
   const secretFilePath = path.join(tmpDir, `walletkey_${agentId}.txt`);
   await fs.writeFile(secretFilePath, walletKey, { encoding: "utf8" });
   const secretName = `wallet_key_${agentId}`;
+  console.log("Creating Secret.")
   await new Promise<void>((resolve, reject) => {
     exec(`docker secret create ${secretName} ${secretFilePath}`, (error, stdout, stderr) => {
       if (error) {
@@ -151,10 +154,11 @@ async function buildAndStartAgentDocker(
     });
   });
   await fs.unlink(secretFilePath); // Remove temporary file
-
+  console.log("Created secret, deleted temp file.")
   // ----- Create the Docker service with port mappings, secret, and config -----
   // The Docker config will be mounted at /characters/agent.json,
   // and the Docker secret will be available at /run/secrets/WALLET_KEY.
+  console.log("Creating service command:")
   const serviceCreateCmd =
     `docker service create --name agent-${agentId} ` +
     `--publish published=${hostPortAPI},target=3000 ` +
@@ -163,7 +167,8 @@ async function buildAndStartAgentDocker(
     `--config source=${configName},target=/characters/agent.json ` +
     `-e SERVER_PORT=3000 -e CLIENT_PORT=7000 ` +
     `${AGENT_IMAGE}`;
-
+  console.log(serviceCreateCmd)
+  console.log("Launching service")
   const serviceId: string = await new Promise((resolve, reject) => {
     exec(serviceCreateCmd, (error, stdout, stderr) => {
       if (error) {
@@ -174,7 +179,7 @@ async function buildAndStartAgentDocker(
       resolve(stdout.trim());
     });
   });
-
+  console.log("Service created.")
   return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
 }
 
@@ -188,8 +193,9 @@ export async function Deploy(deploymentData: DeploymentData) {
     const agentId = uuidv4();
 
     // Create the Docker config for the agent.json configuration.
+    console.log("Creating config")
     const configName = await createDockerConfigFromAgentConfig(agentId, deploymentData.agentConfig);
-
+    console.log("Config Created.")
     // Generate a new wallet for the agent.
     const agentKeypair = Ed25519Keypair.generate();
     const agentWalletAddress = agentKeypair.getPublicKey().toSuiAddress();
@@ -199,9 +205,11 @@ export async function Deploy(deploymentData: DeploymentData) {
     const encryptedWalletKey = encrypt(agentWalletKey);
 
     // Build and start the agent container via Docker using Docker secrets and configs.
+    console.log("Awaiting docker deployment.")
     const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(agentId, agentWalletKey, configName);
 
     // Create the database record with the deployment information.
+    console.log("Writing to DB")
     const agent = await prisma.agent.create({
       data: {
         id: agentId,
@@ -215,7 +223,7 @@ export async function Deploy(deploymentData: DeploymentData) {
         agentWalletAddress,
         agentWalletKey: encryptedWalletKey, // Stored in encrypted form
         port, // Host port mapped to the API
-        containerId: serviceId, // Storing the Docker service ID
+        //containerId: serviceId, // Storing the Docker service ID
         oraclePort: 0, // For now
       },
     });
