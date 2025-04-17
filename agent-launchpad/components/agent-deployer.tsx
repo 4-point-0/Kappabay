@@ -54,7 +54,7 @@ export default function AgentDeployer() {
 	};
 
 	const handleNestedChange = (parent: string, field: string, value: any) => {
-		setAgentConfig((prev) => ({
+		setAgentConfig((prev: any) => ({
 			...prev,
 			[parent]: {
 				...prev[parent],
@@ -64,7 +64,7 @@ export default function AgentDeployer() {
 	};
 
 	const handleArrayChange = (field: string, index: number, value: string) => {
-		setAgentConfig((prev) => {
+		setAgentConfig((prev: any) => {
 			const newArray = [...prev[field]];
 			newArray[index] = value;
 			return {
@@ -75,16 +75,16 @@ export default function AgentDeployer() {
 	};
 
 	const handleArrayAdd = (field: string) => {
-		setAgentConfig((prev) => ({
+		setAgentConfig((prev: any) => ({
 			...prev,
 			[field]: [...prev[field], ""],
 		}));
 	};
 
 	const handleArrayRemove = (field: string, index: number) => {
-		setAgentConfig((prev) => ({
+		setAgentConfig((prev: any) => ({
 			...prev,
-			[field]: prev[field].filter((_, i) => i !== index),
+			[field]: prev[field].filter((_: any, i: number) => i !== index),
 		}));
 	};
 

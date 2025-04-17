@@ -206,7 +206,7 @@ async function buildAndStartAgentDocker(
 				reject(error);
 				return;
 			}
-			resolve(stdout.trim());
+			resolve(stdout.split("\n")[0].trim() ?? stdout.trim());
 		});
 	});
 	console.log("Service created.");
