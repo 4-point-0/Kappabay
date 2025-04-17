@@ -7,6 +7,43 @@ import crypto from "crypto";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
+
+/**
+ * Creates a Docker secret from the .env content.
+ * @param agentId A unique identifier for this agent
+ * @param envContent The content of the .env file
+ * @returns A promise resolving to the Docker secret name
+ */
+async function createDockerSecretFromEnv(agentId: string, envContent: string): Promise<string> {
+  const tmpDir = os.tmpdir();
+  const envFilePath = path.join(tmpDir, `env_${agentId}.env`);
+  await fs.writeFile(envFilePath, envContent, { encoding: "utf8" });
+  const secretName = `env_secret_${agentId}`;
+  await new Promise<void>((resolve, reject) => {
+    exec(`docker secret create ${secretName} ${envFilePath}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Docker secret creation error:", stderr);
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+  await fs.unlink(envFilePath); // Clean up the temporary file
+  return secretName;
+}
+
+export interface DeploymentData {
+  agentConfig: AgentConfig;
+  onChainData: {
+    agentObjectId: string;
+    agentCapId: string;
+    adminCapId: string;
+    ownerWallet: string;
+    txDigest: string;
+  };
+  envContent: string; // Add this field
+}
 import { DeploymentData } from "@/lib/types";
 import * as net from "net";
 import { DeployOracle } from "./deploy-oracle";
@@ -127,7 +164,8 @@ async function findAvailablePort(start: number, end: number): Promise<number> {
 async function buildAndStartAgentDocker(
   agentId: string,
   walletKey: string,
-  configName: string
+  configName: string,
+  envContent: string // Add this parameter
 ): Promise<{ port: number; portTerminal: number; serviceId: string }> {
   // Assign available host ports for the container mappings.
   const hostPortAPI = await findAvailablePort(3000, 5000);
@@ -155,7 +193,10 @@ async function buildAndStartAgentDocker(
   });
   await fs.unlink(secretFilePath); // Remove temporary file
   console.log("Created secret, deleted temp file.")
-  // ----- Create the Docker service with port mappings, secret, and config -----
+  // Create the Docker secret for the .env file
+  const envSecretName = await createDockerSecretFromEnv(agentId, envContent);
+
+  // ----- Create the Docker service with port mappings, secrets, and config -----
   // The Docker config will be mounted at /characters/agent.json,
   // and the Docker secret will be available at /run/secrets/WALLET_KEY.
   console.log("Creating service command:")
@@ -164,6 +205,7 @@ async function buildAndStartAgentDocker(
     `--publish published=${hostPortAPI},target=3000 ` +
     `--publish published=${hostPortTerminal},target=7000 ` +
     `--secret source=${secretName},target=WALLET_KEY ` +
+    `--secret source=${envSecretName},target=/.env ` + // Mount the .env secret
     `--config source=${configName},target=/characters/agent.json ` +
     `-e SERVER_PORT=3000 -e CLIENT_PORT=7000 ` +
     `${AGENT_IMAGE}`;
@@ -180,6 +222,18 @@ async function buildAndStartAgentDocker(
     });
   });
   console.log("Service created.")
+  // After creating the service, optionally remove the secret
+  await new Promise<void>((resolve, reject) => {
+    exec(`docker secret rm ${envSecretName}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error("Docker secret removal error:", stderr);
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+
   return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
 }
 
@@ -206,7 +260,12 @@ export async function Deploy(deploymentData: DeploymentData) {
 
     // Build and start the agent container via Docker using Docker secrets and configs.
     console.log("Awaiting docker deployment.")
-    const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(agentId, agentWalletKey, configName);
+    const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(
+      agentId,
+      agentWalletKey,
+      configName,
+      deploymentData.envContent // Pass the .env content
+    );
 
     // Create the database record with the deployment information.
     console.log("Writing to DB")

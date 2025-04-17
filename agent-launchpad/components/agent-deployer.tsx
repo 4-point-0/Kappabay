@@ -154,6 +154,7 @@ export default function AgentDeployer() {
           agentConfig.image || "https://example.com/placeholder.png"
         ),
       ],
+      envContent, // Include the .env content
     });
 
     try {
