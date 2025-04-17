@@ -44,7 +44,7 @@ export default function AgentDeployer() {
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const envFileInputRef = useRef<HTMLInputElement>(null);
-	const [envContent, setEnvContent] = useState<string>('');
+	const [envContent, setEnvContent] = useState<string>("");
 
 	const handleChange = (field: string, value: any) => {
 		setAgentConfig((prev) => ({
@@ -125,7 +125,7 @@ export default function AgentDeployer() {
 		const file = event.target.files?.[0];
 		if (!file) return;
 
-		if (file.type !== 'text/plain' && !file.name.endsWith('.env')) {
+		if (file.type !== "text/plain" && !file.name.endsWith(".env")) {
 			alert("Please upload a valid .env file.");
 			return;
 		}
@@ -137,6 +137,8 @@ export default function AgentDeployer() {
 		};
 		reader.readAsText(file);
 	};
+
+	const handleDeploy = async () => {
 		const tx = new Transaction();
 
 		const [coin] = tx.splitCoins(tx.gas, [1 * 10000000]);
@@ -199,7 +201,7 @@ export default function AgentDeployer() {
 			// Call Deploy server action
 			const deployResult = await Deploy({
 				agentConfig,
-        envContent,
+				envContent,
 				onChainData: {
 					agentObjectId,
 					agentCapId,
@@ -207,7 +209,7 @@ export default function AgentDeployer() {
 					ownerWallet: account?.address || "",
 					txDigest: txResult.digest,
 				},
-			}),
+			});
 
 			if (deployResult.success) {
 				// Create a second transaction to transfer the caps to the agent wallet
@@ -773,6 +775,7 @@ export default function AgentDeployer() {
 						</CardContent>
 					</Card>
 				</TabsContent>
+			</Tabs>
 
 			<div className="flex justify-end mt-8">
 				<Button size="lg" onClick={handleDeploy}>

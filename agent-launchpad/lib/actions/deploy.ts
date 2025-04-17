@@ -193,7 +193,7 @@ async function buildAndStartAgentDocker(
 		`--publish published=${hostPortAPI},target=3000 ` +
 		`--publish published=${hostPortTerminal},target=7000 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
-		`--secret source=${envSecretName},target=/.env ` + // Mount the .env secret
+		`--secret source=${envSecretName},target=/app/.env ` +
 		`--config source=${configName},target=/characters/agent.json ` +
 		`-e SERVER_PORT=3000 -e CLIENT_PORT=7000 ` +
 		`${AGENT_IMAGE}`;
@@ -210,17 +210,6 @@ async function buildAndStartAgentDocker(
 		});
 	});
 	console.log("Service created.");
-	// After creating the service, optionally remove the secret
-	await new Promise<void>((resolve, reject) => {
-		exec(`docker secret rm ${envSecretName}`, (error, stdout, stderr) => {
-			if (error) {
-				console.error("Docker secret removal error:", stderr);
-				reject(error);
-				return;
-			}
-			resolve();
-		});
-	});
 
 	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
 }
@@ -270,7 +259,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 				agentWalletAddress,
 				agentWalletKey: encryptedWalletKey, // Stored in encrypted form
 				port, // Host port mapped to the API
-				//containerId: serviceId, // Storing the Docker service ID
+				dockerServiceId: serviceId, // Storing the Docker service ID
 				oraclePort: 0, // For now
 			},
 		});
