@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  eliza-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eliza-kappabay-agent
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - agent-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Add your specific environment variables here
+      # - OPENAI_API_KEY=your_key
+      # - REDPILL_API_KEY=your_key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  agent-data:
