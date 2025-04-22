@@ -24,5 +24,22 @@ services:
       timeout: 10s
       retries: 3
 
+  kappabay-terminal-next:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: terminal-runtime
+    container_name: kappabay-terminal-next
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - terminal-data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      # Add other necessary environment variables here
+
 volumes:
   agent-data:
+  terminal-data:
