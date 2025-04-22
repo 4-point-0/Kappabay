@@ -44,58 +44,8 @@ RUN pnpm install && \
     pnpm run build && \
     pnpm prune --prod
 
-# Builder stage for kappabay-terminal-next
-FROM node:23.3.0-slim AS terminal-builder
-
-# Install build tools and dependencies
-RUN apt-get update && \
-    apt-get install -y \
-        git \
-        python3 \
-        pnpm && \
-    rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy kappabay-terminal-next files
-COPY kappabay-terminal-next/ ./kappabay-terminal-next/
-
-WORKDIR /app/kappabay-terminal-next
-
-# Install and build
-RUN pnpm install && \
-    pnpm run build && \
-    pnpm prune --prod
-
 # Runtime stage
 FROM node:23.3.0-slim
-
-# Runtime stage for kappabay-terminal-next
-FROM node:23.3.0-slim AS terminal-runtime
-
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y \
-        git \
-        python3 \
-        ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install pnpm globally
-RUN npm install -g pnpm@9.15.4
-
-WORKDIR /app/kappabay-terminal-next
-
-# Copy built artifacts and production dependencies from the builder stage
-COPY --from=terminal-builder /app/kappabay-terminal-next/package.json ./package.json
-COPY --from=terminal-builder /app/kappabay-terminal-next/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=terminal-builder /app/kappabay-terminal-next/.npmrc ./.npmrc
-COPY --from=terminal-builder /app/kappabay-terminal-next/node_modules ./node_modules
-COPY --from=terminal-builder /app/kappabay-terminal-next/dist ./dist
-
-EXPOSE 4000
-
-CMD ["sh", "-c", "pnpm start"]
 
 # Runtime dependencies
 RUN apt-get update && \
@@ -129,4 +79,53 @@ EXPOSE 3000
 WORKDIR /app/eliza-kappabay-agent
 
 # CMD ["sh", "/usr/local/bin/startup.sh"]
+CMD ["sh", "-c", "pnpm start"]
+
+# Builder stage for kappabay-terminal-next
+FROM node:23.3.0-slim AS terminal-builder
+
+# Install build tools and dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    python3 \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy kappabay-terminal-next files
+COPY kappabay-terminal-next/ ./kappabay-terminal-next/
+
+WORKDIR /app/kappabay-terminal-next
+
+# Install and build
+RUN pnpm install && \
+    pnpm run build && \
+    pnpm prune --prod
+
+# Runtime stage for kappabay-terminal-next
+FROM node:23.3.0-slim AS terminal-runtime
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    git \
+    python3 \
+    ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install pnpm globally
+RUN npm install -g pnpm@9.15.4
+
+WORKDIR /app/kappabay-terminal-next
+
+# Copy built artifacts and production dependencies from the builder stage
+COPY --from=terminal-builder /app/kappabay-terminal-next/package.json ./package.json
+COPY --from=terminal-builder /app/kappabay-terminal-next/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=terminal-builder /app/kappabay-terminal-next/.npmrc ./.npmrc
+COPY --from=terminal-builder /app/kappabay-terminal-next/node_modules ./node_modules
+COPY --from=terminal-builder /app/kappabay-terminal-next/dist ./dist
+
+EXPOSE 3015
+
 CMD ["sh", "-c", "pnpm start"]
