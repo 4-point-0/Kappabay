@@ -24,21 +24,28 @@ services:
       timeout: 10s
       retries: 3
 
-  kappabay-terminal-next:
+  eliza-agent-and-terminal:
     build:
       context: .
       dockerfile: Dockerfile
-      target: terminal-runtime
-    container_name: kappabay-terminal-next
+    container_name: eliza-agent-and-terminal
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "3000:3000"  # For eliza-kappabay-agent
+      - "4000:4000"  # For kappabay-terminal-next
     volumes:
-      - terminal-data:/app/data
+      - agent-data:/app/eliza-kappabay-agent/data
+      - terminal-data:/app/kappabay-terminal-next/data
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - NODE_ENV=production
-      - PORT=4000
-      # Add other necessary environment variables here
+      - PORT=3000
+      - TERM_PORT=4000  # Add other necessary environment variables here
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   agent-data:

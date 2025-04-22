@@ -81,51 +81,25 @@ WORKDIR /app/eliza-kappabay-agent
 # CMD ["sh", "/usr/local/bin/startup.sh"]
 CMD ["sh", "-c", "pnpm start"]
 
-# Builder stage for kappabay-terminal-next
-FROM node:23.3.0-slim AS terminal-builder
-
-# Install build tools and dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    git \
-    python3 \
-    rm -rf /var/lib/apt/lists/*
-
-WORKDIR /app
-
-# Copy kappabay-terminal-next files
+# Copy and build kappabay-terminal-next
 COPY kappabay-terminal-next/ ./kappabay-terminal-next/
-
 WORKDIR /app/kappabay-terminal-next
-
-# Install and build
 RUN pnpm install && \
     pnpm run build && \
     pnpm prune --prod
 
-# Runtime stage for kappabay-terminal-next
-FROM node:23.3.0-slim AS terminal-runtime
+# Copy kappabay-terminal-next built artifacts
+COPY --from=builder /app/kappabay-terminal-next/package.json ./kappabay-terminal-next/
+COPY --from=builder /app/kappabay-terminal-next/pnpm-workspace.yaml ./kappabay-terminal-next/
+COPY --from=builder /app/kappabay-terminal-next/.npmrc ./kappabay-terminal-next/
+COPY --from=builder /app/kappabay-terminal-next/node_modules ./kappabay-terminal-next/node_modules/
+COPY --from=builder /app/kappabay-terminal-next/dist ./kappabay-terminal-next/dist/
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y \
-    git \
-    python3 \
-    ffmpeg && \
-    rm -rf /var/lib/apt/lists/*
+# Expose both ports
+EXPOSE 3000 4000
 
-# Install pnpm globally
-RUN npm install -g pnpm@9.15.4
+# Add a startup script to launch both services
+COPY startup.sh /usr/local/bin/startup.sh
+RUN chmod +x /usr/local/bin/startup.sh
 
-WORKDIR /app/kappabay-terminal-next
-
-# Copy built artifacts and production dependencies from the builder stage
-COPY --from=terminal-builder /app/kappabay-terminal-next/package.json ./package.json
-COPY --from=terminal-builder /app/kappabay-terminal-next/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=terminal-builder /app/kappabay-terminal-next/.npmrc ./.npmrc
-COPY --from=terminal-builder /app/kappabay-terminal-next/node_modules ./node_modules
-COPY --from=terminal-builder /app/kappabay-terminal-next/dist ./dist
-
-EXPOSE 3015
-
-CMD ["sh", "-c", "pnpm start"]
+CMD ["startup.sh"]
