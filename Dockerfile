@@ -108,4 +108,4 @@ RUN pnpm install && pnpm db:setup:dev
 # Expose agent, terminal and oracle ports
 EXPOSE 3000 3015 5000
 
-CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start) & (cd /app/kappabay-terminal-next && exec pnpm start) && wait"]
+CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start) & (cd /app/kappabay-terminal-next && exec pnpm start) & (cd /app/oracle && exec pnpm start) && wait"]
