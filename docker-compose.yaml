@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  eliza-agent-and-terminal-and-oracle:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eliza-agent-and-terminal-and-oracle
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # For eliza-kappabay-agent
+      - "3015:3015" # For kappabay-terminal-next
+      - "3030:3030" # For oracle
+    volumes:
+      - /var/run/tappd.sock:/var/run/tappd.sock
+      - eliza-agent-and-terminal-and-oracle:/app/eliza-kappabay-agent/db.sqlite
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  eliza-agent-and-terminal-and-oracle:
