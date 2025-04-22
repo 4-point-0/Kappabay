@@ -44,6 +44,17 @@ RUN pnpm install && \
     pnpm run build && \
     pnpm prune --prod
 
+WORKDIR /app
+
+COPY kappabay-terminal-next/ ./kappabay-terminal-next/
+
+WORKDIR /app/kappabay-terminal-next
+
+RUN pnpm install && \
+    pnpm run build && \
+    pnpm prune --prod
+
+
 # Runtime stage
 FROM node:23.3.0-slim
 
@@ -59,6 +70,7 @@ RUN apt-get update && \
 RUN npm install -g pnpm@9.15.4
 
 WORKDIR /app
+
 RUN mkdir -p eliza-kappabay-agent
 
 # Copy built artifacts and production dependencies from the builder stage
@@ -74,32 +86,26 @@ COPY --from=builder /app/eliza-kappabay-agent/packages ./eliza-kappabay-agent/pa
 COPY --from=builder /app/eliza-kappabay-agent/scripts ./eliza-kappabay-agent/scripts
 COPY --from=builder /app/eliza-kappabay-agent/characters ./eliza-kappabay-agent/characters
 
-EXPOSE 3000
+RUN mkdir -p kappabay-terminal-next
 
-WORKDIR /app/eliza-kappabay-agent
-
-# CMD ["sh", "/usr/local/bin/startup.sh"]
-CMD ["sh", "-c", "pnpm start"]
-
-# Copy and build kappabay-terminal-next
-COPY kappabay-terminal-next/ ./kappabay-terminal-next/
 WORKDIR /app/kappabay-terminal-next
-RUN pnpm install && \
-    pnpm run build && \
-    pnpm prune --prod
 
 # Copy kappabay-terminal-next built artifacts
-COPY --from=builder /app/kappabay-terminal-next/package.json ./kappabay-terminal-next/
-COPY --from=builder /app/kappabay-terminal-next/pnpm-workspace.yaml ./kappabay-terminal-next/
-COPY --from=builder /app/kappabay-terminal-next/.npmrc ./kappabay-terminal-next/
-COPY --from=builder /app/kappabay-terminal-next/node_modules ./kappabay-terminal-next/node_modules/
-COPY --from=builder /app/kappabay-terminal-next/dist ./kappabay-terminal-next/dist/
+COPY --from=builder /app/kappabay-terminal-next/package.json ./
+COPY --from=builder /app/kappabay-terminal-next/node_modules ./node_modules/
+COPY --from=builder /app/kappabay-terminal-next/.next ./.next/
+COPY --from=builder /app/kappabay-terminal-next/public ./public/
 
-# Expose both ports
-EXPOSE 3000 4000
+# Oracle Setup
+WORKDIR /app
 
-# Add a startup script to launch both services
-COPY startup.sh /usr/local/bin/startup.sh
-RUN chmod +x /usr/local/bin/startup.sh
+COPY oracle/ ./oracle/
 
-CMD ["startup.sh"]
+WORKDIR /app/oracle
+
+RUN pnpm install && pnpm db:setup:dev
+
+# Expose agent, terminal and oracle ports
+EXPOSE 3000 3015 5000
+
+CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start) & (cd /app/kappabay-terminal-next && exec pnpm start) && wait"]

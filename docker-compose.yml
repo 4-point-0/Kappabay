@@ -1,46 +1,22 @@
 version: "3.8"
 
 services:
-  eliza-agent:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: eliza-kappabay-agent
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - agent-data:/app/data
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - NODE_ENV=production
-      - PORT=3000
-      # Add your specific environment variables here
-      # - OPENAI_API_KEY=your_key
-      # - REDPILL_API_KEY=your_key
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  eliza-agent-and-terminal:
+  eliza-agent-and-terminal-and-oracle:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: eliza-agent-and-terminal
     restart: unless-stopped
     ports:
-      - "3000:3000"  # For eliza-kappabay-agent
-      - "4000:4000"  # For kappabay-terminal-next
+      - "3000:3000" # For eliza-kappabay-agent
+      - "3015:3015" # For kappabay-terminal-next
+      - "5000:5000" # For oracle
     volumes:
-      - agent-data:/app/eliza-kappabay-agent/data
-      - terminal-data:/app/kappabay-terminal-next/data
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/tappd.sock:/var/run/tappd.sock
+      - eliza-agent-and-terminal-and-oracle:/app/eliza-kappabay-agent/db.sqlite
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - TERM_PORT=4000  # Add other necessary environment variables here
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -48,5 +24,4 @@ services:
       retries: 3
 
 volumes:
-  agent-data:
-  terminal-data:
+  eliza-agent-and-terminal-and-oracle:
