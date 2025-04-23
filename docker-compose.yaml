@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000" # For eliza-kappabay-agent
-      - "3015:3015" # For kappabay-terminal-next
+      - "7000:7000" # For kappabay-terminal-next
       - "3030:3030" # For oracle
     volumes:
       - /var/run/tappd.sock:/var/run/tappd.sock

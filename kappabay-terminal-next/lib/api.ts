@@ -1,6 +1,7 @@
 import type { UUID, Character } from "@elizaos/core";
-
-const BASE_URL = `http://localhost:3000`;
+import { loadRuntimeConfig } from "./runtimeConfig";
+let BASE_URL: string;
+loadRuntimeConfig().then((c) => (BASE_URL = c.AGENT_API));
 
 const fetcher = async ({
 	url,

@@ -92,9 +92,9 @@ WORKDIR /app/kappabay-terminal-next
 
 # Copy kappabay-terminal-next built artifacts
 COPY --from=builder /app/kappabay-terminal-next/package.json ./
-COPY --from=builder /app/kappabay-terminal-next/node_modules ./node_modules/
-COPY --from=builder /app/kappabay-terminal-next/.next ./.next/
-COPY --from=builder /app/kappabay-terminal-next/public ./public/
+COPY --from=builder /app/kappabay-terminal-next/node_modules ./node_modules
+COPY --from=builder /app/kappabay-terminal-next/.next ./.next
+COPY --from=builder /app/kappabay-terminal-next/public ./public
 
 # Oracle Setup
 WORKDIR /app
@@ -106,6 +106,6 @@ WORKDIR /app/oracle
 RUN pnpm install && pnpm db:setup:dev
 
 # Expose agent, terminal and oracle ports
-EXPOSE 3000 3015 3030
+EXPOSE 3000 7000 3030
 
-CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start) & (cd /app/kappabay-terminal-next && exec pnpm start) & (cd /app/oracle && exec pnpm dev) && wait"]
+CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json) & (cd /app/kappabay-terminal-next && exec pnpm start) & (cd /app/oracle && exec pnpm dev) && wait"]

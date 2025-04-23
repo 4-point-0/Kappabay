@@ -6,11 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEnokiFlow, useZkLoginSession } from "@mysten/enoki/react";
 import { Root, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import Link from "next/link"; // Import Link from next/link
-
-// In Next.js, for client-side environment variables, use NEXT_PUBLIC_ prefix
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+import { useEnv } from "./env-provider";
 
 const ConnectButton = () => {
+	const { GOOGLE_CLIENT_ID } = useEnv();
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [showConnectOptions, setShowConnectOptions] = useState(false);
 	const [connectMethod, setConnectMethod] = useState<"enoki" | "walletKit" | null>(null);

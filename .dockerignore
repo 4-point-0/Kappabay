@@ -20,5 +20,9 @@
 # Ignore build artifacts from the host
 dist
 build
+.next
 
 .aider*
+
+**/.env/**
+.env

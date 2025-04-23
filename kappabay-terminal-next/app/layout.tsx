@@ -17,6 +17,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { Toaster as SonnerToaster } from "@/components/ui/toaster";
+import { EnvProvider } from "@/components/env-provider";
+import { loadRuntimeConfig } from "@/lib/runtimeConfig";
 
 const queryClient = new QueryClient({
 	defaultOptions: {
@@ -34,7 +36,8 @@ const { networkConfig } = createNetworkConfig({
 	mainnet: { url: getFullnodeUrl("mainnet") },
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+	const runtimeConfig = await loadRuntimeConfig();
 	return (
 		<html lang="en" className="dark">
 			<head>
@@ -49,27 +52,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 							colorScheme: "dark",
 						}}
 					>
-						<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-							<EnokiFlowProvider apiKey={process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? ""}>
-								<WalletProvider>
-									<JotaiProvider>
-										<TooltipProvider delayDuration={0}>
-											<SidebarProvider>
-												<AppSidebar />
-												<SidebarInset>
-													<Header />
-													<WalletConnectionCheck>
-														<div className="flex flex-1 flex-col gap-4 size-full container">{children}</div>
-													</WalletConnectionCheck>
-												</SidebarInset>
-											</SidebarProvider>
-											<Toaster />
-											<SonnerToaster />
-										</TooltipProvider>
-									</JotaiProvider>
-								</WalletProvider>
-							</EnokiFlowProvider>
-						</SuiClientProvider>
+						<EnvProvider>
+							<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+								<EnokiFlowProvider apiKey={runtimeConfig.ENOKI_API_KEY ?? ""}>
+									<WalletProvider>
+										<JotaiProvider>
+											<TooltipProvider delayDuration={0}>
+												<SidebarProvider>
+													<AppSidebar />
+													<SidebarInset>
+														<Header />
+														<WalletConnectionCheck>
+															<div className="flex flex-1 flex-col gap-4 size-full container">{children}</div>
+														</WalletConnectionCheck>
+													</SidebarInset>
+												</SidebarProvider>
+												<Toaster />
+												<SonnerToaster />
+											</TooltipProvider>
+										</JotaiProvider>
+									</WalletProvider>
+								</EnokiFlowProvider>
+							</SuiClientProvider>
+						</EnvProvider>
 					</div>
 				</QueryClientProvider>
 			</body>

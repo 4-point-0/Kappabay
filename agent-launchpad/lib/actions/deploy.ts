@@ -8,7 +8,7 @@ import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import * as net from "net";
-import { DeployOracle } from "./deploy-oracle";
+// import { DeployOracle } from "./deploy-oracle";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { DeploymentData } from "../types";
 
@@ -16,15 +16,18 @@ import { DeploymentData } from "../types";
  * Creates a Docker secret from the .env content.
  * @param agentId A unique identifier for this agent
  * @param envContent The content of the .env file
+ * @param secretName The name of the Docker secret
  * @returns A promise resolving to the Docker secret name
  */
-async function createDockerSecretFromEnv(agentId: string, envContent: string): Promise<string> {
+async function createDockerSecretFromEnv(agentId: string, envContent: string, secretName: string): Promise<string> {
 	const tmpDir = os.tmpdir();
-	const envFilePath = path.join(tmpDir, `env_${agentId}.env`);
+	const envFilePath = secretName
+		? path.join(tmpDir, `${secretName}.env`)
+		: path.join(tmpDir, `${`env_${agentId}`}.env`);
 	await fs.writeFile(envFilePath, envContent, { encoding: "utf8" });
-	const secretName = `env_secret_${agentId}`;
+	const _secretName = secretName ?? `env_secret_${agentId}`;
 	await new Promise<void>((resolve, reject) => {
-		exec(`docker secret create ${secretName} ${envFilePath}`, (error, stdout, stderr) => {
+		exec(`docker secret create ${_secretName} ${envFilePath}`, (error, stdout, stderr) => {
 			if (error) {
 				console.error("Docker secret creation error:", stderr);
 				reject(error);
@@ -34,7 +37,7 @@ async function createDockerSecretFromEnv(agentId: string, envContent: string): P
 		});
 	});
 	await fs.unlink(envFilePath); // Clean up the temporary file
-	return secretName;
+	return _secretName;
 }
 
 // -----------------
@@ -106,7 +109,7 @@ async function createDockerConfigFromAgentConfig(agentId: string, agentConfig: a
 // Port Discovery Helper
 // -----------------
 
-async function findAvailablePort(start: number, end: number): Promise<number> {
+async function findAvailablePort(start: number, end: number, whereKey: string): Promise<number> {
 	for (let port = start; port <= end; port++) {
 		try {
 			const inUse = await new Promise<boolean>((resolve) => {
@@ -122,7 +125,7 @@ async function findAvailablePort(start: number, end: number): Promise<number> {
 					.listen(port);
 			});
 			if (!inUse) {
-				const existingAgent = await prisma.agent.findFirst({ where: { port } });
+				const existingAgent = await prisma.agent.findFirst({ where: { [whereKey]: port } });
 				if (!existingAgent) {
 					return port;
 				}
@@ -153,11 +156,14 @@ async function buildAndStartAgentDocker(
 	agentId: string,
 	walletKey: string,
 	configName: string,
-	envContent: string // Add this parameter
+	envContentAgent: string,
+	envSecretNameOracle: string,
+	envSecretNameTerminal: string,
+	hostOraclePort: number,
+	hostPortAPI: number
 ): Promise<{ port: number; portTerminal: number; serviceId: string }> {
 	// Assign available host ports for the container mappings.
-	const hostPortAPI = await findAvailablePort(3000, 5000);
-	const hostPortTerminal = await findAvailablePort(7000, 9000);
+	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
 	// Pre-built Docker image from your registry.
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
@@ -182,7 +188,7 @@ async function buildAndStartAgentDocker(
 	await fs.unlink(secretFilePath); // Remove temporary file
 	console.log("Created secret, deleted temp file.");
 	// Create the Docker secret for the .env file
-	const envSecretName = await createDockerSecretFromEnv(agentId, envContent);
+	const envSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 
 	// ----- Create the Docker service with port mappings, secrets, and config -----
 	// The Docker config will be mounted at /characters/agent.json,
@@ -192,10 +198,12 @@ async function buildAndStartAgentDocker(
 		`docker service create --name agent-${agentId} ` +
 		`--publish published=${hostPortAPI},target=3000 ` +
 		`--publish published=${hostPortTerminal},target=7000 ` +
+		`--publish published=${hostOraclePort},target=3015 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
-		`--secret source=${envSecretName},target=/app/.env ` +
-		`--config source=${configName},target=/characters/agent.json ` +
-		`-e SERVER_PORT=3000 -e CLIENT_PORT=7000 ` +
+		`--secret source=${envSecretName},target=/app/eliza-kappabay-agent/.env ` +
+		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
+		`--secret source=${envSecretNameOracle},target=/app/oracle/.env ` +
+		`--config source=${configName},target=/app/eliza-kappabay-agent/characters/agent.json ` +
 		`${AGENT_IMAGE}`;
 	console.log(serviceCreateCmd);
 	console.log("Launching service");
@@ -235,13 +243,50 @@ export async function Deploy(deploymentData: DeploymentData) {
 		// Encrypt the wallet key for storage.
 		const encryptedWalletKey = encrypt(agentWalletKey);
 
+		// Find an available port for the Agent
+		const hostPortAPI = await findAvailablePort(3000, 5000, "port");
+		// Find an available port for the Oracle
+		const hostPortOracle = await findAvailablePort(5001, 7000, "oraclePort");
+
+		// Create Oracle .env content
+		const oracleEnvContent = `BASE_URL='http://localhost:${hostPortAPI}'
+      INITIAL_TRANSACTION_DIGEST='${deploymentData.onChainData.txDigest}'
+      PACKAGE_ID='0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d'
+      NETWORK='testnet'
+      AGENT_ID='${agentId}'
+      PRIVATE_SEED='${agentWalletKey}'
+      PORT='3015'
+      `;
+
+		// Create Docker secret for Oracle .env
+		const oracleEnvSecretName = await createDockerSecretFromEnv(
+			agentId,
+			oracleEnvContent,
+			`oracle_env_secret_${agentId}`
+		);
+
+		const terminalEnvContent = `ENOKI_API_KEY=enoki_public_c23791490124930fcfb553615237ecc5
+      GOOGLE_CLIENT_ID=800626683888-hi6a3moj65nlqlsfqqrdtkvjujuo7f8f.apps.googleusercontent.com
+      AGENT_API=http://localhost:${hostPortAPI}
+    `;
+
+		const terminalEnvSecretName = await createDockerSecretFromEnv(
+			agentId,
+			terminalEnvContent,
+			`terminal_env_secret_${agentId}`
+		);
+
 		// Build and start the agent container via Docker using Docker secrets and configs.
 		console.log("Awaiting docker deployment.");
 		const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(
 			agentId,
 			agentWalletKey,
 			configName,
-			deploymentData.envContent // Pass the .env content
+			deploymentData.envContent,
+			oracleEnvSecretName,
+			terminalEnvSecretName,
+			hostPortOracle,
+			hostPortAPI
 		);
 
 		// Create the database record with the deployment information.
@@ -260,43 +305,27 @@ export async function Deploy(deploymentData: DeploymentData) {
 				agentWalletKey: encryptedWalletKey, // Stored in encrypted form
 				port, // Host port mapped to the API
 				dockerServiceId: serviceId, // Storing the Docker service ID
-				oraclePort: 0, // For now
+				oraclePort: hostPortOracle, // For now
+				hasOracle: hostPortOracle >= 5001,
+				terminalPort: portTerminal,
 			},
 		});
 
 		const agentUrl = `http://localhost:${portTerminal}`;
-		const apiAgentUrl = `http://localhost:${port}`;
 
-		// Deploy the Oracle using the separate function.
-		try {
-			const oracleResult = await DeployOracle(
-				agentId,
-				apiAgentUrl,
-				agentWalletKey // Pass the plain wallet key for oracle setup
-			);
-
-			return {
+		// Deploy the Oracle using the separate function
+		return {
+			success: true,
+			agentId: agent.id,
+			agentWallet: agentWalletAddress,
+			port,
+			agentUrl,
+			oracle: {
 				success: true,
-				agentId: agent.id,
-				agentWallet: agentWalletAddress,
-				port,
-				agentUrl,
-				oracle: oracleResult,
-			};
-		} catch (oracleError) {
-			console.error("Oracle deployment failed:", oracleError);
-			return {
-				success: true,
-				agentId: agent.id,
-				agentWallet: agentWalletAddress,
-				port,
-				agentUrl,
-				oracle: {
-					success: false,
-					error: oracleError instanceof Error ? oracleError.message : "Unknown error during oracle deployment",
-				},
-			};
-		}
+				hostPortOracle,
+				oracleUrl: `http://localhost:${hostPortOracle}`,
+			},
+		};
 	} catch (error) {
 		console.error("Agent backend deployment failed:", error);
 		return {
