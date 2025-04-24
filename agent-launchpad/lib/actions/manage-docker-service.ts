@@ -4,7 +4,6 @@ import { exec } from "child_process";
 import util from "util";
 import fs from "fs";
 import path from "path";
-import axios from "axios";
 import { uploadBlob, retrieveBlob } from "../path/to/walrus-api"; // adjust the path accordingly
 import { prisma } from "../db";
 
