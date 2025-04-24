@@ -1,4 +1,3 @@
-import axios from "axios";
 
 const WALRUS_PUBLISHER_URL = process.env.WALRUS_PUBLISHER_URL!;
 const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
@@ -11,6 +10,8 @@ const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
  */
 export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise<string> => {
 	const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
+
+	// Prepare query parameters
 	const params: any = {
 		deletable: true,
 		epochs: 10,
@@ -20,19 +21,31 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 		params.send_object_to = sendObjectTo;
 	}
 
+	const queryString = new URLSearchParams(params).toString();
+	const fullUrl = `${url}?${queryString}`;
+
 	// Set the appropriate headers
 	const headers = {
-		"Content-Type": "application/vnd.sqlite3", // Specify the file type
-		"Content-Length": buffer.length.toString(), // Specify the content length
+		"Content-Type": "application/vnd.sqlite3",
+		"Content-Length": buffer.length.toString(),
 	};
 
-	// Send the PUT request with the buffer as the body
-	const response = await axios.put(url, buffer, { headers, params });
+	// Send the PUT request using fetch with the buffer as the body
+	const response = await fetch(fullUrl, {
+		method: "PUT",
+		headers,
+		body: buffer,
+	});
 
-	if (response.data.newlyCreated) {
-		return response.data.newlyCreated.blobObject.blobId;
-	} else if (response.data.alreadyCertified) {
-		return response.data.alreadyCertified.blobId;
+	if (!response.ok) {
+		throw new Error(`Failed to upload blob: ${response.statusText}`);
+	}
+
+	const data = await response.json();
+	if (data.newlyCreated) {
+		return data.newlyCreated.blobObject.blobId;
+	} else if (data.alreadyCertified) {
+		return data.alreadyCertified.blobId;
 	} else {
 		throw new Error("Unexpected response from Walrus Publisher.");
 	}
@@ -45,6 +58,11 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
  */
 export const retrieveBlob = async (blobHash: string): Promise<Buffer> => {
 	const url = `${WALRUS_AGGREGATOR_URL}/v1/blobs/${blobHash}`;
-	const response = await axios.get(url, { responseType: "arraybuffer" });
-	return Buffer.from(response.data);
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Failed to retrieve blob: ${response.statusText}`);
+	}
+
+	const arrayBuffer = await response.arrayBuffer();
+	return Buffer.from(arrayBuffer);
 };
