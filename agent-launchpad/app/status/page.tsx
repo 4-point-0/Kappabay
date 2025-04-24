@@ -12,7 +12,7 @@ type Agent = {
 	objectId: string;
 	status: string;
 	dockerServiceId: string;
-	latestBlobId?: string;
+	latestBlobHash?: string;
 };
 
 export default function AgentsPage() {
@@ -41,7 +41,7 @@ export default function AgentsPage() {
 						<TableHead>Object ID</TableHead>
 						<TableHead>Status</TableHead>
 						<TableHead>Agent ID</TableHead>
-						<TableHead>Latest Blob ID</TableHead>
+						<TableHead>Latest Blob Hash</TableHead>
 						<TableHead>Actions</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -52,7 +52,7 @@ export default function AgentsPage() {
 							<TableCell>{agent.objectId}</TableCell>
 							<TableCell>{agent.status}</TableCell>
 							<TableCell>{agent.id}</TableCell>
-							<TableCell>{agent.latestBlobId || "N/A"}</TableCell>
+							<TableCell>{agent.latestBlobHash || "N/A"}</TableCell>
 							<TableCell>
 								<AgentActions agentId={agent.id} />
 							</TableCell>
