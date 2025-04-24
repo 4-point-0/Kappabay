@@ -1,9 +1,6 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { getAgentsByOwner } from "@/lib/actions/get-agents-info";
 import { useCurrentAccount } from "@mysten/dapp-kit"; // adjust import if needed
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { toast } from "@/hooks/use-toast";
 import AgentActions from "@/components/agent-actions";
 
 type Agent = {
@@ -15,22 +12,12 @@ type Agent = {
 	latestBlobHash?: string;
 };
 
-export default function AgentsPage() {
-	const wallet = useCurrentAccount();
-	const [agents, setAgents] = useState<Agent[]>([]);
-
-	useEffect(() => {
-		async function fetchAgents() {
-			if (!wallet?.address) return;
-			const res = await fetch(`/api/my-agents?ownerWallet=${encodeURIComponent(wallet.address)}`);
-			if (res.ok) {
-				setAgents(await res.json());
-			} else {
-				toast({ title: "Error", description: "Failed to load agents", variant: "destructive" });
-			}
-		}
-		fetchAgents();
-	}, [wallet]);
+export default async function AgentsPage() {
+  const wallet = useCurrentAccount();
+  let agents: Agent[] = [];
+  if (wallet?.address) {
+    agents = await getAgentsByOwner(wallet.address);
+  }
 
 	return (
 		<div className="container mx-auto p-4">
