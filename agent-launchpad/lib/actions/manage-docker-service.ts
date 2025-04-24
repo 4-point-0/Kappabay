@@ -19,32 +19,36 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
  * @returns The corresponding agentId.
  * @throws Will throw an error if the agent is not found.
  */
-async function getAgentId(serviceId: string): Promise<string> {
+type AgentRecord = { id: string; dockerServiceId: string };
+
+async function getAgent(agentId: string): Promise<AgentRecord> {
 	const agent = await prisma.agent.findUnique({
-		where: { dockerServiceId: serviceId },
+		where: { id: agentId },
 	});
 
 	if (!agent) {
-		throw new Error(`Agent with serviceId ${serviceId} not found.`);
+		throw new Error(`Agent with id ${agentId} not found.`);
 	}
 
-	return agent.id;
+	return { id: agent.id, dockerServiceId: agent.dockerServiceId };
 }
 
 /**
  * @param serviceId - The ID or name of the Docker service to stop.
  * @throws Will throw an error if the Docker command fails.
  */
-export async function stopService(serviceId: string): Promise<void> {
+export async function stopService(agentId: string): Promise<void> {
 	try {
-		const agentId = await getAgentId(serviceId);
+		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-		// Get the container ID from the service ID
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${serviceId}" --format "{{.ID}}"`);
+		// Get the container ID from the service name using agent.dockerServiceId
+		const { stdout: containerId } = await execAsync(
+			`docker ps --filter "name=${agent.dockerServiceId}" --format "{{.ID}}"`
+		);
 		if (!containerId) {
-			throw new Error(`No container found for service ID ${serviceId}`);
+			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
 
 		// Export DB from container
@@ -64,18 +68,18 @@ export async function stopService(serviceId: string): Promise<void> {
 			console.log(`Database exported to ${localDbPath}.`);
 		}
 
-		// Proceed to stop the service
-		const command = `docker service update --replicas 0 ${serviceId}`;
+		// Proceed to stop the service using agent.dockerServiceId
+		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
 		const { stdout, stderr } = await execAsync(command);
 
 		if (stderr) {
-			console.error(`Error stopping service ${serviceId}:`, stderr);
+			console.error(`Error stopping service ${agent.dockerServiceId}:`, stderr);
 			throw new Error(stderr);
 		}
 
-		console.log(`Service ${serviceId} stopped successfully.`);
+		console.log(`Service ${agent.dockerServiceId} stopped successfully.`);
 	} catch (error) {
-		console.error(`Failed to stop service ${serviceId}:`, error);
+		console.error(`Failed to stop service for agent id ${agentId}:`, error);
 		throw error;
 	}
 }
@@ -85,9 +89,9 @@ export async function stopService(serviceId: string): Promise<void> {
  * @param serviceId - The ID or name of the Docker service to start.
  * @throws Will throw an error if the Docker command fails.
  */
-export async function startService(serviceId: string): Promise<void> {
+export async function startService(agentId: string): Promise<void> {
 	try {
-		const agentId = await getAgentId(serviceId);
+		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
@@ -96,10 +100,12 @@ export async function startService(serviceId: string): Promise<void> {
 			throw new Error(`Local DB file ${localDbPath} does not exist.`);
 		}
 
-		// Get the container ID from the service ID
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${serviceId}" --format "{{.ID}}"`);
+		// Get the container ID from the service using agent.dockerServiceId
+		const { stdout: containerId } = await execAsync(
+			`docker ps --filter "name=${agent.dockerServiceId}" --format "{{.ID}}"`
+		);
 		if (!containerId) {
-			throw new Error(`No container found for service ID ${serviceId}`);
+			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
 
 		// If a DB already exists in the container, remove it
@@ -112,18 +118,18 @@ export async function startService(serviceId: string): Promise<void> {
 		await execAsync(importCommand);
 		console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
 
-		// Start the service
-		const command = `docker service update --replicas 1 ${serviceId}`;
+		// Start the service using agent.dockerServiceId
+		const command = `docker service update --replicas 1 ${agent.dockerServiceId}`;
 		const { stdout, stderr } = await execAsync(command);
 
 		if (stderr) {
-			console.error(`Error starting service ${serviceId}:`, stderr);
+			console.error(`Error starting service ${agent.dockerServiceId}:`, stderr);
 			throw new Error(stderr);
 		}
 
-		console.log(`Service ${serviceId} started successfully.`);
+		console.log(`Service ${agent.dockerServiceId} started successfully.`);
 	} catch (error) {
-		console.error(`Failed to start service ${serviceId}:`, error);
+		console.error(`Failed to start service for agent id ${agentId}:`, error);
 		throw error;
 	}
 }

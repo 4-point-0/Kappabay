@@ -82,10 +82,10 @@ export default function AgentsPage() {
 							<TableCell>{/* Format createdAt */}</TableCell>
 							<TableCell>{/* Format lastActive */}</TableCell>
 							<TableCell>
-								<Button variant="outline" size="sm" onClick={() => handleStart(agent.dockerServiceId!)}>
+								<Button variant="outline" size="sm" onClick={() => handleStart(agent.id)}>
 									Start
 								</Button>
-								<Button variant="destructive" size="sm" onClick={() => handleStop(agent.dockerServiceId!)}>
+								<Button variant="destructive" size="sm" onClick={() => handleStop(agent.id)}>
 									Stop
 								</Button>
 							</TableCell>
