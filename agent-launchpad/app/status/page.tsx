@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit"; // adjust import if needed
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 
 type Agent = {
@@ -68,39 +69,39 @@ export default function AgentsPage() {
 					Deploy New Agent
 				</Button>
 			</header>
-			<table className="w-full border-collapse">
-				<thead>
-					<tr className="border-b">
-						<th className="p-2 text-left">Agent</th>
-						<th className="p-2 text-left">Object ID</th>
-						<th className="p-2 text-left">Status</th>
-						<th className="p-2 text-left">Gas Bag</th>
-						<th className="p-2 text-left">Created</th>
-						<th className="p-2 text-left">Last Active</th>
-						<th className="p-2 text-left">Actions</th>
-					</tr>
-				</thead>
-				<tbody>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableHead>Agent</TableHead>
+						<TableHead>Object ID</TableHead>
+						<TableHead>Status</TableHead>
+						<TableHead>Gas Bag</TableHead>
+						<TableHead>Created</TableHead>
+						<TableHead>Last Active</TableHead>
+						<TableHead>Actions</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
 					{agents.map((agent) => (
-						<tr key={agent.id} className="border-b">
-							<td className="p-2">{agent.name}</td>
-							<td className="p-2">{agent.objectId}</td>
-							<td className="p-2">{agent.status}</td>
-							<td className="p-2">{/* Display gas bag info if available */}</td>
-							<td className="p-2">{/* Format createdAt */}</td>
-							<td className="p-2">{/* Format lastActive */}</td>
-							<td className="p-2 space-x-2">
+						<TableRow key={agent.id}>
+							<TableCell>{agent.name}</TableCell>
+							<TableCell>{agent.objectId}</TableCell>
+							<TableCell>{agent.status}</TableCell>
+							<TableCell>{/* Display gas bag info if available */}</TableCell>
+							<TableCell>{/* Format createdAt */}</TableCell>
+							<TableCell>{/* Format lastActive */}</TableCell>
+							<TableCell>
 								<Button variant="outline" size="sm" onClick={() => handleStart(agent.dockerServiceId!)}>
 									Start
 								</Button>
 								<Button variant="destructive" size="sm" onClick={() => handleStop(agent.dockerServiceId!)}>
 									Stop
 								</Button>
-							</td>
-						</tr>
+							</TableCell>
+						</TableRow>
 					))}
-				</tbody>
-			</table>
+				</TableBody>
+			</Table>
 		</div>
 	);
 }
