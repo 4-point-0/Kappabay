@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { startAgent, stopAgent } from "@/lib/actions/agent-actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { Spinner } from "@/components/ui/spinner"; // import spinner component
 
 export default function AgentActions({ agentId }: { agentId: string }) {
 	const [isStartLoading, setIsStartLoading] = useState(false);
@@ -30,7 +31,7 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 					}
 				}}
 			>
-				Start
+				{isStartLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "Start"}
 			</Button>
 			<Button
 				variant="destructive"
@@ -49,7 +50,7 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 					}
 				}}
 			>
-				Stop
+				{isStopLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "Stop"}
 			</Button>
 		</>
 	);
