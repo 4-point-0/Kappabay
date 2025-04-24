@@ -76,7 +76,34 @@ export async function stopService(agentId: string): Promise<void> {
 			console.log(`Database exported to ${localDbPath}.`);
 		}
 
-		// Proceed to stop the service using agent.dockerServiceId
+		// ---- Begin: Upload sqlite file to Walrus Publisher API ----
+		if (!fs.existsSync(localDbPath)) {
+			throw new Error(`Exported DB file ${localDbPath} not found.`);
+		}
+		const publisherUrl = process.env.PUBLISHER;
+		if (!publisherUrl) {
+			throw new Error("Walrus publisher URL (PUBLISHER) not set in environment variables.");
+		}
+		const uploadUrl = `${publisherUrl.replace(/\/$/, "")}/v1/blobs?deletable=true`;
+
+		// Read the local sqlite file as a Buffer.
+		const fileBuffer = fs.readFileSync(localDbPath);
+
+		// Upload the file via HTTP PUT. (Using global fetch; if not available, please add a fetch polyfill.)
+		const uploadResponse = await fetch(uploadUrl, {
+			method: "PUT",
+			headers: {
+				"Content-Type": "application/octet-stream",
+			},
+			body: fileBuffer,
+		});
+
+		if (!uploadResponse.ok) {
+			throw new Error(`Failed to upload sqlite file to Walrus publisher: ${uploadResponse.statusText}`);
+		}
+
+		console.log("SQLite file uploaded to Walrus publisher successfully.");
+		// ---- End: Upload section ----
 		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
 		const { stdout, stderr } = await execAsync(command);
 
