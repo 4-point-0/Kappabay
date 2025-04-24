@@ -25,7 +25,7 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
 type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash: string };
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
-	const agent = await prisma.agent.findUnique({
+	const agent = await prisma.agent.findFirst({
 		where: { id: agentId },
 		select: { id: true, dockerServiceId: true, latestBlobHash: true },
 	});
