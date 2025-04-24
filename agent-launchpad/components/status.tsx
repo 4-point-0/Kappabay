@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit"; // adjust import if needed
+import { getAgentsByOwner } from "@/lib/actions/get-agents-info";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AgentActions from "@/components/agent-actions";
 
-type Agent = {
+export type Agent = {
 	id: string;
 	name: string;
 	objectId: string;
@@ -15,10 +17,21 @@ type Agent = {
 
 export default function Status() {
 	const wallet = useCurrentAccount();
-	let agents: Agent[] = [];
-	// if (wallet?.address) {
-	// 	agents = await getAgentsByOwner(wallet.address);
-	// }
+	const [agents, setAgents] = useState<Agent[]>([]);
+
+	useEffect(() => {
+		async function fetchAgents() {
+			if (wallet?.address) {
+				try {
+					const fetchedAgents = await getAgentsByOwner(wallet.address);
+					setAgents(fetchedAgents);
+				} catch (error) {
+					console.error("Failed to fetch agents", error);
+				}
+			}
+		}
+		fetchAgents();
+	}, [wallet]);
 
 	return (
 		<div className="container mx-auto p-4">
@@ -34,7 +47,7 @@ export default function Status() {
 					</TableRow>
 				</TableHeader>
 				<TableBody>
-					{[].map((agent: any) => (
+					{agents.map((agent) => (
 						<TableRow key={agent.id}>
 							<TableCell>{agent.name}</TableCell>
 							<TableCell>{agent.objectId}</TableCell>
