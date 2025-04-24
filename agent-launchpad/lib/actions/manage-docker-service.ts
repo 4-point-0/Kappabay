@@ -2,18 +2,15 @@ import { exec } from "child_process";
 import util from "util";
 import fs from "fs";
 import path from "path";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db";
 
 const execAsync = util.promisify(exec);
 
-const prisma = new PrismaClient();
-
-/**
 const DB_CACHE_DIR = path.join(__dirname, "../../db-cache");
 
 // Ensure the db-cache directory exists
 if (!fs.existsSync(DB_CACHE_DIR)) {
-  fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
+	fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
 }
 
 /**
@@ -23,15 +20,15 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
  * @throws Will throw an error if the agent is not found.
  */
 async function getAgentId(serviceId: string): Promise<string> {
-  const agent = await prisma.agent.findUnique({
-    where: { dockerServiceId: serviceId },
-  });
+	const agent = await prisma.agent.findUnique({
+		where: { dockerServiceId: serviceId },
+	});
 
-  if (!agent) {
-    throw new Error(`Agent with serviceId ${serviceId} not found.`);
-  }
+	if (!agent) {
+		throw new Error(`Agent with serviceId ${serviceId} not found.`);
+	}
 
-  return agent.id;
+	return agent.id;
 }
 
 /**
