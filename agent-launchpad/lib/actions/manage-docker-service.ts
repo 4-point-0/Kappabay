@@ -4,6 +4,8 @@ import { exec } from "child_process";
 import util from "util";
 import fs from "fs";
 import path from "path";
+import axios from "axios";
+import { uploadBlob, retrieveBlob } from "../path/to/walrus-api"; // adjust the path accordingly
 import { prisma } from "../db";
 
 const execAsync = util.promisify(exec);
@@ -21,11 +23,12 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
  * @returns The corresponding agentId.
  * @throws Will throw an error if the agent is not found.
  */
-type AgentRecord = { id: string; dockerServiceId: string };
+type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash?: string };
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
 	const agent = await prisma.agent.findUnique({
 		where: { id: agentId },
+		select: { id: true, dockerServiceId: true, latestBlobHash: true },
 	});
 
 	if (!agent) {
@@ -76,33 +79,16 @@ export async function stopService(agentId: string): Promise<void> {
 			console.log(`Database exported to ${localDbPath}.`);
 		}
 
-		// ---- Begin: Upload sqlite file to Walrus Publisher API ----
-		if (!fs.existsSync(localDbPath)) {
-			throw new Error(`Exported DB file ${localDbPath} not found.`);
-		}
-		const publisherUrl = process.env.PUBLISHER;
-		if (!publisherUrl) {
-			throw new Error("Walrus publisher URL (PUBLISHER) not set in environment variables.");
-		}
-		const uploadUrl = `${publisherUrl.replace(/\/$/, "")}/v1/blobs?deletable=true`;
-
-		// Read the local sqlite file as a Buffer.
+		// ---- Begin: Upload sqlite file using Walrus Publisher API ----
 		const fileBuffer = fs.readFileSync(localDbPath);
+		const blobHash = await uploadBlob(fileBuffer);
+		console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
 
-		// Upload the file via HTTP PUT. (Using global fetch; if not available, please add a fetch polyfill.)
-		const uploadResponse = await fetch(uploadUrl, {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/octet-stream",
-			},
-			body: fileBuffer,
+		// Update the agent with the latest blob hash so we can retrieve it later.
+		await prisma.agent.update({
+			where: { id: agentId },
+			data: { latestBlobHash: blobHash },
 		});
-
-		if (!uploadResponse.ok) {
-			throw new Error(`Failed to upload sqlite file to Walrus publisher: ${uploadResponse.statusText}`);
-		}
-
-		console.log("SQLite file uploaded to Walrus publisher successfully.");
 		// ---- End: Upload section ----
 		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
 		const { stdout, stderr } = await execAsync(command);
@@ -130,9 +116,14 @@ export async function startService(agentId: string): Promise<void> {
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-		// Validate the existence of the local DB file
+		// Ensure local DB file exists; if not, attempt to download it from Walrus Aggregator.
 		if (!fs.existsSync(localDbPath)) {
-			throw new Error(`Local DB file ${localDbPath} does not exist.`);
+			if (!agent.latestBlobHash) {
+				throw new Error(`Local DB file ${localDbPath} does not exist and no latest blob hash available.`);
+			}
+			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
+			fs.writeFileSync(localDbPath, fileBuffer);
+			console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
 		}
 
 		// Start the service using agent.dockerServiceId
