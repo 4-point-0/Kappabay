@@ -12,7 +12,7 @@ type Agent = {
 	objectId: string;
 	status: string;
 	dockerServiceId: string;
-	// ... include other fields as needed (gasBag, createdAt, lastActive, dockerServiceId, etc.)
+	latestBlobId?: string;
 };
 
 export default function AgentsPage() {
@@ -40,9 +40,8 @@ export default function AgentsPage() {
 						<TableHead>Agent</TableHead>
 						<TableHead>Object ID</TableHead>
 						<TableHead>Status</TableHead>
-						<TableHead>Gas Bag</TableHead>
-						<TableHead>Created</TableHead>
-						<TableHead>Last Active</TableHead>
+						<TableHead>Agent ID</TableHead>
+						<TableHead>Latest Blob ID</TableHead>
 						<TableHead>Actions</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -52,9 +51,8 @@ export default function AgentsPage() {
 							<TableCell>{agent.name}</TableCell>
 							<TableCell>{agent.objectId}</TableCell>
 							<TableCell>{agent.status}</TableCell>
-							<TableCell>{/* Display gas bag info if available */}</TableCell>
-							<TableCell>{/* Format createdAt */}</TableCell>
-							<TableCell>{/* Format lastActive */}</TableCell>
+							<TableCell>{agent.id}</TableCell>
+							<TableCell>{agent.latestBlobId || "N/A"}</TableCell>
 							<TableCell>
 								<AgentActions agentId={agent.id} />
 							</TableCell>
