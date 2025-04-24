@@ -11,6 +11,7 @@ type Agent = {
 	name: string;
 	objectId: string;
 	status: string;
+	dockerServiceId: string;
 	// ... include other fields as needed (gasBag, createdAt, lastActive, dockerServiceId, etc.)
 };
 
@@ -59,16 +60,6 @@ export default function AgentsPage() {
 
 	return (
 		<div className="container mx-auto p-4">
-			<header className="flex items-center justify-between mb-8">
-				<h1 className="text-3xl font-bold">My Agents</h1>
-				<Button
-					onClick={() => {
-						/* Navigate to deploy new agent page */
-					}}
-				>
-					Deploy New Agent
-				</Button>
-			</header>
 			<Table>
 				<TableHeader>
 					<TableRow>
