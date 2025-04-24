@@ -1,9 +1,10 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit"; // adjust import if needed
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import AgentActions from "@/components/AgentActions";
+import AgentActions from "@/components/agent-actions";
 
 type Agent = {
 	id: string;
@@ -30,7 +31,6 @@ export default function AgentsPage() {
 		}
 		fetchAgents();
 	}, [wallet]);
-
 
 	return (
 		<div className="container mx-auto p-4">

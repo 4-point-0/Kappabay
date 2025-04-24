@@ -8,7 +8,7 @@ import { prisma } from "../db";
 
 const execAsync = util.promisify(exec);
 
-const DB_CACHE_DIR = path.join(__dirname, "db-cache");
+const DB_CACHE_DIR = path.join(process.cwd(), "db-cache");
 
 // Ensure the db-cache directory exists
 if (!fs.existsSync(DB_CACHE_DIR)) {
@@ -47,14 +47,20 @@ export async function stopService(agentId: string): Promise<void> {
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
+		console.log("DB_CACHE_DIR", DB_CACHE_DIR);
+		console.log("LOCAL", localDbPath);
+		console.log("DIRNAME", __dirname);
+		console.log("process.cwd() ", process.cwd());
+
 		// Get the container ID from the service name using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${agent.id}" --format "{{.ID}}"`);
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}"`);
 		if (!containerId) {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
 
 		// Export DB from container
 		const exportCommand = `docker cp ${containerId.trim()}:${containerDbPath} ${localDbPath}`;
+
 		await execAsync(exportCommand);
 		console.log(`Database exported to ${localDbPath}.`);
 
@@ -102,8 +108,14 @@ export async function startService(agentId: string): Promise<void> {
 			throw new Error(`Local DB file ${localDbPath} does not exist.`);
 		}
 
+		// Start the service using agent.dockerServiceId
+		const command = `docker service update --replicas 1 ${agent.dockerServiceId}`;
+		const { stdout, stderr } = await execAsync(command);
+
+		await new Promise((resolve) => setTimeout(resolve, 1000));
+
 		// Get the container ID from the service using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${agent.id}" --format "{{.ID}}`);
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}`);
 		if (!containerId) {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
@@ -117,10 +129,6 @@ export async function startService(agentId: string): Promise<void> {
 		const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
 		await execAsync(importCommand);
 		console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
-
-		// Start the service using agent.dockerServiceId
-		const command = `docker service update --replicas 1 ${agent.dockerServiceId}`;
-		const { stdout, stderr } = await execAsync(command);
 
 		if (stderr) {
 			console.error(`Error starting service ${agent.dockerServiceId}:`, stderr);
