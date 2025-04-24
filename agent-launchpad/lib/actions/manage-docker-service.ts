@@ -4,7 +4,7 @@ import { exec } from "child_process";
 import util from "util";
 import fs from "fs";
 import path from "path";
-import { uploadBlob, retrieveBlob } from "../path/to/walrus-api"; // adjust the path accordingly
+import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { prisma } from "../db";
 
 const execAsync = util.promisify(exec);
@@ -22,7 +22,7 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
  * @returns The corresponding agentId.
  * @throws Will throw an error if the agent is not found.
  */
-type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash?: string };
+type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash: string };
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
 	const agent = await prisma.agent.findUnique({
@@ -34,7 +34,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 		throw new Error(`Agent with id ${agentId} not found.`);
 	}
 
-	return { id: agent.id, dockerServiceId: agent.dockerServiceId ?? "" };
+	return { id: agent.id, dockerServiceId: agent.dockerServiceId, latestBlobHash: agent.latestBlobHash };
 }
 
 /**
@@ -42,17 +42,10 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
  * @throws Will throw an error if the Docker command fails.
  */
 export async function stopService(agentId: string): Promise<void> {
-	console.log("agentId", agentId);
-
 	try {
 		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
-
-		console.log("DB_CACHE_DIR", DB_CACHE_DIR);
-		console.log("LOCAL", localDbPath);
-		console.log("DIRNAME", __dirname);
-		console.log("process.cwd() ", process.cwd());
 
 		// Get the container ID from the service name using agent.dockerServiceId
 		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}"`);
