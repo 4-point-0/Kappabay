@@ -34,7 +34,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 }
 
 /**
- * @param serviceId - The ID or name of the Docker service to stop.
+ * @param agentId - The id of the agent whose Docker service should be stopped.
  * @throws Will throw an error if the Docker command fails.
  */
 export async function stopService(agentId: string): Promise<void> {
@@ -86,7 +86,7 @@ export async function stopService(agentId: string): Promise<void> {
 
 /**
  * Starts a Docker Swarm service by setting its replicas to 1.
- * @param serviceId - The ID or name of the Docker service to start.
+ * @param agentId - The id of the agent whose Docker service should be started.
  * @throws Will throw an error if the Docker command fails.
  */
 export async function startService(agentId: string): Promise<void> {
