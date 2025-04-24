@@ -91,7 +91,7 @@ export async function stopService(agentId: string): Promise<void> {
 		}
 
 		console.log(`Service ${agent.dockerServiceId} stopped successfully.`);
-		
+
 		// Update agent status to INACTIVE in the Prisma DB.
 		await prisma.agent.update({
 			where: { id: agentId },
@@ -152,7 +152,7 @@ export async function startService(agentId: string): Promise<void> {
 		}
 
 		console.log(`Service ${agent.dockerServiceId} started successfully.`);
-		
+
 		// Update agent status to ACTIVE in the Prisma DB.
 		await prisma.agent.update({
 			where: { id: agentId },

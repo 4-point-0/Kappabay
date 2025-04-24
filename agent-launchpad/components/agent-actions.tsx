@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { startAgent, stopAgent } from "@/lib/actions/agent-actions";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { toast } from "@/hooks/use-toast";
-import { Spinner } from "@/components/ui/spinner"; // import spinner component
 
 export default function AgentActions({ agentId }: { agentId: string }) {
 	const [isStartLoading, setIsStartLoading] = useState(false);
