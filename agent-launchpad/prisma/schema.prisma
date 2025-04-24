@@ -34,6 +34,6 @@ model Agent {
   hasOracle         Boolean   @default(false)
   oraclePort        Int?      // Port the oracle is running on
   oraclePid         Int?      // Process ID of the running oracle
-  dockerServiceId   String?   // Docker service ID
+  dockerServiceId   String?   @unique // Docker service ID
   terminalPort      Int?      // Port the terminal is running on
 }
