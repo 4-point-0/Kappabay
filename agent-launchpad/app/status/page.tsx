@@ -1,10 +1,9 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useCurrentAccount } from "@mysten/dapp-kit"; // adjust import if needed
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import AgentActions from "@/components/AgentActions";
 
 type Agent = {
 	id: string;
@@ -32,31 +31,6 @@ export default function AgentsPage() {
 		fetchAgents();
 	}, [wallet]);
 
-	async function handleStart(agentId: string) {
-		const res = await fetch("/api/agent/start", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ agentId }),
-		});
-		if (res.ok) {
-			toast({ title: "Started", description: "Agent started successfully." });
-		} else {
-			toast({ title: "Error", description: "Could not start agent.", variant: "destructive" });
-		}
-	}
-
-	async function handleStop(agentId: string) {
-		const res = await fetch("/api/agent/stop", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ agentId }),
-		});
-		if (res.ok) {
-			toast({ title: "Stopped", description: "Agent stopped successfully." });
-		} else {
-			toast({ title: "Error", description: "Could not stop agent.", variant: "destructive" });
-		}
-	}
 
 	return (
 		<div className="container mx-auto p-4">
@@ -82,12 +56,7 @@ export default function AgentsPage() {
 							<TableCell>{/* Format createdAt */}</TableCell>
 							<TableCell>{/* Format lastActive */}</TableCell>
 							<TableCell>
-								<Button variant="outline" size="sm" onClick={() => handleStart(agent.id)}>
-									Start
-								</Button>
-								<Button variant="destructive" size="sm" onClick={() => handleStop(agent.id)}>
-									Stop
-								</Button>
+								<AgentActions agentId={agent.id} />
 							</TableCell>
 						</TableRow>
 					))}
