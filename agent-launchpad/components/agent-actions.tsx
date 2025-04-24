@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { startAgent, stopAgent } from "@/lib/actions/agent-actions";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/ui/loading-button";
 import { toast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/spinner"; // import spinner component
 
@@ -14,10 +14,10 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 
 	return (
 		<>
-			<Button
+			<LoadingButton
 				variant="outline"
 				size="sm"
-				disabled={isStartLoading || isStopLoading}
+				loading={isStartLoading}
 				onClick={async () => {
 					setIsStartLoading(true);
 					try {
@@ -31,12 +31,12 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 					}
 				}}
 			>
-				{isStartLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "Start"}
-			</Button>
-			<Button
+				Start
+			</LoadingButton>
+			<LoadingButton
 				variant="destructive"
 				size="sm"
-				disabled={isStartLoading || isStopLoading}
+				loading={isStopLoading}
 				onClick={async () => {
 					setIsStopLoading(true);
 					try {
@@ -50,8 +50,8 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 					}
 				}}
 			>
-				{isStopLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "Stop"}
-			</Button>
+				Stop
+			</LoadingButton>
 		</>
 	);
 }
