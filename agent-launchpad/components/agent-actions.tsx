@@ -16,7 +16,6 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 			<Button
 				variant="outline"
 				size="sm"
-				loading={isStartLoading}
 				disabled={isStartLoading || isStopLoading}
 				onClick={async () => {
 					setIsStartLoading(true);
@@ -36,7 +35,6 @@ export default function AgentActions({ agentId }: { agentId: string }) {
 			<Button
 				variant="destructive"
 				size="sm"
-				loading={isStopLoading}
 				disabled={isStartLoading || isStopLoading}
 				onClick={async () => {
 					setIsStopLoading(true);
