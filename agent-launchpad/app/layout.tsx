@@ -7,11 +7,11 @@ import { SuiClientProvider, createNetworkConfig } from "@mysten/dapp-kit";
 import { WalletProvider } from "@suiet/wallet-kit";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import Providers from "@/app/providers";
-
+import Header from "@/components/header";
 
 const metadata: Metadata = {
 	title: "Kappabay",
-	description: "Created with love by 4PTO Labs"
+	description: "Created with love by 4PTO Labs",
 };
 
 const { networkConfig } = createNetworkConfig({
@@ -28,11 +28,10 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body>
-				
-					<Providers>
-						{children}	
-					</Providers>
-				
+				<Providers>
+					<Header />
+					{children}
+				</Providers>
 			</body>
 		</html>
 	);
