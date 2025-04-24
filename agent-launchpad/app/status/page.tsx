@@ -22,7 +22,7 @@ export default function AgentsPage() {
 	useEffect(() => {
 		async function fetchAgents() {
 			if (!wallet?.address) return;
-			const res = await fetch(`/api/agents?ownerWallet=${encodeURIComponent(wallet.address)}`);
+			const res = await fetch(`/api/my-agents?ownerWallet=${encodeURIComponent(wallet.address)}`);
 			if (res.ok) {
 				setAgents(await res.json());
 			} else {
@@ -32,11 +32,11 @@ export default function AgentsPage() {
 		fetchAgents();
 	}, [wallet]);
 
-	async function handleStart(serviceId: string) {
+	async function handleStart(agentId: string) {
 		const res = await fetch("/api/agent/start", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ serviceId }),
+			body: JSON.stringify({ agentId }),
 		});
 		if (res.ok) {
 			toast({ title: "Started", description: "Agent started successfully." });
@@ -45,11 +45,11 @@ export default function AgentsPage() {
 		}
 	}
 
-	async function handleStop(serviceId: string) {
+	async function handleStop(agentId: string) {
 		const res = await fetch("/api/agent/stop", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ serviceId }),
+			body: JSON.stringify({ agentId }),
 		});
 		if (res.ok) {
 			toast({ title: "Stopped", description: "Agent stopped successfully." });

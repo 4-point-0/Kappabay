@@ -1,3 +1,5 @@
+"use server";
+
 import { exec } from "child_process";
 import util from "util";
 import fs from "fs";
@@ -6,7 +8,7 @@ import { prisma } from "../db";
 
 const execAsync = util.promisify(exec);
 
-const DB_CACHE_DIR = path.join(__dirname, "../../db-cache");
+const DB_CACHE_DIR = path.join(__dirname, "db-cache");
 
 // Ensure the db-cache directory exists
 if (!fs.existsSync(DB_CACHE_DIR)) {
@@ -30,7 +32,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 		throw new Error(`Agent with id ${agentId} not found.`);
 	}
 
-	return { id: agent.id, dockerServiceId: agent.dockerServiceId };
+	return { id: agent.id, dockerServiceId: agent.dockerServiceId ?? "" };
 }
 
 /**
@@ -38,15 +40,15 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
  * @throws Will throw an error if the Docker command fails.
  */
 export async function stopService(agentId: string): Promise<void> {
+	console.log("agentId", agentId);
+
 	try {
 		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
 		// Get the container ID from the service name using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(
-			`docker ps --filter "name=${agent.dockerServiceId}" --format "{{.ID}}"`
-		);
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${agent.id}" --format "{{.ID}}"`);
 		if (!containerId) {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
@@ -101,9 +103,7 @@ export async function startService(agentId: string): Promise<void> {
 		}
 
 		// Get the container ID from the service using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(
-			`docker ps --filter "name=${agent.dockerServiceId}" --format "{{.ID}}"`
-		);
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${agent.id}" --format "{{.ID}}`);
 		if (!containerId) {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
