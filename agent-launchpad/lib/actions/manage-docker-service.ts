@@ -41,8 +41,14 @@ export async function stopService(serviceId: string): Promise<void> {
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
+		// Get the container ID from the service ID
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${serviceId}" --format "{{.ID}}"`);
+		if (!containerId) {
+			throw new Error(`No container found for service ID ${serviceId}`);
+		}
+
 		// Export DB from container
-		const exportCommand = `docker cp ${serviceId}:${containerDbPath} ${localDbPath}`;
+		const exportCommand = `docker cp ${containerId.trim()}:${containerDbPath} ${localDbPath}`;
 		await execAsync(exportCommand);
 		console.log(`Database exported to ${localDbPath}.`);
 
@@ -90,15 +96,21 @@ export async function startService(serviceId: string): Promise<void> {
 			throw new Error(`Local DB file ${localDbPath} does not exist.`);
 		}
 
+		// Get the container ID from the service ID
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=${serviceId}" --format "{{.ID}}"`);
+		if (!containerId) {
+			throw new Error(`No container found for service ID ${serviceId}`);
+		}
+
 		// If a DB already exists in the container, remove it
-		const removeCommand = `docker exec ${serviceId} rm -f ${containerDbPath}`;
+		const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
 		await execAsync(removeCommand);
-		console.log(`Existing database in container ${serviceId} removed.`);
+		console.log(`Existing database in container ${containerId.trim()} removed.`);
 
 		// Import DB to container
-		const importCommand = `docker cp ${localDbPath} ${serviceId}:${containerDbPath}`;
+		const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
 		await execAsync(importCommand);
-		console.log(`Database imported to container ${serviceId} from ${localDbPath}.`);
+		console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
 
 		// Start the service
 		const command = `docker service update --replicas 1 ${serviceId}`;
