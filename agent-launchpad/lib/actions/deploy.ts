@@ -194,8 +194,6 @@ async function buildAndStartAgentDocker(
 	});
 	await fs.unlink(secretFilePath); // Remove temporary file
 	console.log("Created secret, deleted temp file.");
-	// Create the Docker secret for the .env file
-	const envSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 
 	// ----- Create the Docker service with port mappings, secrets, and config -----
 	// The Docker config will be mounted at /characters/agent.json,

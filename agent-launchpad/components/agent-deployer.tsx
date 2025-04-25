@@ -119,7 +119,6 @@ export default function AgentDeployer() {
 		reader.readAsText(file);
 	};
 
-
 	const handleDeploy = async () => {
 		const tx = new Transaction();
 
@@ -268,13 +267,12 @@ export default function AgentDeployer() {
 			</div>
 
 			<Tabs defaultValue="basic" className="w-full">
-				<TabsList className="grid grid-cols-6 w-full">
+				<TabsList className="grid grid-cols-5 w-full">
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
 					<TabsTrigger value="examples">Examples</TabsTrigger>
 					<TabsTrigger value="plugins">Plugins</TabsTrigger>
 					<TabsTrigger value="advanced">Advanced</TabsTrigger>
-					<TabsTrigger value="environment">Environment</TabsTrigger>
 				</TabsList>
 
 				<TabsContent value="basic" className="space-y-4 mt-4">
