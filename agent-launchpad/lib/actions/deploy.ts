@@ -165,7 +165,7 @@ async function buildAndStartAgentDocker(
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
 	// Read env content from the backend filesystem and create Docker secret for agent's .env
-	const agentEnvFilePath = path.join(process.cwd(), "agent-launchpad", "config-agent", ".env");
+	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
 	const envContentAgent = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
 	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
