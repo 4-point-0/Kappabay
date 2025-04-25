@@ -29,8 +29,13 @@ async function createDockerSecretFromEnv(agentId: string, envContent: string, se
 	await new Promise<void>((resolve, reject) => {
 		exec(`docker secret create ${_secretName} ${envFilePath}`, (error, stdout, stderr) => {
 			if (error) {
-				console.error("Docker secret creation error:", stderr);
-				reject(error);
+				if (stderr.includes("already exists")) {
+					console.warn(`Docker secret ${_secretName} already exists. Skipping creation.`);
+					resolve();
+				} else {
+					console.error("Docker secret creation error:", stderr);
+					reject(error);
+				}
 				return;
 			}
 			resolve();
