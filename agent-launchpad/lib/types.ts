@@ -31,7 +31,6 @@ export interface AgentConfig {
 
 export interface DeploymentData {
 	agentConfig: AgentConfig;
-	envContent: string;
 	onChainData: {
 		agentObjectId: string;
 		agentCapId: string;

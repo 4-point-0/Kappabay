@@ -29,8 +29,13 @@ async function createDockerSecretFromEnv(agentId: string, envContent: string, se
 	await new Promise<void>((resolve, reject) => {
 		exec(`docker secret create ${_secretName} ${envFilePath}`, (error, stdout, stderr) => {
 			if (error) {
-				console.error("Docker secret creation error:", stderr);
-				reject(error);
+				if (stderr.includes("already exists")) {
+					console.warn(`Docker secret ${_secretName} already exists. Skipping creation.`);
+					resolve();
+				} else {
+					console.error("Docker secret creation error:", stderr);
+					reject(error);
+				}
 				return;
 			}
 			resolve();
@@ -156,7 +161,6 @@ async function buildAndStartAgentDocker(
 	agentId: string,
 	walletKey: string,
 	configName: string,
-	envContentAgent: string,
 	envSecretNameOracle: string,
 	envSecretNameTerminal: string,
 	hostOraclePort: number,
@@ -165,7 +169,10 @@ async function buildAndStartAgentDocker(
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
-	// Pre-built Docker image from your registry.
+	// Read env content from the backend filesystem and create Docker secret for agent's .env
+	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
+	const envContentAgent = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
+	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
 
 	// ----- Create the Docker secret for the wallet key -----
@@ -187,8 +194,6 @@ async function buildAndStartAgentDocker(
 	});
 	await fs.unlink(secretFilePath); // Remove temporary file
 	console.log("Created secret, deleted temp file.");
-	// Create the Docker secret for the .env file
-	const envSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 
 	// ----- Create the Docker service with port mappings, secrets, and config -----
 	// The Docker config will be mounted at /characters/agent.json,
@@ -200,7 +205,7 @@ async function buildAndStartAgentDocker(
 		`--publish published=${hostPortTerminal},target=7000 ` +
 		`--publish published=${hostOraclePort},target=3015 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
-		`--secret source=${envSecretName},target=/app/eliza-kappabay-agent/.env ` +
+		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
 		`--secret source=${envSecretNameOracle},target=/app/oracle/.env ` +
 		`--config source=${configName},target=/app/eliza-kappabay-agent/characters/agent.json ` +
@@ -282,7 +287,6 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId,
 			agentWalletKey,
 			configName,
-			deploymentData.envContent,
 			oracleEnvSecretName,
 			terminalEnvSecretName,
 			hostPortOracle,
