@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Agent" ADD COLUMN "pid" INTEGER;
+ALTER TABLE "Agent" ADD COLUMN "port" INTEGER;
