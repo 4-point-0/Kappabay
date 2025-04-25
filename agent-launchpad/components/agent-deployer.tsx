@@ -43,8 +43,6 @@ export default function AgentDeployer() {
 
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig);
 	const fileInputRef = useRef<HTMLInputElement>(null);
-	const envFileInputRef = useRef<HTMLInputElement>(null);
-	const [envContent, setEnvContent] = useState<string>("");
 
 	const handleChange = (field: string, value: any) => {
 		setAgentConfig((prev) => ({
@@ -121,22 +119,6 @@ export default function AgentDeployer() {
 		reader.readAsText(file);
 	};
 
-	const handleEnvFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (!file) return;
-
-		if (file.type !== "text/plain" && !file.name.endsWith(".env")) {
-			alert("Please upload a valid .env file.");
-			return;
-		}
-
-		const reader = new FileReader();
-		reader.onload = (e) => {
-			const content = e.target?.result as string;
-			setEnvContent(content);
-		};
-		reader.readAsText(file);
-	};
 
 	const handleDeploy = async () => {
 		const tx = new Transaction();
@@ -201,7 +183,6 @@ export default function AgentDeployer() {
 			// Call Deploy server action
 			const deployResult = await Deploy({
 				agentConfig,
-				envContent,
 				onChainData: {
 					agentObjectId,
 					agentCapId,
@@ -745,33 +726,6 @@ export default function AgentDeployer() {
 									</div>
 								</div>
 							</div>
-						</CardContent>
-					</Card>
-				</TabsContent>
-				<TabsContent value="environment" className="space-y-4 mt-4">
-					<Card>
-						<CardContent className="pt-6 space-y-4">
-							<div className="flex justify-between items-center">
-								<Label>Environment Configuration (.env)</Label>
-								<Button variant="outline" onClick={() => envFileInputRef.current?.click()}>
-									<Upload className="mr-2 h-4 w-4" />
-									Import .env
-								</Button>
-								<input
-									type="file"
-									ref={envFileInputRef}
-									onChange={handleEnvFileUpload}
-									accept=".env"
-									className="hidden"
-								/>
-							</div>
-							{envContent && (
-								<Textarea
-									value={envContent}
-									readOnly
-									className="min-h-[200px] mt-4 p-4 bg-gray-100 border rounded-md"
-								/>
-							)}
 						</CardContent>
 					</Card>
 				</TabsContent>

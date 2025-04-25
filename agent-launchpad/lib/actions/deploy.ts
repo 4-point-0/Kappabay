@@ -156,7 +156,6 @@ async function buildAndStartAgentDocker(
 	agentId: string,
 	walletKey: string,
 	configName: string,
-	envContentAgent: string,
 	envSecretNameOracle: string,
 	envSecretNameTerminal: string,
 	hostOraclePort: number,
@@ -165,7 +164,10 @@ async function buildAndStartAgentDocker(
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
-	// Pre-built Docker image from your registry.
+	// Read env content from the backend filesystem and create Docker secret for agent's .env
+	const agentEnvFilePath = path.join(process.cwd(), "agent-launchpad", "config-agent", ".env");
+	const envContentAgent = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
+	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
 
 	// ----- Create the Docker secret for the wallet key -----
@@ -200,7 +202,7 @@ async function buildAndStartAgentDocker(
 		`--publish published=${hostPortTerminal},target=7000 ` +
 		`--publish published=${hostOraclePort},target=3015 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
-		`--secret source=${envSecretName},target=/app/eliza-kappabay-agent/.env ` +
+		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
 		`--secret source=${envSecretNameOracle},target=/app/oracle/.env ` +
 		`--config source=${configName},target=/app/eliza-kappabay-agent/characters/agent.json ` +
@@ -282,7 +284,6 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId,
 			agentWalletKey,
 			configName,
-			deploymentData.envContent,
 			oracleEnvSecretName,
 			terminalEnvSecretName,
 			hostPortOracle,
