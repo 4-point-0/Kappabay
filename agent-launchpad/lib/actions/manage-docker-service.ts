@@ -34,7 +34,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 		throw new Error(`Agent with id ${agentId} not found.`);
 	}
 
-	return { id: agent.id, dockerServiceId: agent.dockerServiceId, latestBlobHash: agent.latestBlobHash };
+	return { id: agent.id, dockerServiceId: agent.dockerServiceId ?? "", latestBlobHash: agent.latestBlobHash ?? "" };
 }
 
 /**

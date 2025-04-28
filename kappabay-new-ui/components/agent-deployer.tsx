@@ -300,6 +300,7 @@ export default function AgentDeployer({
 											<SelectItem value="anthropic">Anthropic</SelectItem>
 											<SelectItem value="mistral">Mistral AI</SelectItem>
 											<SelectItem value="llama">Llama</SelectItem>
+											<SelectItem value="deepseek">DeepSeek</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
