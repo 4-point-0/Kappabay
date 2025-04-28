@@ -71,7 +71,7 @@ export default function TerminalPage() {
 				console.error("Error retrieving agents:", error);
 			}
 		})();
-	}, [agent.id]);
+	}, []);
 
 	// Mock agent data
 	const agent = {
@@ -103,7 +103,6 @@ export default function TerminalPage() {
 			return;
 		}
 
-
 		// Call the API with all required arguments, including the baseUrl.
 		try {
 			// Ensure initialization is complete.
@@ -114,15 +113,18 @@ export default function TerminalPage() {
 
 			const response = await apiClient.sendMessage(
 				containerAgentId, // container agent id from getAgents response
-				messageContent,   // text message
-				wallet.address,   // wallet's address
-				baseUrl,          // dynamic baseUrl (http://localhost:<agent.port>)
-				null              // no file provided
+				messageContent, // text message
+				wallet.address, // wallet's address
+				baseUrl, // dynamic baseUrl (http://localhost:<agent.port>)
+				null // no file provided
 			);
 
 			// Optionally process the response e.g. update messages with agent reply.
 			// For example:
-			// setMessages((prev) => [...prev, { id: Date.now().toString(), role: "agent", content: response.reply, timestamp: new Date() }]);
+			setMessages((prev) => [
+				...prev,
+				{ id: Date.now().toString(), role: "agent", content: response.reply, timestamp: new Date() },
+			]);
 		} catch (error) {
 			console.error("Error sending message:", error);
 		}
