@@ -79,19 +79,11 @@ export default function StatusPage() {
 		try {
 			if (currentStatus === "ACTIVE") {
 				await stopService(agentId);
-				setAgents(
-					agents.map((agent: any) =>
-						agent.id === agentId ? { ...agent, status: "INACTIVE" } : agent
-					)
-				);
 			} else {
 				await startService(agentId);
-				setAgents(
-					agents.map((agent: any) =>
-						agent.id === agentId ? { ...agent, status: "ACTIVE" } : agent
-					)
-				);
 			}
+			const updatedAgents = await getAgentsByOwner(wallet.address);
+			setAgents(updatedAgents);
 		} catch (error) {
 			console.error(`Failed to update service status for agent ${agentId}:`, error);
 		}
