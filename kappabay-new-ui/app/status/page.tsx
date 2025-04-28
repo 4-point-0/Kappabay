@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Play, Pause, RefreshCw, Settings, Terminal, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import {
 	Dialog,
 	DialogContent,
@@ -74,12 +75,26 @@ export default function StatusPage() {
 		fetchAgents();
 	}, [wallet]);
 
-	const toggleStatus = (id: string) => {
-		setAgents(
-			agents.map((agent: any) =>
-				agent.id === id ? { ...agent, status: agent.status === "ACTIVE" ? "inactive" : "active" } : agent
-			)
-		);
+	const handleService = async (agentId: string, currentStatus: string) => {
+		try {
+			if (currentStatus === "ACTIVE") {
+				await stopService(agentId);
+				setAgents(
+					agents.map((agent: any) =>
+						agent.id === agentId ? { ...agent, status: "INACTIVE" } : agent
+					)
+				);
+			} else {
+				await startService(agentId);
+				setAgents(
+					agents.map((agent: any) =>
+						agent.id === agentId ? { ...agent, status: "ACTIVE" } : agent
+					)
+				);
+			}
+		} catch (error) {
+			console.error(`Failed to update service status for agent ${agentId}:`, error);
+		}
 	};
 
 	const handleDeposit = () => {
@@ -241,7 +256,7 @@ export default function StatusPage() {
 															</Link>
 														</motion.div>
 														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Button variant="outline" size="icon" onClick={() => toggleStatus(agent.id)}>
+															<Button variant="outline" size="icon" onClick={() => handleService(agent.id, agent.status)}>
 																{agent.status === "ACTIVE" ? (
 																	<Pause className="h-4 w-4" />
 																) : (
