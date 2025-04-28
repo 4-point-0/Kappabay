@@ -3,6 +3,7 @@
 import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
+import { useCurrentAccount } from "@/hooks/useCurrentAccount";
 import { useParams } from "next/navigation";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -45,30 +46,43 @@ export default function TerminalPage() {
 		objectId: id,
 	};
 
-	const handleSendMessage = () => {
+	const handleSendMessage = async () => {
 		if (!input.trim()) return;
 
-		// Add user message
+		// Create and add the user's message.
 		const userMessage: Message = {
 			id: Date.now().toString(),
 			role: "user",
-			content: input,
+			content: input.trim(),
 			timestamp: new Date(),
 		};
 		setMessages((prev) => [...prev, userMessage]);
+
+		// Preserve the message content and clear input.
+		const messageContent = userMessage.content;
 		setInput("");
 
-		// Simulate agent response after a delay
-		// setTimeout(() => {
-		//   const agentMessage: Message = {
-		//     id: (Date.now() + 1).toString(),
-		//     role: "agent",
-		//     content: `I received your message: "${input}". This is a simulated response from the agent.`,
-		//     timestamp: new Date(),
-		//   }
-		//   setMessages((prev) => [...prev, agentMessage])
-		// }, 1000)
-		apiClient.sendMessage(agentId, message, walletAddress, selectedFile);
+		// Obtain wallet's address (assumes wallet is obtained at component level).
+		if (!wallet?.address) {
+			console.error("Wallet not connected");
+			return;
+		}
+
+		// Call the API with the proper arguments.
+		try {
+			const response = await apiClient.sendMessage(
+				agent.id,        // agent id from the `agent` object
+				messageContent,  // the text message
+				wallet.address,  // wallet's address from useCurrentAccount()
+				null             // pass `null` as no file is provided
+			);
+
+			// Optionally process the response e.g. update messages with agent reply.
+			// For example:
+			// setMessages((prev) => [...prev, { id: Date.now().toString(), role: "agent", content: response.reply, timestamp: new Date() }]);
+		} catch (error) {
+			console.error("Error sending message:", error);
+		}
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
