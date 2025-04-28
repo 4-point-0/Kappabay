@@ -72,17 +72,17 @@ export async function stopService(agentId: string): Promise<void> {
 		}
 
 		try {
-		  const fileBuffer = fs.readFileSync(localDbPath);
-		  const blobHash = await uploadBlob(fileBuffer);
-		  console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
+			const fileBuffer = fs.readFileSync(localDbPath);
+			const blobHash = await uploadBlob(fileBuffer);
+			console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
 
-		  // Update the agent with the latest blob hash so we can retrieve it later.
-		  await prisma.agent.update({
-		    where: { id: agentId },
-		    data: { latestBlobHash: blobHash },
-		  });
+			// Update the agent with the latest blob hash so we can retrieve it later.
+			await prisma.agent.update({
+				where: { id: agentId },
+				data: { latestBlobHash: blobHash },
+			});
 		} catch (error) {
-		  console.warn(`Optional blob upload failed for agent ${agentId}:`, error);
+			console.warn(`Optional blob upload failed for agent ${agentId}:`, error);
 		}
 		// ---- End: Optional blob upload section ----
 		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
@@ -118,17 +118,17 @@ export async function startService(agentId: string): Promise<void> {
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
 		if (!fs.existsSync(localDbPath)) {
-		  if (agent.latestBlobHash) {
-		    try {
-		      const fileBuffer = await retrieveBlob(agent.latestBlobHash);
-		      fs.writeFileSync(localDbPath, fileBuffer);
-		      console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
-		    } catch (error) {
-		      console.warn(`Optional blob retrieval failed for agent ${agentId}:`, error);
-		    }
-		  } else {
-		    console.warn(`No local DB file and no blob hash available for agent ${agentId}. Continuing without DB import.`);
-		  }
+			if (agent.latestBlobHash) {
+				try {
+					const fileBuffer = await retrieveBlob(agent.latestBlobHash);
+					fs.writeFileSync(localDbPath, fileBuffer);
+					console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
+				} catch (error) {
+					console.warn(`Optional blob retrieval failed for agent ${agentId}:`, error);
+				}
+			} else {
+				console.warn(`No local DB file and no blob hash available for agent ${agentId}. Continuing without DB import.`);
+			}
 		}
 
 		// Start the service using agent.dockerServiceId
@@ -138,28 +138,83 @@ export async function startService(agentId: string): Promise<void> {
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		// Get the container ID from the service using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}`);
+		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}"`);
 		if (!containerId) {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
 
-		if (fs.existsSync(localDbPath)) {
-		  // Remove any existing DB file in the container
-		  const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
-		  await execAsync(removeCommand);
-		  console.log(`Existing database in container ${containerId.trim()} removed.`);
- 
-		  // Copy the updated DB file from the host to the container
-		  const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
-		  await execAsync(importCommand);
-		  console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
+		const trimmedContainerId = containerId.trim();
 
-		  // Update file permissions to ensure full read/write access in the container
-		  const chmodCommand = `docker exec ${containerId.trim()} chmod 666 ${containerDbPath}`;
-		  await execAsync(chmodCommand);
-		  console.log(`Updated permissions for ${containerDbPath} in container ${containerId.trim()}.`);
+		if (fs.existsSync(localDbPath)) {
+			// Check if PID 105 exists and is running using /proc/105/comm - agent framework
+			let pidExists = false;
+			const maxAttempts = 10;
+			const checkInterval = 1000; // 1 second between checks
+
+			for (let attempt = 0; attempt < maxAttempts; attempt++) {
+				try {
+					// Check if process exists using /proc
+					const { stdout: comm } = await execAsync(`docker exec ${trimmedContainerId} cat /proc/105/comm`);
+					if (comm.trim().length > 0) {
+						pidExists = true;
+						console.log(`Process with PID 105 found in container ${trimmedContainerId} (command: ${comm.trim()})`);
+						break;
+					}
+				} catch (error) {
+					// Ignore errors as they likely mean the process doesn't exist
+				}
+
+				if (attempt < maxAttempts - 1) {
+					console.log(`Waiting for process with PID 105 to start (attempt ${attempt + 1}/${maxAttempts})`);
+					await new Promise((resolve) => setTimeout(resolve, checkInterval));
+				}
+			}
+
+			if (pidExists) {
+				// Stop the running process with PID 105 in the container
+				try {
+					await execAsync(`docker exec ${trimmedContainerId} sh -c "kill -15 105"`);
+					console.log(`Sent SIGTERM to process with PID 105 in container ${trimmedContainerId}`);
+
+					// Wait for process to exit by checking /proc/105/comm
+					for (let attempt = 0; attempt < maxAttempts; attempt++) {
+						try {
+							const { stdout: comm } = await execAsync(`docker exec ${trimmedContainerId} cat /proc/105/comm`);
+							if (!comm.trim().includes("No such file or directory")) {
+								console.log(`Process with PID 105 still running, waiting... (attempt ${attempt + 1}/${maxAttempts})`);
+								await new Promise((resolve) => setTimeout(resolve, checkInterval));
+							} else {
+								console.log(`Process with PID 105 has stopped`);
+								break;
+							}
+						} catch (error) {
+							console.log(`Process with PID 105 has stopped`);
+							break;
+						}
+					}
+				} catch (error) {
+					console.warn(`Failed to stop process with PID 105:`, error);
+				}
+			} else {
+				console.warn(`Process with PID 105 not found in container ${trimmedContainerId}, proceeding without stopping`);
+			}
+
+			// Remove any existing DB file in the container
+			const removeCommand = `docker exec ${trimmedContainerId} rm -f ${containerDbPath}`;
+			await execAsync(removeCommand);
+			console.log(`Existing database in container ${trimmedContainerId} removed.`);
+
+			// Copy the updated DB file from the host to the container
+			const importCommand = `docker cp ${localDbPath} ${trimmedContainerId}:${containerDbPath}`;
+			await execAsync(importCommand);
+			console.log(`Database imported to container ${trimmedContainerId} from ${localDbPath}.`);
+
+			// Start the agent process in the container
+			const startCommand = `docker exec -d ${trimmedContainerId} sh -c "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"`;
+			await execAsync(startCommand);
+			console.log(`Started agent process in container ${trimmedContainerId}`);
 		} else {
-		  console.warn(`Local DB file ${localDbPath} not found. Skipping DB import.`);
+			console.warn(`Local DB file ${localDbPath} not found. Skipping DB import.`);
 		}
 
 		if (stderr) {
