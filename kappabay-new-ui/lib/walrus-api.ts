@@ -25,7 +25,7 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 
 	// Set the appropriate headers
 	const headers = {
-		"Content-Type": "application/vnd.sqlite3",
+		"Content-Type": "application/octet-stream",
 		"Content-Length": buffer.length.toString(),
 	};
 
@@ -38,7 +38,9 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 
 	console.log("RESPONSE--------------", response);
 	if (!response.ok) {
-		throw new Error(`Failed to upload blob: ${response.statusText}`);
+		const errorData = await response.json();
+		console.error("Walrus API upload error:", errorData);
+		throw new Error(`Failed to upload blob: ${errorData.message || response.statusText}`);
 	}
 
 	const data = await response.json();
