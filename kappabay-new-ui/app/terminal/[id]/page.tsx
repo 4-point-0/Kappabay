@@ -3,7 +3,6 @@
 import type React from "react";
 
 import { useState, useRef, useEffect } from "react";
-import { useCurrentAccount } from "@/hooks/useCurrentAccount";
 import { useParams } from "next/navigation";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
@@ -16,6 +15,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiClient } from "@/lib/api";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 
 interface Message {
 	id: string;
@@ -25,6 +25,7 @@ interface Message {
 }
 
 export default function TerminalPage() {
+	const wallet = useCurrentAccount();
 	const params = useParams();
 	const id = params.id as string;
 	const [input, setInput] = useState("");
@@ -71,10 +72,10 @@ export default function TerminalPage() {
 		// Call the API with the proper arguments.
 		try {
 			const response = await apiClient.sendMessage(
-				agent.id,        // agent id from the `agent` object
-				messageContent,  // the text message
-				wallet.address,  // wallet's address from useCurrentAccount()
-				null             // pass `null` as no file is provided
+				agent.id, // agent id from the `agent` object
+				messageContent, // the text message
+				wallet.address, // wallet's address from useCurrentAccount()
+				null // pass `null` as no file is provided
 			);
 
 			// Optionally process the response e.g. update messages with agent reply.
