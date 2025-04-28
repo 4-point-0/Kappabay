@@ -70,23 +70,15 @@ export default function TerminalPage() {
 			return;
 		}
 
-		// Retrieve agent info from db to get its port.
-		const agentInfo = await getAgentInfo(agent.id);
-		if (!agentInfo || !agentInfo.port) {
-			console.error("Unable to retrieve agent port from DB");
-			return;
-		}
-
-		const baseUrl = `http://localhost:${agentInfo.port}`;
 
 		// Call the API with all required arguments, including the baseUrl.
 		try {
 			const response = await apiClient.sendMessage(
-				agent.id, // agent id from the `agent` object
-				messageContent, // the text message
-				wallet.address, // wallet's address from useCurrentAccount()
-				baseUrl,        // dynamic base URL with the agent's port
-				null            // no file provided
+				containerAgentId, // container agent id retrieved from getAgents call
+				messageContent,   // the text message
+				wallet.address,   // wallet's address from useCurrentAccount()
+				baseUrl,          // dynamic base URL with the agent's port
+				null              // no file provided
 			);
 
 			// Optionally process the response e.g. update messages with agent reply.
