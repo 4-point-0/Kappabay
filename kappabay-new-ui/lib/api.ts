@@ -85,25 +85,26 @@ export const apiClient = {
 			body: formData,
 		});
 	},
-	getAgents: () => fetcher({ url: "/agents" }),
-	getAgent: (agentId: string): Promise<{ id: UUID; character: Character }> => fetcher({ url: `/agents/${agentId}` }),
-	tts: (agentId: string, text: string) =>
+	getAgents: (baseUrl: string) => fetcher({ baseUrl, url: "/agents" }),
+	getAgent: (agentId: string, baseUrl: string): Promise<{ id: UUID; character: Character }> =>
+		fetcher({ baseUrl, url: `/agents/${agentId}` }),
+	tts: (agentId: string, text: string, baseUrl: string) =>
 		fetcher({
+			baseUrl,
 			url: `/${agentId}/tts`,
 			method: "POST",
-			body: {
-				text,
-			},
+			body: { text },
 			headers: {
 				"Content-Type": "application/json",
 				Accept: "audio/mpeg",
 				"Transfer-Encoding": "chunked",
 			},
 		}),
-	whisper: async (agentId: string, audioBlob: Blob) => {
+	whisper: async (agentId: string, audioBlob: Blob, baseUrl: string) => {
 		const formData = new FormData();
 		formData.append("file", audioBlob, "recording.wav");
 		return fetcher({
+			baseUrl,
 			url: `/${agentId}/whisper`,
 			method: "POST",
 			body: formData,
