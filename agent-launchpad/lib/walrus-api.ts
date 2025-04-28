@@ -1,4 +1,3 @@
-
 const WALRUS_PUBLISHER_URL = process.env.WALRUS_PUBLISHER_URL!;
 const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
 
@@ -38,6 +37,8 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	});
 
 	if (!response.ok) {
+		const resp = await response.json();
+		console.error("Failed to upload blob:", resp);
 		throw new Error(`Failed to upload blob: ${response.statusText}`);
 	}
 

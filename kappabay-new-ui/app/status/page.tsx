@@ -76,6 +76,7 @@ export default function StatusPage() {
 	}, [wallet]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
+		if (!wallet?.address) return;
 		try {
 			if (currentStatus === "ACTIVE") {
 				await stopService(agentId);
@@ -248,7 +249,11 @@ export default function StatusPage() {
 															</Link>
 														</motion.div>
 														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Button variant="outline" size="icon" onClick={() => handleService(agent.id, agent.status)}>
+															<Button
+																variant="outline"
+																size="icon"
+																onClick={() => handleService(agent.id, agent.status)}
+															>
 																{agent.status === "ACTIVE" ? (
 																	<Pause className="h-4 w-4" />
 																) : (

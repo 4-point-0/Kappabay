@@ -9,6 +9,7 @@
 		"lint": "next lint"
 	},
 	"dependencies": {
+		"@elizaos/core": "^0.25.9",
 		"@emotion/is-prop-valid": "latest",
 		"@hookform/resolvers": "^3.9.1",
 		"@mysten/dapp-kit": "^0.16.0",
