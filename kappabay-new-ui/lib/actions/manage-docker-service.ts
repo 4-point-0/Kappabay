@@ -144,13 +144,20 @@ export async function startService(agentId: string): Promise<void> {
 		}
 
 		if (fs.existsSync(localDbPath)) {
+		  // Remove any existing DB file in the container
 		  const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
 		  await execAsync(removeCommand);
 		  console.log(`Existing database in container ${containerId.trim()} removed.`);
-
+ 
+		  // Copy the updated DB file from the host to the container
 		  const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
 		  await execAsync(importCommand);
 		  console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
+
+		  // Update file permissions to ensure full read/write access in the container
+		  const chmodCommand = `docker exec ${containerId.trim()} chmod 666 ${containerDbPath}`;
+		  await execAsync(chmodCommand);
+		  console.log(`Updated permissions for ${containerDbPath} in container ${containerId.trim()}.`);
 		} else {
 		  console.warn(`Local DB file ${localDbPath} not found. Skipping DB import.`);
 		}
