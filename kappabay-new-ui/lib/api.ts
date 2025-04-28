@@ -1,11 +1,13 @@
 import type { UUID, Character } from "@elizaos/core";
 
 const fetcher = async ({
+	baseUrl,
 	url,
 	method,
 	body,
 	headers,
 }: {
+	baseUrl: string;
 	url: string;
 	method?: "GET" | "POST";
 	body?: object | FormData;
@@ -35,7 +37,7 @@ const fetcher = async ({
 		}
 	}
 
-	return fetch(`${BASE_URL}${url}`, options).then(async (resp) => {
+	return fetch(`${baseUrl}${url}`, options).then(async (resp) => {
 		const contentType = resp.headers.get("Content-Type");
 		if (contentType === "audio/mpeg") {
 			return await resp.blob();
@@ -61,7 +63,13 @@ const fetcher = async ({
 };
 
 export const apiClient = {
-	sendMessage: (agentId: string, message: string, walletAddress: string, selectedFile?: File | null) => {
+	sendMessage: (
+		agentId: string,
+		message: string,
+		walletAddress: string,
+		baseUrl: string,
+		selectedFile?: File | null
+	) => {
 		const formData = new FormData();
 		formData.append("text", message);
 		formData.append("user", "user");
@@ -71,6 +79,7 @@ export const apiClient = {
 			formData.append("file", selectedFile);
 		}
 		return fetcher({
+			baseUrl,
 			url: `/${agentId}/message`,
 			method: "POST",
 			body: formData,

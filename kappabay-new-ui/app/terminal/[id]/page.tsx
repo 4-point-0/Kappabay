@@ -5,6 +5,7 @@ import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Header from "@/components/header";
+import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -63,19 +64,29 @@ export default function TerminalPage() {
 		const messageContent = userMessage.content;
 		setInput("");
 
-		// Obtain wallet's address (assumes wallet is obtained at component level).
+		// Obtain wallet's address.
 		if (!wallet?.address) {
 			console.error("Wallet not connected");
 			return;
 		}
 
-		// Call the API with the proper arguments.
+		// Retrieve agent info from db to get its port.
+		const agentInfo = await getAgentInfo(agent.id);
+		if (!agentInfo || !agentInfo.port) {
+			console.error("Unable to retrieve agent port from DB");
+			return;
+		}
+
+		const baseUrl = `http://localhost:${agentInfo.port}`;
+
+		// Call the API with all required arguments, including the baseUrl.
 		try {
 			const response = await apiClient.sendMessage(
 				agent.id, // agent id from the `agent` object
 				messageContent, // the text message
 				wallet.address, // wallet's address from useCurrentAccount()
-				null // pass `null` as no file is provided
+				baseUrl,        // dynamic base URL with the agent's port
+				null            // no file provided
 			);
 
 			// Optionally process the response e.g. update messages with agent reply.
