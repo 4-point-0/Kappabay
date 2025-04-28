@@ -40,6 +40,39 @@ export default function TerminalPage() {
 	]);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
+	// NEW: BaseUrl and containerAgentId state variables
+	const [baseUrl, setBaseUrl] = useState<string>("");
+	const [containerAgentId, setContainerAgentId] = useState<string>("");
+
+	// NEW: On component mount, retrieve agent port and container agent ID.
+	useEffect(() => {
+		(async () => {
+			// Retrieve agent info from DB using agent.id.
+			const agentInfo = await getAgentInfo(agent.id);
+			if (!agentInfo || !agentInfo.port) {
+				console.error("Unable to retrieve agent port from DB for agent:", agent.id);
+				return;
+			}
+
+			// Construct base URL from agent port.
+			const _baseUrl = `http://localhost:${agentInfo.port}`;
+			setBaseUrl(_baseUrl);
+
+			try {
+				// Call apiClient.getAgents with the baseUrl.
+				const agentsResponse = await apiClient.getAgents(_baseUrl);
+				if (agentsResponse && agentsResponse.length > 0) {
+					// Use the first agent's id as the containerAgentId.
+					setContainerAgentId(agentsResponse[0].id);
+				} else {
+					console.error("No agents returned from getAgents call.");
+				}
+			} catch (error) {
+				console.error("Error retrieving agents:", error);
+			}
+		})();
+	}, [agent.id]);
+
 	// Mock agent data
 	const agent = {
 		id,
@@ -73,11 +106,17 @@ export default function TerminalPage() {
 
 		// Call the API with all required arguments, including the baseUrl.
 		try {
+			// Ensure initialization is complete.
+			if (!containerAgentId || !baseUrl) {
+				console.error("Agent initialization incomplete. Cannot send message.");
+				return;
+			}
+
 			const response = await apiClient.sendMessage(
-				containerAgentId, // container agent id retrieved from getAgents call
-				messageContent,   // the text message
-				wallet.address,   // wallet's address from useCurrentAccount()
-				baseUrl,          // dynamic base URL with the agent's port
+				containerAgentId, // container agent id from getAgents response
+				messageContent,   // text message
+				wallet.address,   // wallet's address
+				baseUrl,          // dynamic baseUrl (http://localhost:<agent.port>)
 				null              // no file provided
 			);
 
