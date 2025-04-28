@@ -36,6 +36,7 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 		body: buffer,
 	});
 
+	console.log("RESPONSE--------------", response);
 	if (!response.ok) {
 		throw new Error(`Failed to upload blob: ${response.statusText}`);
 	}
