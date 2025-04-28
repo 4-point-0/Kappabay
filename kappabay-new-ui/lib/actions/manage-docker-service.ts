@@ -71,17 +71,20 @@ export async function stopService(agentId: string): Promise<void> {
 			console.log(`Database exported to ${localDbPath}.`);
 		}
 
-		// ---- Begin: Upload sqlite file using Walrus Publisher API ----
-		const fileBuffer = fs.readFileSync(localDbPath);
-		const blobHash = await uploadBlob(fileBuffer);
-		console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
+		try {
+		  const fileBuffer = fs.readFileSync(localDbPath);
+		  const blobHash = await uploadBlob(fileBuffer);
+		  console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
 
-		// Update the agent with the latest blob hash so we can retrieve it later.
-		await prisma.agent.update({
-			where: { id: agentId },
-			data: { latestBlobHash: blobHash },
-		});
-		// ---- End: Upload section ----
+		  // Update the agent with the latest blob hash so we can retrieve it later.
+		  await prisma.agent.update({
+		    where: { id: agentId },
+		    data: { latestBlobHash: blobHash },
+		  });
+		} catch (error) {
+		  console.warn(`Optional blob upload failed for agent ${agentId}:`, error);
+		}
+		// ---- End: Optional blob upload section ----
 		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
 		const { stdout, stderr } = await execAsync(command);
 
@@ -114,14 +117,18 @@ export async function startService(agentId: string): Promise<void> {
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-		// Ensure local DB file exists; if not, attempt to download it from Walrus Aggregator.
 		if (!fs.existsSync(localDbPath)) {
-			if (!agent.latestBlobHash) {
-				throw new Error(`Local DB file ${localDbPath} does not exist and no latest blob hash available.`);
-			}
-			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
-			fs.writeFileSync(localDbPath, fileBuffer);
-			console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
+		  if (agent.latestBlobHash) {
+		    try {
+		      const fileBuffer = await retrieveBlob(agent.latestBlobHash);
+		      fs.writeFileSync(localDbPath, fileBuffer);
+		      console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
+		    } catch (error) {
+		      console.warn(`Optional blob retrieval failed for agent ${agentId}:`, error);
+		    }
+		  } else {
+		    console.warn(`No local DB file and no blob hash available for agent ${agentId}. Continuing without DB import.`);
+		  }
 		}
 
 		// Start the service using agent.dockerServiceId
@@ -136,15 +143,17 @@ export async function startService(agentId: string): Promise<void> {
 			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
 		}
 
-		// If a DB already exists in the container, remove it
-		const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
-		await execAsync(removeCommand);
-		console.log(`Existing database in container ${containerId.trim()} removed.`);
+		if (fs.existsSync(localDbPath)) {
+		  const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
+		  await execAsync(removeCommand);
+		  console.log(`Existing database in container ${containerId.trim()} removed.`);
 
-		// Import DB to container
-		const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
-		await execAsync(importCommand);
-		console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
+		  const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
+		  await execAsync(importCommand);
+		  console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
+		} else {
+		  console.warn(`Local DB file ${localDbPath} not found. Skipping DB import.`);
+		}
 
 		if (stderr) {
 			console.error(`Error starting service ${agent.dockerServiceId}:`, stderr);
