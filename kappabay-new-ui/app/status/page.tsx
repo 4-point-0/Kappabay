@@ -184,7 +184,7 @@ export default function StatusPage() {
 												className="border-b border-border"
 											>
 												<TableCell className="font-medium">{agent.name}</TableCell>
-												<TableCell className="font-mono text-xs">{agent.id}</TableCell>
+												<TableCell className="font-mono text-xs">{agent.objectId}</TableCell>
 												<TableCell>
 													<Badge variant={agent.status === "ACTIVE" ? "default" : "outline"}>
 														{agent.status === "ACTIVE" ? "Active" : "Inactive"}
