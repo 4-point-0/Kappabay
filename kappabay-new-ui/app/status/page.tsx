@@ -61,8 +61,8 @@ export default function StatusPage() {
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
 	const [selectedAgentId, setSelectedAgentId] = useState("");
-    const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
-    const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
+	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
+	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
@@ -89,7 +89,7 @@ export default function StatusPage() {
 	}, [caps]);
 
 	useEffect(() => {
-		const timers = agents.reduce((acc, agent) => {
+		const timers = agents.reduce((acc: any, agent: any) => {
 			if (agent.status === "ACTIVE" && !terminalEnabledAgents.includes(agent.id)) {
 				const timer = setTimeout(() => {
 					setTerminalEnabledAgents((prev) => [...prev, agent.id]);
@@ -103,13 +103,13 @@ export default function StatusPage() {
 		}, [] as NodeJS.Timeout[]);
 
 		return () => {
-			timers.forEach((timer) => clearTimeout(timer));
+			timers.forEach((timer: any) => clearTimeout(timer));
 		};
 	}, [agents, terminalEnabledAgents]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
-        setLoadingAgent(agentId);
+		setLoadingAgent(agentId);
 		try {
 			if (currentStatus === "ACTIVE") {
 				await stopService(agentId);
@@ -120,8 +120,8 @@ export default function StatusPage() {
 		} catch (error) {
 			console.error(`Failed to update service status for agent ${agentId}:`, error);
 		} finally {
-            setLoadingAgent(null);
-        }
+			setLoadingAgent(null);
+		}
 	};
 
 	const handleDeposit = () => {
@@ -277,16 +277,10 @@ export default function StatusPage() {
 													<div className="flex justify-end space-x-2">
 														<motion.div
 															whileHover={{
-																scale:
-																	agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id)
-																		? 1.1
-																		: 1,
+																scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 1.1 : 1,
 															}}
 															whileTap={{
-																scale:
-																	agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id)
-																		? 0.9
-																		: 1,
+																scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 0.9 : 1,
 															}}
 														>
 															{agent.status === "ACTIVE" ? (
@@ -297,22 +291,12 @@ export default function StatusPage() {
 																		</Button>
 																	</Link>
 																) : (
-																	<Button
-																		variant="outline"
-																		size="icon"
-																		title="Enabling Terminal..."
-																		disabled
-																	>
+																	<Button variant="outline" size="icon" title="Enabling Terminal..." disabled>
 																		<Loader2 className="h-4 w-4 animate-spin" />
 																	</Button>
 																)
 															) : (
-																<Button
-																	variant="outline"
-																	size="icon"
-																	title="Terminal unavailable"
-																	disabled
-																>
+																<Button variant="outline" size="icon" title="Terminal unavailable" disabled>
 																	<Terminal className="h-4 w-4 opacity-50" />
 																</Button>
 															)}
