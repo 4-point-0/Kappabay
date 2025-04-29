@@ -276,15 +276,36 @@ export default function StatusPage() {
 												<TableCell className="text-right">
 													<div className="flex justify-end space-x-2">
 														<motion.div
-															whileHover={{ scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 1.1 : 1 }}
-															whileTap={{ scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 0.9 : 1 }}
+															whileHover={{
+																scale:
+																	agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id)
+																		? 1.1
+																		: 1,
+															}}
+															whileTap={{
+																scale:
+																	agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id)
+																		? 0.9
+																		: 1,
+															}}
 														>
-															{agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? (
-																<Link href={`/terminal/${agent.id}`}>
-																	<Button variant="outline" size="icon" title="Open Terminal">
-																		<Terminal className="h-4 w-4" />
+															{agent.status === "ACTIVE" ? (
+																terminalEnabledAgents.includes(agent.id) ? (
+																	<Link href={`/terminal/${agent.id}`}>
+																		<Button variant="outline" size="icon" title="Open Terminal">
+																			<Terminal className="h-4 w-4" />
+																		</Button>
+																	</Link>
+																) : (
+																	<Button
+																		variant="outline"
+																		size="icon"
+																		title="Enabling Terminal..."
+																		disabled
+																	>
+																		<Loader2 className="h-4 w-4 animate-spin" />
 																	</Button>
-																</Link>
+																)
 															) : (
 																<Button
 																	variant="outline"
