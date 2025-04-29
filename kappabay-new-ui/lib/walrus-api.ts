@@ -13,7 +13,7 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	// Prepare query parameters
 	const params: any = {
 		deletable: true,
-		epochs: 10,
+		// epochs: 10,
 	};
 
 	if (sendObjectTo) {
@@ -37,9 +37,9 @@ export const uploadBlob = async (buffer: Buffer, sendObjectTo?: string): Promise
 	});
 
 	if (!response.ok) {
-		const resp = await response.json();
-		console.error("Failed to upload blob:", resp);
-		throw new Error(`Failed to upload blob: ${response.statusText}`);
+		const errorData = await response.json();
+		console.error("Walrus API upload error:", errorData);
+		throw new Error(`Failed to upload blob: ${errorData.message || response.statusText}`);
 	}
 
 	const data = await response.json();
