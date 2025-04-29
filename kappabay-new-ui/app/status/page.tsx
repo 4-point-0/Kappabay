@@ -255,12 +255,26 @@ export default function StatusPage() {
 												<TableCell>{agent.lastActive}</TableCell>
 												<TableCell className="text-right">
 													<div className="flex justify-end space-x-2">
-														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Link href={`/terminal/${agent.id}`}>
-																<Button variant="outline" size="icon" title="Open Terminal">
-																	<Terminal className="h-4 w-4" />
+														<motion.div
+															whileHover={{ scale: agent.status === "ACTIVE" ? 1.1 : 1 }}
+															whileTap={{ scale: agent.status === "ACTIVE" ? 0.9 : 1 }}
+														>
+															{agent.status === "ACTIVE" ? (
+																<Link href={`/terminal/${agent.id}`}>
+																	<Button variant="outline" size="icon" title="Open Terminal">
+																		<Terminal className="h-4 w-4" />
+																	</Button>
+																</Link>
+															) : (
+																<Button
+																	variant="outline"
+																	size="icon"
+																	title="Terminal unavailable"
+																	disabled
+																>
+																	<Terminal className="h-4 w-4 opacity-50" />
 																</Button>
-															</Link>
+															)}
 														</motion.div>
 														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
 															<Button
