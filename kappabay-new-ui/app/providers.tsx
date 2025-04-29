@@ -47,6 +47,11 @@ function RegisterEnokiWallets() {
 
   return null;
 }
+interface ProvidersProps {
+	children: React.ReactNode;
+}
+
+const Providers: React.FC<ProvidersProps> = ({ children }) => {
 	return (
 		<EnokiFlowProvider apiKey={process.env.NEXT_PUBLIC_ENOKI_API_KEY ?? ""}>
 			<QueryClientProvider client={queryClient}>
