@@ -36,7 +36,7 @@ function RegisterEnokiWallets() {
       apiKey: process.env.NEXT_PUBLIC_ENOKI_API_KEY!,
       providers: {
         google: { clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID! },
-        facebook: { clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID! },
+        // facebook: { clientId: process.env.NEXT_PUBLIC_FACEBOOK_CLIENT_ID! },
       },
       client,
       network,
