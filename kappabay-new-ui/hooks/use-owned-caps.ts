@@ -20,6 +20,7 @@ export function useOwnedCaps() {
 				owner: account.address,
 				options: { showType: true },
 			});
+			console.log("response", response);
 
 			// Get the data array from the response
 			const objects = response.data;
