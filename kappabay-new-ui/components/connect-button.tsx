@@ -1,17 +1,13 @@
 "use client";
-import { useCurrentAccount, useDisconnectWallet, ConnectModal, useConnectWallet, useWallets } from "@mysten/dapp-kit";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCurrentAccount, useDisconnectWallet, ConnectModal } from "@mysten/dapp-kit";
+import { useEffect, useState, useRef } from "react";
 import { resolveSuinsName } from "@/lib/suins";
 import { motion, AnimatePresence } from "framer-motion";
-import { isEnokiWallet } from "@mysten/enoki";
 import { Root, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import Link from "next/link";
-import { Button } from "./ui/button";
 
 import "@mysten/dapp-kit/dist/index.css";
-
-// In Next.js, for client-side environment variables, use NEXT_PUBLIC_ prefix
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+import { buttonVariants } from "./ui/button";
 
 const ConnectButton = () => {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -37,16 +33,6 @@ const ConnectButton = () => {
 
 		fetchSuinsName();
 	}, [walletAddress]);
-
-	const { mutate: connect } = useConnectWallet();
-	const enokiWallets = useWallets().filter(isEnokiWallet);
-	const walletsByProvider = enokiWallets.reduce((map, wallet) => {
-		map.set(wallet.provider, wallet);
-		return map;
-	}, new Map());
-
-	const googleWallet = walletsByProvider.get("google");
-	const facebookWallet = walletsByProvider.get("facebook");
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -111,18 +97,12 @@ const ConnectButton = () => {
 			{/* dapp-kit Login (default Connect Modal) */}
 			<div className="relative">
 				<motion.button
-					className="bg-primary text-white py-2 px-4 rounded h-full"
+					className="bg-primary text-white py-1 px-2 rounded h-full"
 					whileHover={{ scale: 1.05 }}
 					whileTap={{ scale: 0.95 }}
 					onClick={() => setShowConnectOptions(true)}
 				>
-					<ConnectModal
-						trigger={
-							<Button className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">
-								Connect
-							</Button>
-						}
-					/>
+					<ConnectModal trigger={<span className={buttonVariants({ variant: "default" })}>Connect</span>} />
 				</motion.button>
 			</div>
 		</div>
