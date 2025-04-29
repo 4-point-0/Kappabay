@@ -1,27 +1,34 @@
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useQuery } from "@tanstack/react-query";
-import React from "react";
+
+const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
 
 export function useOwnedCaps() {
 	const account = useCurrentAccount();
 	const suiClient = useSuiClient();
+
 	const {
 		data: caps = [],
 		isLoading,
 		error,
-	} = useQuery(
-		["ownedCaps", account?.address],
-		async () => {
+	} = useQuery({
+		queryKey: ["ownedCaps", account?.address],
+		queryFn: async () => {
 			if (!account?.address) return [];
+
 			const response = await suiClient.getOwnedObjects({
 				owner: account.address,
-				options: { showType: true, showDisplay: true },
+				options: { showType: true },
 			});
-			const objects = response.data || response;
-			return objects.filter((obj: any) => obj.data?.type && obj.data.type.includes("KioskOwnerCap"));
+
+			// Get the data array from the response
+			const objects = response.data;
+
+			// Filter objects that have KioskOwnerCap in their type
+			return objects.filter((obj) => obj.data?.type && obj.data.type === `${PACKAGE_ID}::agent::AgentCap`);
 		},
-		{ enabled: !!account?.address }
-	);
+		enabled: !!account?.address,
+	});
 
 	return { caps, isLoading, error };
 }

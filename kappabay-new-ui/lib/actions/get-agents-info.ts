@@ -18,10 +18,7 @@ export async function getAgentsByOwner(capId: string) {
 			where: { capId },
 		});
 		// Exclude oracle-related (and other sensitive) fields
-		return agents.map(
-			({ hasOracle, oraclePort, oraclePid, agentWalletKey, ...agentInfo }: any) =>
-				agentInfo
-		);
+		return agents.map(({ hasOracle, oraclePort, oraclePid, agentWalletKey, ...agentInfo }: any) => agentInfo);
 	} catch (error: any) {
 		console.error("Failed to fetch agents:", error);
 		throw new Error(error.message || "Failed to fetch agents.");

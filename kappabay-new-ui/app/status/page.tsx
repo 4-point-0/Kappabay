@@ -68,6 +68,7 @@ export default function StatusPage() {
 		let allAgents: any[] = [];
 		if (caps.length > 0) {
 			for (const cap of caps) {
+				if (!cap.data) continue;
 				try {
 					// Use the capability ID (assumed to be at cap.data.objectId)
 					const agentsForCap = await getAgentsByOwner(cap.data.objectId);
