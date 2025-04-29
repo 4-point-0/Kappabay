@@ -9,7 +9,7 @@ import { prisma } from "@/lib/db";
  * @param ownerWallet - The wallet address of the owner.
  * @returns An array of agents with filtered fields.
  */
-export async function getAgentsByOwner(capIds: string[]) {
+export async function getAgentsByCapIds(capIds: string[]) {
 	if (!capIds || capIds.length === 0) {
 		throw new Error("Missing capability IDs.");
 	}

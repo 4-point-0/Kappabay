@@ -17,7 +17,7 @@ export function useOwnedCaps() {
 			if (!account?.address) return [];
 
 			let allObjects: any[] = [];
-			let cursor: string | undefined = undefined;
+			let cursor: string | undefined | null = undefined;
 
 			do {
 				const response = await suiClient.getOwnedObjects({
@@ -25,7 +25,6 @@ export function useOwnedCaps() {
 					cursor,
 					options: { showType: true },
 				});
-				console.log("response", response);
 
 				allObjects.push(...response.data);
 				cursor = response.nextCursor;
@@ -33,10 +32,7 @@ export function useOwnedCaps() {
 				if (!response.hasNextPage) break;
 			} while (true);
 
-			return allObjects.filter(
-				(obj) =>
-					obj.data?.type && obj.data.type === `${PACKAGE_ID}::agent::AgentCap`
-			);
+			return allObjects.filter((obj) => obj.data?.type && obj.data.type === `${PACKAGE_ID}::agent::AgentCap`);
 		},
 		enabled: !!account?.address,
 	});
