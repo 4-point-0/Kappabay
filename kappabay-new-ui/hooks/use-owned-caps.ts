@@ -4,14 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 export function useOwnedCaps() {
 	const account = useCurrentAccount();
 	const suiClient = useSuiClient();
-	// there is error in this function:
-	//
-	// Expected 1-2 arguments, but got 3.ts(2554)
-	// ⚠ Error (TS2554)  |
-	//Expected 1-2 arguments, but got 3.
-	//(property) WalletAccount.address: string | undefined
-	// Address of the account, corresponding with a public key.
-	//
+	// use useQueryClient instead of useQuery ai!
 	const { data, isLoading, error } = useQuery(
 		["ownedCaps", account?.address],
 		async () => {
