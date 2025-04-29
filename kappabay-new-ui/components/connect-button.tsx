@@ -1,11 +1,5 @@
 "use client";
-import {
-  useCurrentAccount,
-  useDisconnectWallet,
-  ConnectModal,
-  useConnectWallet,
-  useWallets
-} from "@mysten/dapp-kit";
+import { useCurrentAccount, useDisconnectWallet, ConnectModal, useConnectWallet, useWallets } from "@mysten/dapp-kit";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { resolveSuinsName } from "@/lib/suins";
 import { motion, AnimatePresence } from "framer-motion";
@@ -44,7 +38,7 @@ const ConnectButton = () => {
 		fetchSuinsName();
 	}, [walletAddress]);
 
-	const { connect } = useConnectWallet();
+	const { mutate: connect } = useConnectWallet();
 	const enokiWallets = useWallets().filter(isEnokiWallet);
 	const walletsByProvider = enokiWallets.reduce((map, wallet) => {
 		map.set(wallet.provider, wallet);
@@ -70,14 +64,11 @@ const ConnectButton = () => {
 		};
 	}, [isMenuOpen]);
 
-
 	if (account) {
 		return (
 			<div className="relative h-full flex items-center gap-2">
 				{suinsName && (
-					<div className="hidden sm:block text-lg font-medium text-gray-700 dark:text-gray-300">
-						{suinsName}
-					</div>
+					<div className="hidden sm:block text-lg font-medium text-gray-700 dark:text-gray-300">{suinsName}</div>
 				)}
 				<motion.button
 					className="w-10 h-10 rounded-full overflow-hidden border-2 border-white focus:outline-none"
@@ -149,20 +140,6 @@ const ConnectButton = () => {
 						</motion.div>
 					)}
 				</AnimatePresence>
-			</div>
-
-			{/* Custom Enoki Login Buttons */}
-			<div className="flex flex-col gap-2">
-				{googleWallet && (
-					<Button onClick={() => connect({ wallet: googleWallet })}>
-						Sign in with Google
-					</Button>
-				)}
-				{facebookWallet && (
-					<Button onClick={() => connect({ wallet: facebookWallet })}>
-						Sign in with Facebook
-					</Button>
-				)}
 			</div>
 		</div>
 	);
