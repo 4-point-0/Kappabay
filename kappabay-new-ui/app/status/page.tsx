@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByOwner } from "@/lib/actions/get-agents-info";
 
 // // Mock data for owned agents
@@ -61,19 +62,29 @@ export default function StatusPage() {
 	const [depositAmount, setDepositAmount] = useState("");
 	const [selectedAgentId, setSelectedAgentId] = useState("");
 
+	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
+
 	useEffect(() => {
-		async function fetchAgents() {
-			if (wallet?.address) {
-				try {
-					const fetchedAgents = await getAgentsByOwner(wallet.address);
-					setAgents(fetchedAgents);
-				} catch (error) {
-					console.error("Failed to fetch agents", error);
+		async function fetchAgentsByCaps() {
+			if (caps.length > 0) {
+				let allAgents: any[] = [];
+				for (const cap of caps) {
+					try {
+						// Assume the capability ID is accessible as cap.data.objectId
+						const agentsForCap = await getAgentsByOwner(cap.data.objectId);
+						if (agentsForCap && agentsForCap.length > 0) {
+							allAgents = [...allAgents, ...agentsForCap];
+						}
+					} catch (error) {
+						console.error("Error fetching agents for cap", cap.data.objectId, error);
+					}
 				}
+				setAgents(allAgents);
 			}
 		}
-		fetchAgents();
-	}, [wallet]);
+
+		fetchAgentsByCaps();
+	}, [caps]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
