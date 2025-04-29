@@ -24,7 +24,7 @@ import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
-import { getAgentsByOwner } from "@/lib/actions/get-agents-info";
+import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
 // // Mock data for owned agents
 // const initialAgents = [
@@ -71,7 +71,7 @@ export default function StatusPage() {
 		if (capIds.length > 0) {
 			try {
 				// Make a single HTTP call with the array of capIds
-				const agentsForCaps = await getAgentsByOwner(capIds);
+				const agentsForCaps = await getAgentsByCapIds(capIds);
 				if (agentsForCaps && agentsForCaps.length > 0) {
 					allAgents = agentsForCaps;
 				}
