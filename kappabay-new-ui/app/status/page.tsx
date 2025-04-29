@@ -64,26 +64,26 @@ export default function StatusPage() {
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
-	useEffect(() => {
-		async function fetchAgentsByCaps() {
-			if (caps.length > 0) {
-				let allAgents: any[] = [];
-				for (const cap of caps) {
-					try {
-						// Assume the capability ID is accessible as cap.data.objectId
-						const agentsForCap = await getAgentsByOwner(cap.data.objectId);
-						if (agentsForCap && agentsForCap.length > 0) {
-							allAgents = [...allAgents, ...agentsForCap];
-						}
-					} catch (error) {
-						console.error("Error fetching agents for cap", cap.data.objectId, error);
+	async function refreshAgents() {
+		let allAgents: any[] = [];
+		if (caps.length > 0) {
+			for (const cap of caps) {
+				try {
+					// Use the capability ID (assumed to be at cap.data.objectId)
+					const agentsForCap = await getAgentsByOwner(cap.data.objectId);
+					if (agentsForCap && agentsForCap.length > 0) {
+						allAgents = [...allAgents, ...agentsForCap];
 					}
+				} catch (error) {
+					console.error("Error fetching agents for cap", cap.data.objectId, error);
 				}
-				setAgents(allAgents);
 			}
 		}
+		setAgents(allAgents);
+	}
 
-		fetchAgentsByCaps();
+	useEffect(() => {
+		refreshAgents();
 	}, [caps]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
@@ -94,8 +94,7 @@ export default function StatusPage() {
 			} else {
 				await startService(agentId);
 			}
-			const updatedAgents = await getAgentsByOwner(wallet.address);
-			setAgents(updatedAgents);
+			await refreshAgents();
 		} catch (error) {
 			console.error(`Failed to update service status for agent ${agentId}:`, error);
 		}
