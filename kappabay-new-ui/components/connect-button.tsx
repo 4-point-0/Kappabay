@@ -3,7 +3,7 @@ import { useCurrentAccount, useCurrentWallet, useDisconnectWallet, ConnectModal 
 import { useCallback, useEffect, useState, useRef } from "react";
 import { resolveSuinsName } from "@/lib/suins";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEnokiFlow, useZkLoginSession } from "@mysten/enoki/react";
+import { useZkLoginSession } from "@mysten/enoki/react";
 import { Root, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
 import Link from "next/link";
 import { Button } from "./ui/button";
@@ -21,7 +21,6 @@ const ConnectButton = () => {
 	const account = useCurrentAccount();
 	const { mutate: disconnect } = useDisconnectWallet();
 	const zkSession = useZkLoginSession();
-	const enokiFlow = useEnokiFlow();
 	const [suinsName, setSuinsName] = useState<string | null>(null);
 	const walletAddress = account?.address;
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -75,27 +74,6 @@ const ConnectButton = () => {
 		};
 	}, [isMenuOpen]);
 
-	const handleEnokiConnection = useCallback(() => {
-		const protocol = window.location.protocol;
-		const host = window.location.host;
-		const redirectUrl = `${protocol}//${host}/auth`;
-		enokiFlow
-			.createAuthorizationURL({
-				provider: "google",
-				network: "testnet",
-				clientId: GOOGLE_CLIENT_ID!,
-				redirectUrl,
-				extraParams: {
-					scope: ["openid", "email", "profile"],
-				},
-			})
-			.then((url) => {
-				window.location.href = url;
-			})
-			.catch((error) => {
-				console.error("Enoki Connection Error:", error);
-			});
-	}, [enokiFlow]);
 
 	return (
 		<>
@@ -156,15 +134,7 @@ const ConnectButton = () => {
 								animate={{ opacity: 1, y: 0 }}
 								exit={{ opacity: 0, y: -10 }}
 							>
-								<h2 className="text-xl font-semibold mb-4">Choose Connection Method</h2>
-								<motion.button
-									className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
-									whileHover={{ scale: 1.05 }}
-									whileTap={{ scale: 0.95 }}
-									onClick={handleEnokiConnection}
-								>
-									Connect with Enoki
-								</motion.button>
+								<h2 className="text-xl font-semibold mb-4">Connect Wallet</h2>
 								<ConnectModal trigger={<Button>Connect with Wallet</Button>} />
 								<motion.button
 									className="mt-4  hover:text-gray-400"
