@@ -17,10 +17,7 @@ export function useOwnedCaps() {
 		["ownedCaps", account?.address],
 		async () => {
 			if (!account?.address) return [];
-			const response = await suiClient.getOwnedObjects({
-				owner: account.address,
-				options: { showType: true, showDisplay: true },
-			});
+			const response = await suiClient.getOwnedObjects(account.address, { showType: true, showDisplay: true });
 			const objects = response.data || response;
 			// Filter for capability objects – adjust the string below to match your capability type
 			return objects.filter((obj: any) => obj.data?.type && obj.data.type.includes("KioskOwnerCap"));
