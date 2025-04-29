@@ -89,21 +89,26 @@ export default function StatusPage() {
 	}, [caps]);
 
 	useEffect(() => {
-		const timers = agents.reduce((acc: any, agent: any) => {
-			if (agent.status === "ACTIVE" && !terminalEnabledAgents.includes(agent.id)) {
-				const timer = setTimeout(() => {
-					setTerminalEnabledAgents((prev) => [...prev, agent.id]);
+		const timers = agents.map((agent: any) => {
+			if (agent.status === "ACTIVE") {
+				// Schedule enabling terminal for active agents after 3 seconds:
+				return setTimeout(() => {
+					setTerminalEnabledAgents(prev => {
+						if (!prev.includes(agent.id)) {
+							return [...prev, agent.id];
+						}
+						return prev;
+					});
 				}, 3000);
-				acc.push(timer);
-			} else if (agent.status !== "ACTIVE" && terminalEnabledAgents.includes(agent.id)) {
-				// Remove agent from enabled list if it is no longer active.
-				setTerminalEnabledAgents((prev) => prev.filter((id) => id !== agent.id));
+			} else {
+				// Immediately remove inactive agents:
+				setTerminalEnabledAgents(prev => prev.filter(id => id !== agent.id));
+				return null;
 			}
-			return acc;
-		}, [] as NodeJS.Timeout[]);
+		}).filter(Boolean) as NodeJS.Timeout[];
 
 		return () => {
-			timers.forEach((timer: any) => clearTimeout(timer));
+			timers.forEach(timer => clearTimeout(timer));
 		};
 	}, [agents]);
 
