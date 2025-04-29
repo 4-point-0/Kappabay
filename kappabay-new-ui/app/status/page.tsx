@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Play, Pause, RefreshCw, Settings, Terminal, Wallet } from "lucide-react";
+import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
@@ -61,6 +61,7 @@ export default function StatusPage() {
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
 	const [selectedAgentId, setSelectedAgentId] = useState("");
+    const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
@@ -88,6 +89,7 @@ export default function StatusPage() {
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
+        setLoadingAgent(agentId);
 		try {
 			if (currentStatus === "ACTIVE") {
 				await stopService(agentId);
@@ -97,7 +99,9 @@ export default function StatusPage() {
 			await refreshAgents();
 		} catch (error) {
 			console.error(`Failed to update service status for agent ${agentId}:`, error);
-		}
+		} finally {
+            setLoadingAgent(null);
+        }
 	};
 
 	const handleDeposit = () => {
@@ -264,7 +268,9 @@ export default function StatusPage() {
 																size="icon"
 																onClick={() => handleService(agent.id, agent.status)}
 															>
-																{agent.status === "ACTIVE" ? (
+																{loadingAgent === agent.id ? (
+																	<Loader2 className="h-4 w-4 animate-spin" />
+																) : agent.status === "ACTIVE" ? (
 																	<Pause className="h-4 w-4" />
 																) : (
 																	<Play className="h-4 w-4" />
