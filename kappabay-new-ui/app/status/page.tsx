@@ -62,6 +62,7 @@ export default function StatusPage() {
 	const [depositAmount, setDepositAmount] = useState("");
 	const [selectedAgentId, setSelectedAgentId] = useState("");
     const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
+    const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
@@ -86,6 +87,25 @@ export default function StatusPage() {
 	useEffect(() => {
 		refreshAgents();
 	}, [caps]);
+
+	useEffect(() => {
+		const timers = agents.reduce((acc, agent) => {
+			if (agent.status === "ACTIVE" && !terminalEnabledAgents.includes(agent.id)) {
+				const timer = setTimeout(() => {
+					setTerminalEnabledAgents((prev) => [...prev, agent.id]);
+				}, 3000);
+				acc.push(timer);
+			} else if (agent.status !== "ACTIVE" && terminalEnabledAgents.includes(agent.id)) {
+				// Remove agent from enabled list if it is no longer active.
+				setTerminalEnabledAgents((prev) => prev.filter((id) => id !== agent.id));
+			}
+			return acc;
+		}, [] as NodeJS.Timeout[]);
+
+		return () => {
+			timers.forEach((timer) => clearTimeout(timer));
+		};
+	}, [agents, terminalEnabledAgents]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
@@ -256,10 +276,10 @@ export default function StatusPage() {
 												<TableCell className="text-right">
 													<div className="flex justify-end space-x-2">
 														<motion.div
-															whileHover={{ scale: agent.status === "ACTIVE" ? 1.1 : 1 }}
-															whileTap={{ scale: agent.status === "ACTIVE" ? 0.9 : 1 }}
+															whileHover={{ scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 1.1 : 1 }}
+															whileTap={{ scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 0.9 : 1 }}
 														>
-															{agent.status === "ACTIVE" ? (
+															{agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? (
 																<Link href={`/terminal/${agent.id}`}>
 																	<Button variant="outline" size="icon" title="Open Terminal">
 																		<Terminal className="h-4 w-4" />
