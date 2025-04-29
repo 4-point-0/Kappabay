@@ -116,7 +116,13 @@ const ConnectButton = () => {
 					whileTap={{ scale: 0.95 }}
 					onClick={() => setShowConnectOptions(true)}
 				>
-					<ConnectModal trigger={<Button>Connect</Button>} />
+					<ConnectModal
+						trigger={
+							<Button className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-bold py-2 px-6 rounded-full shadow-lg">
+								Connect
+							</Button>
+						}
+					/>
 				</motion.button>
 			</div>
 		</div>
