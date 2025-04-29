@@ -26,34 +26,6 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
-// // Mock data for owned agents
-// const initialAgents = [
-// 	{
-// 		id: "0x1a2b3c4d5e6f7g8h9i0j",
-// 		name: "Financial Advisor",
-// 		status: "active",
-// 		created: "2023-04-15",
-// 		lastActive: "2023-04-24",
-// 		gasBag: "0.25",
-// 	},
-// 	{
-// 		id: "0x9i8h7g6f5e4d3c2b1a0",
-// 		name: "News Aggregator",
-// 		status: "inactive",
-// 		created: "2023-03-10",
-// 		lastActive: "2023-04-20",
-// 		gasBag: "0.10",
-// 	},
-// 	{
-// 		id: "0x2b3c4d5e6f7g8h9i0j1a",
-// 		name: "Crypto Market Analyst",
-// 		status: "active",
-// 		created: "2023-04-01",
-// 		lastActive: "2023-04-24",
-// 		gasBag: "0.50",
-// 	},
-// ];
-
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
 	const [agents, setAgents] = useState<any>([]);
@@ -85,27 +57,35 @@ export default function StatusPage() {
 	}
 
 	useEffect(() => {
+		if (!wallet?.address) return;
 		refreshAgents();
-	}, [caps]);
+	}, [wallet]);
 
 	useEffect(() => {
-		const timers = agents.reduce((acc: any, agent: any) => {
-			if (agent.status === "ACTIVE" && !terminalEnabledAgents.includes(agent.id)) {
-				const timer = setTimeout(() => {
-					setTerminalEnabledAgents((prev) => [...prev, agent.id]);
-				}, 3000);
-				acc.push(timer);
-			} else if (agent.status !== "ACTIVE" && terminalEnabledAgents.includes(agent.id)) {
-				// Remove agent from enabled list if it is no longer active.
-				setTerminalEnabledAgents((prev) => prev.filter((id) => id !== agent.id));
-			}
-			return acc;
-		}, [] as NodeJS.Timeout[]);
+		const timers = agents
+			.map((agent: any) => {
+				if (agent.status === "ACTIVE") {
+					// Schedule enabling terminal for active agents after 3 seconds:
+					return setTimeout(() => {
+						setTerminalEnabledAgents((prev) => {
+							if (!prev.includes(agent.id)) {
+								return [...prev, agent.id];
+							}
+							return prev;
+						});
+					}, 3000);
+				} else {
+					// Immediately remove inactive agents:
+					setTerminalEnabledAgents((prev) => prev.filter((id) => id !== agent.id));
+					return null;
+				}
+			})
+			.filter(Boolean) as NodeJS.Timeout[];
 
 		return () => {
-			timers.forEach((timer: any) => clearTimeout(timer));
+			timers.forEach((timer) => clearTimeout(timer));
 		};
-	}, [agents, terminalEnabledAgents]);
+	}, [agents]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
