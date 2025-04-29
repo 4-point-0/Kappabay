@@ -9,13 +9,13 @@ import { prisma } from "@/lib/db";
  * @param ownerWallet - The wallet address of the owner.
  * @returns An array of agents with filtered fields.
  */
-export async function getAgentsByOwner(capId: string) {
-	if (!capId) {
-		throw new Error("Missing capability ID.");
+export async function getAgentsByOwner(capIds: string[]) {
+	if (!capIds || capIds.length === 0) {
+		throw new Error("Missing capability IDs.");
 	}
 	try {
 		const agents = await prisma.agent.findMany({
-			where: { capId },
+			where: { capId: { in: capIds } },
 		});
 		// Exclude oracle-related (and other sensitive) fields
 		return agents.map(({ hasOracle, oraclePort, oraclePid, agentWalletKey, ...agentInfo }: any) => agentInfo);
