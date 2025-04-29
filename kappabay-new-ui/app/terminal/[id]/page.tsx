@@ -11,18 +11,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Send } from "lucide-react";
 import Link from "next/link";
 import { PageTransition } from "@/components/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiClient } from "@/lib/api";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+// Update the Message interface to include user and action properties
 interface Message {
 	id: string;
 	role: "user" | "agent";
 	content: string;
 	timestamp: Date;
+	isLoading?: boolean;
+	user?: string;
+	action?: string;
 }
 
 export default function TerminalPage() {
@@ -30,19 +35,37 @@ export default function TerminalPage() {
 	const params = useParams();
 	const id = params.id as string;
 	const [input, setInput] = useState("");
-	const [messages, setMessages] = useState<Message[]>([
-		{
-			id: "1",
-			role: "agent",
-			content: "Hello! I'm your AI agent. How can I assist you today?",
-			timestamp: new Date(),
-		},
-	]);
+	const queryClient = useQueryClient();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	// NEW: BaseUrl and containerAgentId state variables
 	const [baseUrl, setBaseUrl] = useState<string>("");
 	const [containerAgentId, setContainerAgentId] = useState<string>("");
+
+	// Mock agent data
+	const agent = {
+		id,
+		name: "Agent " + id.slice(0, 6),
+		status: "active",
+		objectId: id,
+	};
+
+	// Initialize messages in React Query cache if not already present
+	useEffect(() => {
+		if (!queryClient.getQueryData(["messages", id])) {
+			queryClient.setQueryData(
+				["messages", id],
+				[
+					{
+						id: "1",
+						role: "agent",
+						content: "Hello! I'm your AI agent. How can I assist you today?",
+						timestamp: new Date(),
+					},
+				]
+			);
+		}
+	}, [id, queryClient]);
 
 	// NEW: On component mount, retrieve agent port and container agent ID.
 	useEffect(() => {
@@ -61,9 +84,10 @@ export default function TerminalPage() {
 			try {
 				// Call apiClient.getAgents with the baseUrl.
 				const agentsResponse = await apiClient.getAgents(_baseUrl);
-				if (agentsResponse && agentsResponse.length > 0) {
+				const agent = agentsResponse?.agents?.[0];
+				if (agent?.id) {
 					// Use the first agent's id as the containerAgentId.
-					setContainerAgentId(agentsResponse[0].id);
+					setContainerAgentId(agent.id);
 				} else {
 					console.error("No agents returned from getAgents call.");
 				}
@@ -71,44 +95,15 @@ export default function TerminalPage() {
 				console.error("Error retrieving agents:", error);
 			}
 		})();
-	}, []);
+	}, [agent.id]);
 
-	// Mock agent data
-	const agent = {
-		id,
-		name: "Agent " + id.slice(0, 6),
-		status: "active",
-		objectId: id,
-	};
-
-	const handleSendMessage = async () => {
-		if (!input.trim()) return;
-
-		// Create and add the user's message.
-		const userMessage: Message = {
-			id: Date.now().toString(),
-			role: "user",
-			content: input.trim(),
-			timestamp: new Date(),
-		};
-		setMessages((prev) => [...prev, userMessage]);
-
-		// Preserve the message content and clear input.
-		const messageContent = userMessage.content;
-		setInput("");
-
-		// Obtain wallet's address.
-		if (!wallet?.address) {
-			console.error("Wallet not connected");
-			return;
-		}
-
-		// Call the API with all required arguments, including the baseUrl.
-		try {
+	// Send message mutation
+	const sendMessageMutation = useMutation({
+		mutationKey: ["send_message", id],
+		mutationFn: async (messageContent: string) => {
 			// Ensure initialization is complete.
-			if (!containerAgentId || !baseUrl) {
-				console.error("Agent initialization incomplete. Cannot send message.");
-				return;
+			if (!containerAgentId || !baseUrl || !wallet?.address) {
+				throw new Error("Agent initialization incomplete or wallet not connected");
 			}
 
 			const response = await apiClient.sendMessage(
@@ -119,15 +114,69 @@ export default function TerminalPage() {
 				null // no file provided
 			);
 
-			// Optionally process the response e.g. update messages with agent reply.
-			// For example:
-			setMessages((prev) => [
-				...prev,
-				{ id: Date.now().toString(), role: "agent", content: response.reply, timestamp: new Date() },
-			]);
-		} catch (error) {
+			return response;
+		},
+		onSuccess: (response) => {
+			// The response is an array of message objects
+			if (Array.isArray(response) && response.length > 0) {
+				// Add agent responses to messages
+				queryClient.setQueryData(["messages", id], (oldMessages: Message[] = []) => [
+					...oldMessages.filter((msg) => !msg.isLoading),
+					...response.map((msg) => ({
+						id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
+						role: "agent",
+						content: msg.text,
+						timestamp: new Date(),
+						user: msg.user,
+						action: msg.action,
+					})),
+				]);
+			} else {
+				console.error("Unexpected response format:", response);
+				// Remove loading message on error
+				queryClient.setQueryData(["messages", id], (oldMessages: Message[] = []) =>
+					oldMessages.filter((msg) => !msg.isLoading)
+				);
+			}
+		},
+		onError: (error) => {
 			console.error("Error sending message:", error);
-		}
+			// Remove loading message on error
+			queryClient.setQueryData(["messages", id], (oldMessages: Message[] = []) =>
+				oldMessages.filter((msg) => !msg.isLoading)
+			);
+		},
+	});
+
+	const handleSendMessage = async () => {
+		if (!input.trim()) return;
+
+		// Create and add the user's message and a loading message
+		const newMessages: Message[] = [
+			{
+				id: Date.now().toString(),
+				role: "user",
+				content: input.trim(),
+				timestamp: new Date(),
+			},
+			{
+				id: `loading-${Date.now()}`,
+				role: "agent",
+				content: "Thinking...",
+				timestamp: new Date(),
+				isLoading: true,
+			},
+		];
+
+		// Update messages in React Query cache
+		queryClient.setQueryData(["messages", id], (oldMessages: Message[] = []) => [...oldMessages, ...newMessages]);
+
+		// Preserve the message content and clear input
+		const messageContent = input.trim();
+		setInput("");
+
+		// Send the message
+		sendMessageMutation.mutate(messageContent);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -140,7 +189,10 @@ export default function TerminalPage() {
 	// Auto-scroll to bottom when messages change
 	useEffect(() => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-	}, [messages]);
+	}, [queryClient.getQueryData(["messages", id])]);
+
+	// Get messages from React Query cache
+	const messages = queryClient.getQueryData<Message[]>(["messages", id]) || [];
 
 	return (
 		<main className="min-h-screen bg-background text-foreground flex flex-col">
@@ -197,10 +249,29 @@ export default function TerminalPage() {
 															: "bg-muted text-muted-foreground"
 													}`}
 												>
-													<p>{message.content}</p>
-													<p className="text-xs opacity-70 mt-1">
-														{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-													</p>
+													{message.user && message.role === "agent" && (
+														<p className="text-xs font-medium mb-1">{message.user}</p>
+													)}
+													<div className="flex items-center">
+														{message.isLoading ? (
+															<>
+																<p>{message.content}</p>
+																<Loader2 className="ml-2 h-4 w-4 animate-spin" />
+															</>
+														) : (
+															<p>{message.content}</p>
+														)}
+													</div>
+													<div className="flex justify-between items-center mt-1">
+														<p className="text-xs opacity-70">
+															{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+														</p>
+														{message.action && message.action !== "NONE" && (
+															<Badge variant="outline" className="text-xs">
+																{message.action}
+															</Badge>
+														)}
+													</div>
 												</motion.div>
 											</div>
 										</motion.div>
@@ -218,10 +289,20 @@ export default function TerminalPage() {
 									onChange={(e) => setInput(e.target.value)}
 									onKeyDown={handleKeyDown}
 									className="flex-1"
+									disabled={sendMessageMutation.isPending}
 								/>
 								<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-									<Button type="submit" size="icon" onClick={handleSendMessage}>
-										<Send className="h-4 w-4" />
+									<Button
+										type="submit"
+										size="icon"
+										onClick={handleSendMessage}
+										disabled={sendMessageMutation.isPending}
+									>
+										{sendMessageMutation.isPending ? (
+											<Loader2 className="h-4 w-4 animate-spin" />
+										) : (
+											<Send className="h-4 w-4" />
+										)}
 									</Button>
 								</motion.div>
 							</div>
