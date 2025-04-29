@@ -16,17 +16,27 @@ export function useOwnedCaps() {
 		queryFn: async () => {
 			if (!account?.address) return [];
 
-			const response = await suiClient.getOwnedObjects({
-				owner: account.address,
-				options: { showType: true },
-			});
-			console.log("response", response);
+			let allObjects: any[] = [];
+			let cursor: string | undefined = undefined;
 
-			// Get the data array from the response
-			const objects = response.data;
+			do {
+				const response = await suiClient.getOwnedObjects({
+					owner: account.address,
+					cursor,
+					options: { showType: true },
+				});
+				console.log("response", response);
 
-			// Filter objects that have KioskOwnerCap in their type
-			return objects.filter((obj) => obj.data?.type && obj.data.type === `${PACKAGE_ID}::agent::AgentCap`);
+				allObjects.push(...response.data);
+				cursor = response.nextCursor;
+
+				if (!response.hasNextPage) break;
+			} while (true);
+
+			return allObjects.filter(
+				(obj) =>
+					obj.data?.type && obj.data.type === `${PACKAGE_ID}::agent::AgentCap`
+			);
 		},
 		enabled: !!account?.address,
 	});
