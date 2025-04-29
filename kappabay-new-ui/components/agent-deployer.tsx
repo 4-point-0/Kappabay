@@ -12,7 +12,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react";
+import { PlusCircle, Trash2, Download, Upload, Wand2, Loader2 } from "lucide-react";
 import PluginSelector from "@/components/plugin-selector";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
@@ -38,6 +38,7 @@ export default function AgentDeployer({
 	const account = useCurrentAccount();
 	const signAndExec = useSignExecuteAndWaitForTransaction();
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(initialConfig);
+	const [isDeploying, setIsDeploying] = useState(false);
 	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -755,8 +756,24 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={handleDeploy}>
-					{isConfiguring ? "Update Agent" : "Deploy Agent"}
+				<Button
+					size="lg"
+					onClick={async () => {
+						setIsDeploying(true);
+						try {
+							await handleDeploy();
+						} catch (error) {
+							console.error("Deploy failed:", error);
+						} finally {
+							setIsDeploying(false);
+						}
+					}}
+				>
+					{isDeploying ? (
+						<Loader2 className="animate-spin h-4 w-4" />
+					) : (
+						isConfiguring ? "Update Agent" : "Deploy Agent"
+					)}
 				</Button>
 			</div>
 		</div>
