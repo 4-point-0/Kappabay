@@ -1,21 +1,26 @@
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function useOwnedCaps() {
 	const account = useCurrentAccount();
 	const suiClient = useSuiClient();
-	// use useQueryClient instead of useQuery ai!
-	const { data, isLoading, error } = useQuery(
-		["ownedCaps", account?.address],
-		async () => {
-			if (!account?.address) return [];
+	const queryClient = useQueryClient();
+	const [data, setData] = React.useState<any[]>([]);
+	const [isLoading, setIsLoading] = React.useState(false);
+	const [error, setError] = React.useState<Error | null>(null);
+
+	React.useEffect(() => {
+		if (!account?.address) return;
+		setIsLoading(true);
+		queryClient.fetchQuery(["ownedCaps", account.address], async () => {
 			const response = await suiClient.getOwnedObjects(account.address, { showType: true, showDisplay: true });
 			const objects = response.data || response;
-			// Filter for capability objects – adjust the string below to match your capability type
 			return objects.filter((obj: any) => obj.data?.type && obj.data.type.includes("KioskOwnerCap"));
-		},
-		{ enabled: !!account?.address }
-	);
+		})
+		.then(setData)
+		.catch(setError)
+		.finally(() => setIsLoading(false));
+	}, [account?.address, queryClient, suiClient]);
 
 	return { caps: data || [], isLoading, error };
 }
