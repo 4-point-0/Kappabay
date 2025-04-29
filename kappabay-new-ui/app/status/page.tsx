@@ -105,7 +105,7 @@ export default function StatusPage() {
 		return () => {
 			timers.forEach((timer: any) => clearTimeout(timer));
 		};
-	}, [agents, terminalEnabledAgents]);
+	}, [agents]);
 
 	const handleService = async (agentId: string, currentStatus: string) => {
 		if (!wallet?.address) return;
