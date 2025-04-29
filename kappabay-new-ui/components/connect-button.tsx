@@ -116,30 +116,8 @@ const ConnectButton = () => {
 					whileTap={{ scale: 0.95 }}
 					onClick={() => setShowConnectOptions(true)}
 				>
-					Connect with Wallet
+					<ConnectModal trigger={<Button>Connect</Button>} />
 				</motion.button>
-
-				<AnimatePresence>
-					{showConnectOptions && (
-						<motion.div
-							className="absolute right-0 mt-2 w-64 bg-card rounded-lg shadow-lg p-6 flex flex-col space-y-4 z-20"
-							initial={{ opacity: 0, y: -10 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -10 }}
-						>
-							<h2 className="text-xl font-semibold mb-4">Connect Wallet</h2>
-							<ConnectModal trigger={<Button>Connect with Wallet</Button>} />
-							<motion.button
-								className="mt-4 hover:text-gray-400"
-								whileHover={{ scale: 1.05 }}
-								whileTap={{ scale: 0.95 }}
-								onClick={() => setShowConnectOptions(false)}
-							>
-								Cancel
-							</motion.button>
-						</motion.div>
-					)}
-				</AnimatePresence>
 			</div>
 		</div>
 	);
