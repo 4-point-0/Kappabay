@@ -66,18 +66,17 @@ export default function StatusPage() {
 
 	async function refreshAgents() {
 		let allAgents: any[] = [];
-		if (caps.length > 0) {
-			for (const cap of caps) {
-				if (!cap.data) continue;
-				try {
-					// Use the capability ID (assumed to be at cap.data.objectId)
-					const agentsForCap = await getAgentsByOwner(cap.data.objectId);
-					if (agentsForCap && agentsForCap.length > 0) {
-						allAgents = [...allAgents, ...agentsForCap];
-					}
-				} catch (error) {
-					console.error("Error fetching agents for cap", cap.data.objectId, error);
+		// Collect all valid cap IDs from caps
+		const capIds = caps.filter((cap: any) => cap.data).map((cap: any) => cap.data.objectId);
+		if (capIds.length > 0) {
+			try {
+				// Make a single HTTP call with the array of capIds
+				const agentsForCaps = await getAgentsByOwner(capIds);
+				if (agentsForCaps && agentsForCaps.length > 0) {
+					allAgents = agentsForCaps;
 				}
+			} catch (error) {
+				console.error("Error fetching agents for capIds", capIds, error);
 			}
 		}
 		setAgents(allAgents);
