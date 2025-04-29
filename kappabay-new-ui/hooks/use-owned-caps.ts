@@ -12,7 +12,6 @@ export function useOwnedCaps() {
 	//(property) WalletAccount.address: string | undefined
 	// Address of the account, corresponding with a public key.
 	//
-	// fix it ai!
 	const { data, isLoading, error } = useQuery(
 		["ownedCaps", account?.address],
 		async () => {
