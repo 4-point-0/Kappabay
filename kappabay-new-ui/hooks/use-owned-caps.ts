@@ -5,12 +5,17 @@ import React from "react";
 export function useOwnedCaps() {
 	const account = useCurrentAccount();
 	const suiClient = useSuiClient();
-	const { data: caps = [], isLoading, error } = useQuery(
+	const {
+		data: caps = [],
+		isLoading,
+		error,
+	} = useQuery(
 		["ownedCaps", account?.address],
 		async () => {
-			const response = await suiClient.getOwnedObjects(account!.address, {
-				showType: true,
-				showDisplay: true,
+			if (!account?.address) return [];
+			const response = await suiClient.getOwnedObjects({
+				owner: account.address,
+				options: { showType: true, showDisplay: true },
 			});
 			const objects = response.data || response;
 			return objects.filter((obj: any) => obj.data?.type && obj.data.type.includes("KioskOwnerCap"));
