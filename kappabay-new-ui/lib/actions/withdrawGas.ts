@@ -4,6 +4,7 @@ import { prisma } from "../db";
 import { decrypt } from "../utils";
 import { Transaction } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
 // Server Action: Given an agentId, find the agent in the DB,
 // then build and sign a Sui Move transaction calling withdraw_gas.
@@ -31,7 +32,31 @@ export async function withdrawGas(agentId: string) {
 	// The private key is expected to be in hexadecimal format.
 	const keypair = Ed25519Keypair.fromSecretKey(Uint8Array.from(Buffer.from(decryptedKey, "hex")));
 
-	// Instantiate a new transaction
+	// Derive the Sui address from the keypair.
+	const ownerAddress = keypair.getPublicKey().toSuiAddress();
+
+	// Initialize a Sui client (using testnet endpoint).
+	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+
+	// Define the expected AdminCap type. This assumes your contract defines an AdminCap with this type.
+	const adminCapType = `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::AdminCap`;
+
+	// Get owned objects for the derived address.
+	const ownedCaps = await client.getOwnedObjects({
+		owner: ownerAddress,
+	});
+
+	// Filter the owned objects for one with the correct AdminCap type.
+	const adminCapObject = ownedCaps.data.find(
+		(obj) => obj.data?.type === adminCapType
+	);
+
+	if (!adminCapObject) {
+		throw new Error(`No AdminCap found for address ${ownerAddress}`);
+	}
+
+	// Use the found AdminCap object's id.
+	const adminCapId = adminCapObject.data.objectId;
 	const tx = new Transaction();
 
 	// Build the move call for withdraw_gas.
@@ -40,13 +65,13 @@ export async function withdrawGas(agentId: string) {
 		target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
 		arguments: [
 			tx.object(agent.objectId), // Agent object id from the DB
-			tx.object(agent.capId), // The AdminCap (from agent.capId)
+			tx.object(adminCapId), // Use the AdminCap id derived from the chain
 			tx.pure.u64(0), // Amount: 0 (in u64)
 		],
 	});
 
 	// Sign the transaction using the agent's keypair.
-	const signedTx = tx.sign({ signer: keypair });
+	const signedTx = tx.sign({ keypair });
 
 	// Return the signed transaction without sending it.
 	return signedTx;
