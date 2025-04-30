@@ -190,15 +190,15 @@ export default function StatusPage() {
 			const withdrawAmountMist = BigInt(Math.round(Number(withdrawAmount) * 1e9));
 
 			// Get the adminCapId and agentAddress from the backend.
-			const { adminCapId, agentAddress } = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
+			const { adminCapId, agentAddress } = await withdrawGas(agent.id);
 
 			// Build the sponsored transaction using the returned parameters.
 			const tx = new Transaction();
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
 				arguments: [
-					tx.object(agent.objectId),   // Agent object id from the DB
-					tx.object(adminCapId),         // AdminCap id retrieved from the chain
+					tx.object(agent.objectId), // Agent object id from the DB
+					tx.object(adminCapId), // AdminCap id retrieved from the chain
 					tx.pure.u64(withdrawAmountMist.toString()), // Amount as u64
 				],
 			});
