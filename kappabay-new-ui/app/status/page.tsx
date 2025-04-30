@@ -29,6 +29,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { toast } from "@/hooks/use-toast";
+import { withdrawGas } from "@/lib/actions/withdrawGas";
 
 const formatObjectId = (objectId: string) => {
 	// Display the first 6 and last 4 characters
@@ -174,25 +175,50 @@ export default function StatusPage() {
 		}
 	};
 
-	const handleWithdraw = () => {
+	const handleWithdraw = async () => {
 		if (!withdrawAmount || isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) return;
+		if (!wallet?.address) return;
 
 		// Find the selected agent
 		const agent = agents.find((a: any) => a.id === selectedAgentId);
 		if (!agent || Number(withdrawAmount) > Number(agent.gasBag)) return;
 
-		// Update the selected agent's gas bag
-		setAgents(
-			agents.map((agent: any) =>
-				agent.id === selectedAgentId
-					? { ...agent, gasBag: (Number(agent.gasBag) - Number(withdrawAmount)).toFixed(2) }
-					: agent
-			)
-		);
-
-		// Update total gas bag
-		setTotalGasBag((Number(totalGasBag) + Number(withdrawAmount)).toFixed(2));
-		setWithdrawAmount("");
+		try {
+			// Call the server action to build and sign the withdrawGas transaction.
+			const signedTx = await withdrawGas(agent.id, withdrawAmount);
+			
+			// Use the connected wallet to sign and execute the transaction.
+			signAndExecuteTransaction(
+				{ transaction: signedTx },
+				{
+					onSuccess: async (result) => {
+						console.log("Withdraw transaction:", result);
+						toast({
+							title: "Withdraw Successful",
+							description: "Withdraw transaction executed successfully.",
+						});
+						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Withdraw transaction failed:", error);
+						toast({
+							title: "Withdraw Failed",
+							description: "Withdraw transaction failed.",
+							variant: "destructive",
+						});
+					},
+				}
+			);
+		} catch (error) {
+			console.error("Error in withdrawGas:", error);
+			toast({
+				title: "Withdraw Error",
+				description: "Error while executing the withdraw operation.",
+				variant: "destructive",
+			});
+		} finally {
+			setWithdrawAmount("");
+		}
 	};
 
 	return (
