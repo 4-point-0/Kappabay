@@ -54,29 +54,5 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 
 	// Use the found AdminCap object's id.
 	const adminCapId = adminCapObject.data.objectId;
-	const tx = new Transaction();
-
-	// Ensure the amount is in the proper format (e.g. as a BigInt or a string integer)
-	const parsedAmount = BigInt(amount);
-	// The amount is 0 (u64). The TxContext parameter is provided automatically.
-	tx.moveCall({
-		target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
-		arguments: [
-			tx.object(agent.objectId), // Agent object id from the DB
-			tx.object(adminCapId), // Use the AdminCap id derived from the chain
-			tx.pure.u64(parsedAmount), // Amount: parsed from input
-		],
-	});
-
-	// Build the transaction kind bytes using only the transaction kind.
-	const kindBytes = await tx.build({ client, onlyTransactionKind: true });
-	const sponsoredTx = Transaction.fromKind(kindBytes);
-
-	// // Set sponsor details using the walletAddress (i.e. current connected wallet).
-	sponsoredTx.setSender(agentAddress);
-	sponsoredTx.setGasOwner(walletAddress);
-	// Optionally, if you have sponsor coins, set them via:
-	// sponsoredTx.setGasPayment(sponsorCoins);
-
-	return sponsoredTx;
+	return { adminCapId, agentAddress };
 }

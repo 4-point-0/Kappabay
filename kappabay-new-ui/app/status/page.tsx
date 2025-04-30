@@ -186,31 +186,52 @@ export default function StatusPage() {
 		if (!agent || Number(withdrawAmount) > Number(agent.gasBag)) return;
 
 		try {
-			// Call the server action to build and sign the withdrawGas transaction.
-			const withdrawAmountMist = Math.round(Number(withdrawAmount) * 1e9);
+			// Convert withdraw amount from SUI to mist.
+			const withdrawAmountMist = BigInt(Math.round(Number(withdrawAmount) * 1e9));
 
-			const sponsoredTx = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
-			// signAndExecuteTransaction(
-			// 	{ transaction: sponsoredTx },
-			// 	{
-			// 		onSuccess: async (result) => {
-			// 			console.log("Withdraw transaction:", result);
-			// 			toast({
-			// 				title: "Withdraw Successful",
-			// 				description: "Withdraw transaction executed successfully.",
-			// 			});
-			// 			await refreshAgents();
-			// 		},
-			// 		onError: (error) => {
-			// 			console.error("Withdraw move call failed:", error);
-			// 			toast({
-			// 				title: "Withdraw Failed",
-			// 				description: "Withdraw transaction failed.",
-			// 				variant: "destructive",
-			// 			});
-			// 		},
-			// 	}
-			// );
+			// Get the adminCapId and agentAddress from the backend.
+			const { adminCapId, agentAddress } = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
+
+			// Build the sponsored transaction using the returned parameters.
+			const tx = new Transaction();
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
+				arguments: [
+					tx.object(agent.objectId),   // Agent object id from the DB
+					tx.object(adminCapId),         // AdminCap id retrieved from the chain
+					tx.pure.u64(withdrawAmountMist.toString()), // Amount as u64
+				],
+			});
+
+			const kindBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
+			const sponsoredTx = Transaction.fromKind(kindBytes);
+
+			// Set sponsor details: the backend (agentAddress) remains as the move call signer and wallet.address sponsors gas.
+			sponsoredTx.setSender(agentAddress);
+			sponsoredTx.setGasOwner(wallet.address);
+
+			// Execute the sponsored transaction.
+			signAndExecuteTransaction(
+				{ transaction: sponsoredTx },
+				{
+					onSuccess: async (result) => {
+						console.log("Withdraw transaction:", result);
+						toast({
+							title: "Withdraw Successful",
+							description: "Withdraw transaction executed successfully.",
+						});
+						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Withdraw move call failed:", error);
+						toast({
+							title: "Withdraw Failed",
+							description: "Withdraw transaction failed.",
+							variant: "destructive",
+						});
+					},
+				}
+			);
 		} catch (error) {
 			console.error("Error in withdrawGas:", error);
 			toast({
