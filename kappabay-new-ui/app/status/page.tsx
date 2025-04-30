@@ -146,19 +146,25 @@ export default function StatusPage() {
 				{
 					onSuccess: async (result) => {
 						console.log("Deposit transaction:", result);
-						toast({
-							title: "Deposit Successful",
-							description: "Deposit transaction executed successfully.",
-						});
+						setTimeout(() => {
+							toast({
+								title: "Deposit Successful",
+								description: "Deposit transaction executed successfully.",
+								position: "top-right",
+							});
+						}, 50);
 						await refreshAgents();
 					},
 					onError: (error) => {
 						console.error("Deposit move call failed:", error);
-						toast({
-							title: "Deposit Failed",
-							description: "Deposit transaction failed.",
-							variant: "destructive",
-						});
+						setTimeout(() => {
+							toast({
+								title: "Deposit Failed",
+								description: "Deposit transaction failed.",
+								variant: "destructive",
+								position: "top-right",
+							});
+						}, 50);
 					},
 				}
 			);
