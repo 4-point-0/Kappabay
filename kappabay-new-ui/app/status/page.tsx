@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useToast } from "@/components/ui/use-toast";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
@@ -36,6 +37,7 @@ const formatObjectId = (objectId: string) => {
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const { toast } = useToast();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -113,7 +115,17 @@ export default function StatusPage() {
 		} finally {
 			setLoadingAgent(null);
 		}
-	};
+	} catch (error) {
+		console.error("Error in handleDeposit:", error);
+		toast({
+			title: "Deposit Error",
+			description: "Error in deposit execution.",
+			variant: "destructive",
+		});
+	} finally {
+		setDepositAmount("");
+	}
+};
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -124,16 +136,18 @@ export default function StatusPage() {
 		if (!selectedAgent) return;
 
 		try {
-			// Execute the move call to deposit SUI from the wallet to the smart contract.
+			// Create a new transaction with a Move call to deposit_gas.
+			const txn = new Transaction();
+
+			// Split the gas coin to obtain the payment coin for the deposit.
+			const payment = txn.splitCoins(txn.gas, [txn.pure.u64(depositAmount)])[0];
 			// Create a new transaction with a Move call to deposit_gas.
 			const txn = new Transaction();
 			txn.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
 				arguments: [selectedAgent.objectId],
-				// gasBudget: 10000,
-				// IMPORTANT: Attach the payment coin matching depositAmount.
-				// Depending on your wallet’s API, you may need to add a `coins` field, for example:
-				// coins: [/* coin matching depositAmount */],
+				coins: [payment],
+				gasBudget: 10000,
 			});
 
 			signAndExecuteTransaction(
@@ -141,7 +155,19 @@ export default function StatusPage() {
 				{
 					onSuccess: async (result) => {
 						console.log("Deposit transaction:", result);
+						toast({
+							title: "Deposit Successful",
+							description: "Deposit transaction executed successfully.",
+						});
 						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Deposit move call failed:", error);
+						toast({
+							title: "Deposit Failed",
+							description: "Deposit transaction failed.",
+							variant: "destructive",
+						});
 					},
 					onError: (error) => {
 						console.error("Deposit move call failed:", error);
