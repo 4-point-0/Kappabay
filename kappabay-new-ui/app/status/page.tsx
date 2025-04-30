@@ -129,8 +129,11 @@ export default function StatusPage() {
 			// Create a new transaction.
 			const txn = new Transaction();
 
-			// Split the gas coin to obtain the payment coin for the deposit.
-			const payment = txn.splitCoins(txn.gas, [txn.pure.u64(depositAmount)])[0];
+			// Convert deposit amount from SUI to mist (1 SUI = 1e9 mist)
+			const depositAmountMist = BigInt(Math.round(Number(depositAmount) * 1e9));
+
+			// Split the gas coin to obtain the payment coin for the deposit (using the mist amount).
+			const payment = txn.splitCoins(txn.gas, [txn.pure.u64(depositAmountMist.toString())])[0];
 
 			// Include the move call with the payment coin.
 			txn.moveCall({
