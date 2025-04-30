@@ -115,17 +115,7 @@ export default function StatusPage() {
 		} finally {
 			setLoadingAgent(null);
 		}
-	} catch (error) {
-		console.error("Error in handleDeposit:", error);
-		toast({
-			title: "Deposit Error",
-			description: "Error in deposit execution.",
-			variant: "destructive",
-		});
-	} finally {
-		setDepositAmount("");
 	}
-};
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
