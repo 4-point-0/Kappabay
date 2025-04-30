@@ -112,21 +112,41 @@ export default function StatusPage() {
 		}
 	};
 
-	const handleDeposit = () => {
+	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
+		if (!wallet?.address) return;
 
-		// Update the selected agent's gas bag
-		setAgents(
-			agents.map((agent: any) =>
-				agent.id === selectedAgentId
-					? { ...agent, gasBag: (Number(agent.gasBag) + Number(depositAmount)).toFixed(2) }
-					: agent
-			)
-		);
+		// Find the selected agent (using the agent's objectId)
+		const selectedAgent = agents.find((agent: any) => agent.id === selectedAgentId);
+		if (!selectedAgent) return;
 
-		// Update total gas bag
-		setTotalGasBag((Number(totalGasBag) - Number(depositAmount)).toFixed(2));
-		setDepositAmount("");
+		try {
+			// Execute the move call to deposit SUI from the wallet to the smart contract.
+			const moveCallTxn = await wallet.executeMoveCall({
+				packageObjectId: process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!, // smart contract package id
+				module: "agent",
+				function: "deposit_gas",
+				typeArguments: [],
+				// Pass the agent's objectId as argument. Payment coin(s) are attached automatically.
+				arguments: [selectedAgent.objectId],
+				gasBudget: 10000, // adjust gas budget as needed
+
+				// IMPORTANT: Include the Payment coin argument.
+				// Depending on your wallet SDK, this could be done by specifying an extra field.
+				// For example, if your wallet supports attaching coins:
+				// coins: [theCoinObjectId]
+				// Alternatively, if the SDK splits the coin automatically based on the value,
+				// ensure the depositAmount (in SUI) is attached appropriately.
+			});
+
+			console.log("Deposit transaction:", moveCallTxn);
+			// Optionally refresh agents to update gas bag balances.
+			await refreshAgents();
+		} catch (error) {
+			console.error("Deposit move call failed:", error);
+		} finally {
+			setDepositAmount("");
+		}
 	};
 
 	const handleWithdraw = () => {
