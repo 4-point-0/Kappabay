@@ -188,7 +188,7 @@ export default function StatusPage() {
 		try {
 			// Call the server action to build and sign the withdrawGas transaction.
 			const withdrawAmountMist = Math.round(Number(depositAmount) * 1e9);
-			const signedTx = await withdrawGas(agent.id, withdrawAmountMist);
+			const signedTx = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
 			console.log("here3");
 
 			// console.log("signedTx", signedTx);
