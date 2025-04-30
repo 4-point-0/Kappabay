@@ -213,7 +213,7 @@ export default function StatusPage() {
 				txBlock.setGasOwner(sponsorAddress); // wallet.address
 
 				return {
-					bytes: await txBlock.build({ client: suiClient }),
+					bytes: await txBlock.build({ client: suiClient, onlyTransactionKind: true }),
 					signature: agentSignature,
 				};
 			}
