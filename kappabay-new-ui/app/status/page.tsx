@@ -224,28 +224,47 @@ export default function StatusPage() {
 			// Deserialize the sponsored transaction block
 			const sponsoredTx = Transaction.fromKind(sponsoredResult.bytes);
 
-			// Now have the connected wallet sign the resulting sponsored transaction
-			signAndExecuteTransaction(
-				{ transaction: sponsoredTx },
-				{
-					onSuccess: async (result) => {
-						console.log("Withdraw transaction:", result);
-						toast({
-							title: "Withdraw Successful",
-							description: "Withdraw transaction executed successfully.",
-						});
-						await refreshAgents();
-					},
-					onError: (error) => {
-						console.error("Withdraw move call failed:", error);
-						toast({
-							title: "Withdraw Failed",
-							description: "Withdraw transaction failed.",
-							variant: "destructive",
-						});
-					},
-				}
-			);
+			// Deserialize the sponsored transaction block from the built bytes
+			const txBlock = Transaction.fromKind(sponsoredResult.bytes);
+			// Rebuild the transaction block so it is complete with inputs for execution.
+			const builtTx = await txBlock.build({ client: suiClient });
+
+			// Now, have the connected wallet sign the transaction block.
+			// (Assuming your wallet API provides a method named `signTransactionBlock`.)
+			const walletSignedTx = await wallet.signTransactionBlock({ transactionBlock: builtTx });
+
+			// Execute the transaction block using the SuiClient directly and pass both signatures.
+			// The array must contain the wallet (sponsor) signature first and the agent (backend) signature second.
+			await suiClient.executeTransactionBlock({
+				transactionBlock: builtTx,
+				signature: [walletSignedTx.signature, sponsoredResult.signature],
+				requestType: "WaitForLocalExecution",
+				options: {
+					showEvents: true,
+					showEffects: true,
+					showObjectChanges: true,
+					showBalanceChanges: true,
+					showInput: true,
+				},
+			})
+				.then((res) => {
+					const status = res?.effects?.status.status;
+					if (status === "success") {
+						console.log("\n executed! status =", status);
+						console.log("Transaction digest =", res?.digest);
+						refreshAgents();
+					} else if (status === "failure") {
+						console.error("Error =", res?.effects);
+					}
+				})
+				.catch((error) => {
+					console.error("Error executing sponsored transaction:", error);
+					toast({
+						title: "Withdraw Failed",
+						description: "Withdraw transaction failed.",
+						variant: "destructive",
+					});
+				});
 		} catch (error) {
 			console.error("Error in withdrawGas:", error);
 			toast({
