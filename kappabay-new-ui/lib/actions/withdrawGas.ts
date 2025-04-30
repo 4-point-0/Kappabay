@@ -47,11 +47,9 @@ export async function withdrawGas(agentId: string) {
 	});
 
 	// Filter the owned objects for one with the correct AdminCap type.
-	const adminCapObject = ownedCaps.data.find(
-		(obj) => obj.data?.type === adminCapType
-	);
+	const adminCapObject = ownedCaps.data.find((obj) => obj.data?.type === adminCapType);
 
-	if (!adminCapObject) {
+	if (!adminCapObject?.data?.objectId) {
 		throw new Error(`No AdminCap found for address ${ownerAddress}`);
 	}
 
