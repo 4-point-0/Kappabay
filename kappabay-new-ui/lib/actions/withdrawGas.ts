@@ -19,7 +19,10 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 		where: { id: agentId },
 	});
 
-	// Set the sender of the transaction to the current connected wallet address.
+	// Derive the agent's backend sender address from the stored agentWalletKey.
+	const decryptedKey = decrypt(agent.agentWalletKey);
+	const keypair = Ed25519Keypair.fromSecretKey(decryptedKey);
+	const ownerAddress = keypair.getPublicKey().toSuiAddress();
 	if (!agent) {
 		throw new Error(`Agent not found for id ${agentId}`);
 	}
