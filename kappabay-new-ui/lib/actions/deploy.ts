@@ -3,14 +3,13 @@
 import { exec } from "child_process";
 import fs from "fs/promises";
 import path from "path";
-import crypto from "crypto";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import * as net from "net";
-// import { DeployOracle } from "./deploy-oracle";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { DeploymentData } from "../types";
+import { encrypt } from "../utils";
 
 /**
  * Creates a Docker secret from the .env content.
@@ -43,40 +42,6 @@ async function createDockerSecretFromEnv(agentId: string, envContent: string, se
 	});
 	await fs.unlink(envFilePath); // Clean up the temporary file
 	return _secretName;
-}
-
-// -----------------
-// Encryption Helpers
-// -----------------
-
-function encrypt(text: string): string {
-	const algorithm = "aes-256-cbc";
-
-	const keyHex = process.env.ENCRYPTION_KEY;
-	if (!keyHex) {
-		throw new Error("ENCRYPTION_KEY environment variable not set.");
-	}
-	const key = Buffer.from(keyHex, "hex"); // Must be 32 bytes (64 hex characters)
-	const iv = crypto.randomBytes(16); // Initialization vector (16 bytes)
-	const cipher = crypto.createCipheriv(algorithm, key, iv);
-	const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-	// Combine the IV with the encrypted text (separated by a colon)
-	return iv.toString("hex") + ":" + encrypted.toString("hex");
-}
-
-function decrypt(text: string): string {
-	const algorithm = "aes-256-cbc";
-	const keyHex = process.env.ENCRYPTION_KEY;
-	if (!keyHex) {
-		throw new Error("ENCRYPTION_KEY environment variable not set.");
-	}
-	const key = Buffer.from(keyHex, "hex");
-	const [ivHex, encryptedHex] = text.split(":");
-	const iv = Buffer.from(ivHex, "hex");
-	const encryptedText = Buffer.from(encryptedHex, "hex");
-	const decipher = crypto.createDecipheriv(algorithm, key, iv);
-	const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-	return decrypted.toString("utf8");
 }
 
 // -----------------
