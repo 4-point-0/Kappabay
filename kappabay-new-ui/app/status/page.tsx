@@ -26,6 +26,11 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
+const formatObjectId = (objectId: string) => {
+	// Display the first 6 and last 4 characters
+	return `${objectId.slice(0, 6)}...${objectId.slice(-4)}`;
+};
+
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
 	const [agents, setAgents] = useState<any>([]);
@@ -57,9 +62,12 @@ export default function StatusPage() {
 	}
 
 	useEffect(() => {
-		if (!wallet?.address) return;
+		if (!wallet?.address) {
+			agents.length > 0 && setAgents([]);
+			return;
+		}
 		refreshAgents();
-	}, [wallet]);
+	}, [wallet?.address, caps]);
 
 	useEffect(() => {
 		const timers = agents
@@ -184,7 +192,7 @@ export default function StatusPage() {
 												className="border-b border-border"
 											>
 												<TableCell className="font-medium">{agent.name}</TableCell>
-												<TableCell className="font-mono text-xs">{agent.objectId}</TableCell>
+												<TableCell className="font-mono text-xs">{formatObjectId(agent.objectId)}</TableCell>
 												<TableCell>
 													<Badge variant={agent.status === "ACTIVE" ? "default" : "outline"}>
 														{agent.status === "ACTIVE" ? "Active" : "Inactive"}
