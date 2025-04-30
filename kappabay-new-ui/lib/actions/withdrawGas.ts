@@ -60,7 +60,7 @@ export async function withdrawGas(
 	tx.setGasOwner(gasOwnerAddress); // Connected wallet is the gas payer
 
 	// Build the transaction bytes
-	const builtTx = await tx.build({ client, onlyTransactionKind: true });
+	const builtTx = await tx.build({ client });
 
 	// Sign the transaction with the agent's keypair
 	const agentSignature = await keypair.signTransaction(builtTx);

@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import {
@@ -40,6 +40,7 @@ const formatObjectId = (objectId: string) => {
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const { mutateAsync: signTransaction } = useSignTransaction();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -202,58 +203,40 @@ export default function StatusPage() {
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
 				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
 			});
-
-			// Build only the transaction kind bytes
-			const kindBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
-
-			// Emulate the sponsorTransaction flow from the sample
-			async function sponsorTransaction(sender: string, sponsorAddress: string, transactionKindBytes: Uint8Array) {
-				const txBlock = Transaction.fromKind(transactionKindBytes);
-				txBlock.setSender(sender); // agentAddress
-				txBlock.setGasOwner(sponsorAddress); // wallet.address
-
-				return {
-					bytes: await txBlock.build({ client: suiClient, onlyTransactionKind: true }),
-					signature: agentSignature,
-				};
-			}
-
-			// Obtain the sponsored transaction block
-			const sponsoredResult = await sponsorTransaction(agentAddress, wallet.address, kindBytes);
-
-			// Deserialize the sponsored transaction block
-			const sponsoredTx = Transaction.fromKind(sponsoredResult.bytes);
-
-			// Deserialize the sponsored transaction block from the built bytes
-			const txBlock = Transaction.fromKind(sponsoredResult.bytes);
-			// Rebuild the transaction block so it is complete with inputs for execution.
-			const builtTx = await txBlock.build({ client: suiClient });
+			tx.setSender(agentAddress);
+			tx.setGasOwner(wallet.address);
 
 			// Now, have the connected wallet sign the transaction block.
-			// (Assuming your wallet API provides a method named `signTransactionBlock`.)
-			const walletSignedTx = await wallet.signTransactionBlock({ transactionBlock: builtTx });
+			const walletSignedTx = await signTransaction({ transaction: tx });
 
 			// Execute the transaction block using the SuiClient directly and pass both signatures.
-			// The array must contain the wallet (sponsor) signature first and the agent (backend) signature second.
-			await suiClient.executeTransactionBlock({
-				transactionBlock: builtTx,
-				signature: [walletSignedTx.signature, sponsoredResult.signature],
-				requestType: "WaitForLocalExecution",
-				options: {
-					showEvents: true,
-					showEffects: true,
-					showObjectChanges: true,
-					showBalanceChanges: true,
-					showInput: true,
-				},
-			})
+			await suiClient
+				.executeTransactionBlock({
+					transactionBlock: presignedTxBytes,
+					signature: [agentSignature, walletSignedTx.signature],
+					requestType: "WaitForLocalExecution",
+					options: {
+						showEvents: true,
+						showEffects: true,
+						showObjectChanges: true,
+						showBalanceChanges: true,
+						showInput: true,
+					},
+				})
 				.then((res) => {
 					const status = res?.effects?.status.status;
 					if (status === "success") {
-						console.log("\n executed! status =", status);
-						console.log("Transaction digest =", res?.digest);
+						toast({
+							title: "Withdraw Successful",
+							description: "Withdraw transaction executed successfully. Transaction digest: " + res?.digest,
+						});
 						refreshAgents();
 					} else if (status === "failure") {
+						toast({
+							title: "Withdraw Error",
+							description: "Withdraw transaction failed.",
+							variant: "destructive",
+						});
 						console.error("Error =", res?.effects);
 					}
 				})
