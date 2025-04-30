@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { useSignAndExecuteTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import {
@@ -47,6 +47,7 @@ export default function StatusPage() {
 	const [selectedAgentId, setSelectedAgentId] = useState("");
 	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
+	const suiClient = useSuiClient();
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
@@ -186,19 +187,20 @@ export default function StatusPage() {
 
 		try {
 			// Call the server action to build and sign the withdrawGas transaction.
-			const signedTx = await withdrawGas(agent.id, withdrawAmount);
-			
-			// Instantiate a Sui client (using the testnet endpoint).
-			const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
+			const withdrawAmountMist = Math.round(Number(depositAmount) * 1e9);
+			const signedTx = await withdrawGas(agent.id, withdrawAmountMist);
+			console.log("here3");
+
+			// console.log("signedTx", signedTx);
 
 			// Execute the pre-signed transaction using the client.
-			const result = await suiClient.executeTransactionBlock({
-				transactionBlock: signedTx.bytes,
-				signature: signedTx.signature,
-				options: { showRawEffects: true, showObjectChanges: true },
-			});
+			// const result = await suiClient.executeTransactionBlock({
+			// 	transactionBlock: signedTx.bytes,
+			// 	signature: signedTx.signature,
+			// 	options: { showRawEffects: true, showObjectChanges: true },
+			// });
 
-			console.log("Withdraw transaction:", result);
+			// console.log("Withdraw transaction:", result);
 			toast({
 				title: "Withdraw Successful",
 				description: "Withdraw transaction executed successfully.",

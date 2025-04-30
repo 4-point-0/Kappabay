@@ -29,8 +29,7 @@ export async function withdrawGas(agentId: string, amount: number | string) {
 	const decryptedKey = decrypt(agent.agentWalletKey);
 
 	// Create a keypair from the decrypted private key.
-	// The private key is expected to be in hexadecimal format.
-	const keypair = Ed25519Keypair.fromSecretKey(Uint8Array.from(Buffer.from(decryptedKey, "hex")));
+	const keypair = Ed25519Keypair.fromSecretKey(decryptedKey);
 
 	// Derive the Sui address from the keypair.
 	const ownerAddress = keypair.getPublicKey().toSuiAddress();
@@ -44,6 +43,7 @@ export async function withdrawGas(agentId: string, amount: number | string) {
 	// Get owned objects for the derived address.
 	const ownedCaps = await client.getOwnedObjects({
 		owner: ownerAddress,
+		options: { showType: true },
 	});
 
 	// Filter the owned objects for one with the correct AdminCap type.
@@ -69,9 +69,11 @@ export async function withdrawGas(agentId: string, amount: number | string) {
 		],
 	});
 
+	console.log("here");
+
 	// Sign the transaction using the agent's keypair.
 	const signedTx = tx.sign({ signer: keypair });
-
+	console.log("here1");
 	// Return the signed transaction without sending it.
 	return signedTx;
 }
