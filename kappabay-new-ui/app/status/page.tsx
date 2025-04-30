@@ -28,6 +28,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useToast } from "@/components/ui/use-toast";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
+import { toast } from "@/hooks/use-toast";
 
 const formatObjectId = (objectId: string) => {
 	// Display the first 6 and last 4 characters
@@ -37,7 +38,6 @@ const formatObjectId = (objectId: string) => {
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-	const { toast } = useToast();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -146,25 +146,19 @@ export default function StatusPage() {
 				{
 					onSuccess: async (result) => {
 						console.log("Deposit transaction:", result);
-						setTimeout(() => {
-							toast({
-								title: "Deposit Successful",
-								description: "Deposit transaction executed successfully.",
-								position: "top-right",
-							});
-						}, 50);
+						toast({
+							title: "Deposit Successful",
+							description: "Deposit transaction executed successfully.",
+						});
 						await refreshAgents();
 					},
 					onError: (error) => {
 						console.error("Deposit move call failed:", error);
-						setTimeout(() => {
-							toast({
-								title: "Deposit Failed",
-								description: "Deposit transaction failed.",
-								variant: "destructive",
-								position: "top-right",
-							});
-						}, 50);
+						toast({
+							title: "Deposit Failed",
+							description: "Deposit transaction failed.",
+							variant: "destructive",
+						});
 					},
 				}
 			);
