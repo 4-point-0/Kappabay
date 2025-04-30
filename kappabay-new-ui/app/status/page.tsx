@@ -196,30 +196,37 @@ export default function StatusPage() {
 				agent.objectId,
 				wallet.address
 			);
-			// Build the transaction on the server
+			// Build the transaction block using the move call with withdraw parameters.
 			const tx = new Transaction();
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
-				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
+				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
 			});
 
-			// Configure as a sponsored transaction
-			tx.setSender(agentAddress); // Agent is the transaction sender
-			tx.setGasOwner(wallet.address); // Connected wallet is the gas payer
+			// Build only the transaction kind bytes
+			const kindBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
 
-			// Build the transaction bytes
-			const builtTx = await tx.build({ client: suiClient, onlyTransactionKind: true });
+			// Emulate the sponsorTransaction flow from the sample
+			async function sponsorTransaction(sender: string, sponsorAddress: string, transactionKindBytes: Uint8Array) {
+				const txBlock = Transaction.fromKind(transactionKindBytes);
+				txBlock.setSender(sender); // agentAddress
+				txBlock.setGasOwner(sponsorAddress); // wallet.address
 
-			// Deserialize the transaction that was partially signed on the server
-			const sponsoredTx = Transaction.fromKind(builtTx);
-			// Add the agent's signature that was created on the server
+				return {
+					bytes: await txBlock.build({ client: suiClient }),
+					signature: agentSignature,
+				};
+			}
 
-			// Now execute the transaction with the wallet signing as the gas owner
-			// The dapp-kit will automatically add the wallet's signature to complete the dual signatures
+			// Obtain the sponsored transaction block
+			const sponsoredResult = await sponsorTransaction(agentAddress, wallet.address, kindBytes);
+
+			// Deserialize the sponsored transaction block
+			const sponsoredTx = Transaction.fromKind(sponsoredResult.bytes);
+
+			// Now have the connected wallet sign the resulting sponsored transaction
 			signAndExecuteTransaction(
-				{
-					transaction: sponsoredTx,
-				},
+				{ transaction: sponsoredTx },
 				{
 					onSuccess: async (result) => {
 						console.log("Withdraw transaction:", result);
