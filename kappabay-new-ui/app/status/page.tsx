@@ -206,8 +206,8 @@ export default function StatusPage() {
 			const kindBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
 			const sponsoredTx = Transaction.fromKind(kindBytes);
 
-			// Set sponsor details: the backend (agentAddress) remains as the move call signer and wallet.address sponsors gas.
-			sponsoredTx.setSender(agentAddress);
+			// For a single signature transaction, both the sender and gas payer must be the current connected wallet.
+			sponsoredTx.setSender(wallet.address);
 			sponsoredTx.setGasOwner(wallet.address);
 
 			// Execute the sponsored transaction.
