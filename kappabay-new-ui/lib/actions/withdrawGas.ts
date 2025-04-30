@@ -70,7 +70,7 @@ export async function withdrawGas(agentId: string, amount: number | string) {
 	});
 
 	// Sign the transaction using the agent's keypair.
-	const signedTx = tx.sign({ keypair });
+	const signedTx = tx.sign({ signer: keypair });
 
 	// Return the signed transaction without sending it.
 	return signedTx;
