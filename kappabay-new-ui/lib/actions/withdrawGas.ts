@@ -36,7 +36,7 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 
 	// Get owned objects for the derived address.
 	const ownedCaps = await client.getOwnedObjects({
-		owner: ownerAddress,
+		owner: ownerAddress, // using the backend sender address
 		options: { showType: true },
 	});
 
