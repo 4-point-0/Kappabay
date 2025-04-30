@@ -13,18 +13,13 @@ import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 // and pass 0 (u64) as the amount.
 // The transaction is signed using the agent's decrypted private key from agentWalletKey.
 // The signed transaction is returned (not sent) and will be executed elsewhere.
-export async function withdrawGas(
-  agentId: string,
-  amount: number | string,
-  walletAddress: string
-) {
+export async function withdrawGas(agentId: string, amount: number | string, walletAddress: string) {
 	// Retrieve the agent from the database
 	const agent = await prisma.agent.findUnique({
 		where: { id: agentId },
 	});
-  
+
 	// Set the sender of the transaction to the current connected wallet address.
-	tx.setSender(walletAddress);
 	if (!agent) {
 		throw new Error(`Agent not found for id ${agentId}`);
 	}
@@ -75,12 +70,10 @@ export async function withdrawGas(
 			tx.pure.u64(parsedAmount), // Amount: parsed from input
 		],
 	});
-
-	console.log("here");
+	tx.setSender(ownerAddress);
 
 	// Sign the transaction using the agent's keypair.
-	const signedTx = tx.sign({ signer: keypair });
-	console.log("here1");
+	const signedTx = tx.sign({ signer: keypair, client });
 	// Return the signed transaction without sending it.
 	return signedTx;
 }
