@@ -186,33 +186,40 @@ export default function StatusPage() {
 		if (!agent || Number(withdrawAmount) > Number(agent.gasBag)) return;
 
 		try {
-			// Convert withdraw amount from SUI to mist.
+			// Convert withdraw amount from SUI to mist
 			const withdrawAmountMist = BigInt(Math.round(Number(withdrawAmount) * 1e9));
 
-			// Get the adminCapId and agentAddress from the backend.
-			const { adminCapId, agentAddress } = await withdrawGas(agent.id);
-
-			// Build the sponsored transaction using the returned parameters.
+			// Get the adminCapId, agentAddress, and pre-signed transaction bytes from the backend
+			const { adminCapId, agentAddress, presignedTxBytes, agentSignature } = await withdrawGas(
+				agent.id,
+				withdrawAmountMist.toString(),
+				agent.objectId,
+				wallet.address
+			);
+			// Build the transaction on the server
 			const tx = new Transaction();
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
-				arguments: [
-					tx.object(agent.objectId), // Agent object id from the DB
-					tx.object(adminCapId), // AdminCap id retrieved from the chain
-					tx.pure.u64(withdrawAmountMist.toString()), // Amount as u64
-				],
+				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
 			});
 
-			const kindBytes = await tx.build({ client: suiClient, onlyTransactionKind: true });
-			const sponsoredTx = Transaction.fromKind(kindBytes);
+			// Configure as a sponsored transaction
+			tx.setSender(agentAddress); // Agent is the transaction sender
+			tx.setGasOwner(wallet.address); // Connected wallet is the gas payer
 
-			// For a single signature transaction, both the sender and gas payer must be the current connected wallet.
-			sponsoredTx.setSender(wallet.address);
-			sponsoredTx.setGasOwner(wallet.address);
+			// Build the transaction bytes
+			const builtTx = await tx.build({ client: suiClient, onlyTransactionKind: true });
 
-			// Execute the sponsored transaction.
+			// Deserialize the transaction that was partially signed on the server
+			const sponsoredTx = Transaction.fromKind(builtTx);
+			// Add the agent's signature that was created on the server
+
+			// Now execute the transaction with the wallet signing as the gas owner
+			// The dapp-kit will automatically add the wallet's signature to complete the dual signatures
 			signAndExecuteTransaction(
-				{ transaction: sponsoredTx },
+				{
+					transaction: sponsoredTx,
+				},
 				{
 					onSuccess: async (result) => {
 						console.log("Withdraw transaction:", result);
