@@ -138,7 +138,7 @@ export default function StatusPage() {
 			// Include the move call with the payment coin.
 			txn.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
-				arguments: [selectedAgent.objectId, payment],
+				arguments: [txn.object(selectedAgent.objectId), payment],
 			});
 
 			signAndExecuteTransaction(
