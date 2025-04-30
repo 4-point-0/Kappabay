@@ -115,7 +115,7 @@ export default function StatusPage() {
 		} finally {
 			setLoadingAgent(null);
 		}
-	}
+	};
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -135,9 +135,7 @@ export default function StatusPage() {
 			// Include the move call with the payment coin.
 			txn.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
-				arguments: [selectedAgent.objectId],
-				coins: [payment],
-				gasBudget: 10000,
+				arguments: [selectedAgent.objectId, payment],
 			});
 
 			signAndExecuteTransaction(
