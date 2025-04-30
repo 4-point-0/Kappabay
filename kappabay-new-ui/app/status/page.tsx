@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useToast } from "@/components/ui/use-toast";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
@@ -187,28 +188,22 @@ export default function StatusPage() {
 			// Call the server action to build and sign the withdrawGas transaction.
 			const signedTx = await withdrawGas(agent.id, withdrawAmount);
 			
-			// Use the connected wallet to sign and execute the transaction.
-			signAndExecuteTransaction(
-				{ transaction: signedTx },
-				{
-					onSuccess: async (result) => {
-						console.log("Withdraw transaction:", result);
-						toast({
-							title: "Withdraw Successful",
-							description: "Withdraw transaction executed successfully.",
-						});
-						await refreshAgents();
-					},
-					onError: (error) => {
-						console.error("Withdraw transaction failed:", error);
-						toast({
-							title: "Withdraw Failed",
-							description: "Withdraw transaction failed.",
-							variant: "destructive",
-						});
-					},
-				}
-			);
+			// Instantiate a Sui client (using the testnet endpoint).
+			const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
+
+			// Execute the pre-signed transaction using the client.
+			const result = await suiClient.executeTransactionBlock({
+				transactionBlock: signedTx.bytes,
+				signature: signedTx.signature,
+				options: { showRawEffects: true, showObjectChanges: true },
+			});
+
+			console.log("Withdraw transaction:", result);
+			toast({
+				title: "Withdraw Successful",
+				description: "Withdraw transaction executed successfully.",
+			});
+			await refreshAgents();
 		} catch (error) {
 			console.error("Error in withdrawGas:", error);
 			toast({
