@@ -136,13 +136,13 @@ export default function StatusPage() {
 		if (!selectedAgent) return;
 
 		try {
-			// Create a new transaction with a Move call to deposit_gas.
+			// Create a new transaction.
 			const txn = new Transaction();
 
 			// Split the gas coin to obtain the payment coin for the deposit.
 			const payment = txn.splitCoins(txn.gas, [txn.pure.u64(depositAmount)])[0];
-			// Create a new transaction with a Move call to deposit_gas.
-			const txn = new Transaction();
+
+			// Include the move call with the payment coin.
 			txn.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
 				arguments: [selectedAgent.objectId],
@@ -169,13 +169,18 @@ export default function StatusPage() {
 							variant: "destructive",
 						});
 					},
-					onError: (error) => {
-						console.error("Deposit move call failed:", error);
-					},
 				}
 			);
-
+		} catch (error) {
+			console.error("Error in handleDeposit:", error);
+			toast({
+				title: "Deposit Error",
+				description: "Error in deposit execution.",
+				variant: "destructive",
+			});
+		} finally {
 			setDepositAmount("");
+		}
 	};
 
 	const handleWithdraw = () => {
