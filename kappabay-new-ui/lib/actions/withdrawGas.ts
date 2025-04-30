@@ -27,14 +27,6 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 		throw new Error(`Agent wallet key not found for agent ${agentId}`);
 	}
 
-	// Decrypt the encrypted wallet key
-	const decryptedKey = decrypt(agent.agentWalletKey);
-
-	// Create a keypair from the decrypted private key.
-	const keypair = Ed25519Keypair.fromSecretKey(decryptedKey);
-
-	// Derive the Sui address from the keypair.
-	const ownerAddress = keypair.getPublicKey().toSuiAddress();
 
 	// Initialize a Sui client (using testnet endpoint).
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });

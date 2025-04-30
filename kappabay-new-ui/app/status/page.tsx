@@ -187,25 +187,29 @@ export default function StatusPage() {
 
 		try {
 			// Call the server action to build and sign the withdrawGas transaction.
-			const withdrawAmountMist = Math.round(Number(depositAmount) * 1e9);
-			const signedTx = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
-			console.log("here3");
-
-			// console.log("signedTx", signedTx);
-
-			// Execute the pre-signed transaction using the client.
-			// const result = await suiClient.executeTransactionBlock({
-			// 	transactionBlock: signedTx.bytes,
-			// 	signature: signedTx.signature,
-			// 	options: { showRawEffects: true, showObjectChanges: true },
-			// });
-
-			// console.log("Withdraw transaction:", result);
-			toast({
-				title: "Withdraw Successful",
-				description: "Withdraw transaction executed successfully.",
-			});
-			await refreshAgents();
+			const withdrawAmountMist = BigInt(Math.round(Number(withdrawAmount) * 1e9));
+			const sponsoredTx = await withdrawGas(agent.id, withdrawAmountMist, wallet.address);
+			signAndExecuteTransaction(
+				{ transaction: sponsoredTx },
+				{
+					onSuccess: async (result) => {
+						console.log("Withdraw transaction:", result);
+						toast({
+							title: "Withdraw Successful",
+							description: "Withdraw transaction executed successfully.",
+						});
+						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Withdraw move call failed:", error);
+						toast({
+							title: "Withdraw Failed",
+							description: "Withdraw transaction failed.",
+							variant: "destructive",
+						});
+					},
+				}
+			);
 		} catch (error) {
 			console.error("Error in withdrawGas:", error);
 			toast({
