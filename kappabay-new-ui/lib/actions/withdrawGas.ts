@@ -62,10 +62,16 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 			tx.pure.u64(parsedAmount), // Amount: parsed from input
 		],
 	});
-	tx.setSender(ownerAddress);
 
-	// Sign the transaction using the agent's keypair.
-	const signedTx = tx.sign({ signer: keypair, client });
-	// Return the signed transaction without sending it.
-	return signedTx;
+	// Build the transaction kind bytes using only the transaction kind.
+	const kindBytes = await tx.build({ client, onlyTransactionKind: true });
+	const sponsoredTx = Transaction.fromKind(kindBytes);
+
+	// Set sponsor details using the walletAddress (i.e. current connected wallet).
+	sponsoredTx.setSender(walletAddress);
+	sponsoredTx.setGasOwner(walletAddress);
+	// Optionally, if you have sponsor coins, set them via:
+	// sponsoredTx.setGasPayment(sponsorCoins);
+
+	return sponsoredTx;
 }
