@@ -13,7 +13,7 @@ import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 // and pass 0 (u64) as the amount.
 // The transaction is signed using the agent's decrypted private key from agentWalletKey.
 // The signed transaction is returned (not sent) and will be executed elsewhere.
-export async function withdrawGas(agentId: string) {
+export async function withdrawGas(agentId: string, amount: number | string) {
 	// Retrieve the agent from the database
 	const agent = await prisma.agent.findUnique({
 		where: { id: agentId },
@@ -57,14 +57,15 @@ export async function withdrawGas(agentId: string) {
 	const adminCapId = adminCapObject.data.objectId;
 	const tx = new Transaction();
 
-	// Build the move call for withdraw_gas.
+	// Ensure the amount is in the proper format (e.g. as a BigInt or a string integer)
+	const parsedAmount = BigInt(amount);
 	// The amount is 0 (u64). The TxContext parameter is provided automatically.
 	tx.moveCall({
 		target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
 		arguments: [
 			tx.object(agent.objectId), // Agent object id from the DB
 			tx.object(adminCapId), // Use the AdminCap id derived from the chain
-			tx.pure.u64(0), // Amount: 0 (in u64)
+			tx.pure.u64(parsedAmount), // Amount: parsed from input
 		],
 	});
 
