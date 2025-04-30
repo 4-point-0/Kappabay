@@ -8,6 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import {
 	Dialog,
@@ -33,6 +35,7 @@ const formatObjectId = (objectId: string) => {
 
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
+	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -122,31 +125,31 @@ export default function StatusPage() {
 
 		try {
 			// Execute the move call to deposit SUI from the wallet to the smart contract.
-			const moveCallTxn = await wallet.executeMoveCall({
-				packageObjectId: process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!, // smart contract package id
-				module: "agent",
-				function: "deposit_gas",
-				typeArguments: [],
-				// Pass the agent's objectId as argument. Payment coin(s) are attached automatically.
+			// Create a new transaction with a Move call to deposit_gas.
+			const txn = new Transaction();
+			txn.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
 				arguments: [selectedAgent.objectId],
-				gasBudget: 10000, // adjust gas budget as needed
-
-				// IMPORTANT: Include the Payment coin argument.
-				// Depending on your wallet SDK, this could be done by specifying an extra field.
-				// For example, if your wallet supports attaching coins:
-				// coins: [theCoinObjectId]
-				// Alternatively, if the SDK splits the coin automatically based on the value,
-				// ensure the depositAmount (in SUI) is attached appropriately.
+				gasBudget: 10000,
+				// IMPORTANT: Attach the payment coin matching depositAmount.
+				// Depending on your wallet’s API, you may need to add a `coins` field, for example:
+				// coins: [/* coin matching depositAmount */],
 			});
 
-			console.log("Deposit transaction:", moveCallTxn);
-			// Optionally refresh agents to update gas bag balances.
-			await refreshAgents();
-		} catch (error) {
-			console.error("Deposit move call failed:", error);
-		} finally {
+			signAndExecuteTransaction(
+				{ transaction: txn },
+				{
+					onSuccess: async (result) => {
+						console.log("Deposit transaction:", result);
+						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Deposit move call failed:", error);
+					},
+				}
+			);
+
 			setDepositAmount("");
-		}
 	};
 
 	const handleWithdraw = () => {
