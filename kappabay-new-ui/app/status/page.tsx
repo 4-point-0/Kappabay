@@ -130,7 +130,7 @@ export default function StatusPage() {
 			txn.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::deposit_gas`,
 				arguments: [selectedAgent.objectId],
-				gasBudget: 10000,
+				// gasBudget: 10000,
 				// IMPORTANT: Attach the payment coin matching depositAmount.
 				// Depending on your wallet’s API, you may need to add a `coins` field, for example:
 				// coins: [/* coin matching depositAmount */],
