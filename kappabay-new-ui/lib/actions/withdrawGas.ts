@@ -19,17 +19,19 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 		where: { id: agentId },
 	});
 
+	if (!agent?.agentWalletKey) {
+		throw new Error(`Agent wallet key not found for agent ${agentId}`);
+	}
 	// Derive the agent's backend sender address from the stored agentWalletKey.
 	const decryptedKey = decrypt(agent.agentWalletKey);
 	const keypair = Ed25519Keypair.fromSecretKey(decryptedKey);
-	const ownerAddress = keypair.getPublicKey().toSuiAddress();
+	const agentAddress = keypair.getPublicKey().toSuiAddress();
 	if (!agent) {
 		throw new Error(`Agent not found for id ${agentId}`);
 	}
 	if (!agent.agentWalletKey) {
 		throw new Error(`Agent wallet key not found for agent ${agentId}`);
 	}
-
 
 	// Initialize a Sui client (using testnet endpoint).
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
@@ -39,7 +41,7 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 
 	// Get owned objects for the derived address.
 	const ownedCaps = await client.getOwnedObjects({
-		owner: ownerAddress, // using the backend sender address
+		owner: agentAddress, // using the backend sender address
 		options: { showType: true },
 	});
 
@@ -47,7 +49,7 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 	const adminCapObject = ownedCaps.data.find((obj) => obj.data?.type === adminCapType);
 
 	if (!adminCapObject?.data?.objectId) {
-		throw new Error(`No AdminCap found for address ${ownerAddress}`);
+		throw new Error(`No AdminCap found for address ${agentAddress}`);
 	}
 
 	// Use the found AdminCap object's id.
@@ -70,8 +72,8 @@ export async function withdrawGas(agentId: string, amount: number | string, wall
 	const kindBytes = await tx.build({ client, onlyTransactionKind: true });
 	const sponsoredTx = Transaction.fromKind(kindBytes);
 
-	// Set sponsor details using the walletAddress (i.e. current connected wallet).
-	sponsoredTx.setSender(walletAddress);
+	// // Set sponsor details using the walletAddress (i.e. current connected wallet).
+	sponsoredTx.setSender(agentAddress);
 	sponsoredTx.setGasOwner(walletAddress);
 	// Optionally, if you have sponsor coins, set them via:
 	// sponsoredTx.setGasPayment(sponsorCoins);
