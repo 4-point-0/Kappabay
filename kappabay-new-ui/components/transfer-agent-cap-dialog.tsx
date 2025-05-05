@@ -15,7 +15,6 @@ interface TransferAgentCapDialogProps {
 	setTransferAddress: (val: string) => void;
 	selectedCap: string;
 	setSelectedCap: (val: string) => void;
-	caps: any[];
 	onTransferSuccess?: () => Promise<void> | void;
 }
 
@@ -30,7 +29,7 @@ export default function TransferAgentCapDialog({
 	setTransferAddress,
 	selectedCap,
 	setSelectedCap,
-	caps,
+	onTransferSuccess,
 }: TransferAgentCapDialogProps) {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
@@ -60,6 +59,7 @@ export default function TransferAgentCapDialog({
 							title: "Transfer Successful",
 							description: "Agent cap has been transferred.",
 						});
+						onTransferSuccess && onTransferSuccess();
 					},
 					onError: (error) => {
 						console.error("Transfer move call failed:", error);
@@ -105,12 +105,7 @@ export default function TransferAgentCapDialog({
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="agent-cap">Agent Cap</Label>
-						<Input
-							id="agent-cap"
-							type="text"
-							value={selectedCap ? formatObjectId(selectedCap) : ""}
-							disabled
-						/>
+						<Input id="agent-cap" type="text" value={selectedCap ? formatObjectId(selectedCap) : ""} disabled />
 					</div>
 				</div>
 				<DialogFooter>

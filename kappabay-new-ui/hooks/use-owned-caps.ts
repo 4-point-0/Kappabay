@@ -11,6 +11,7 @@ export function useOwnedCaps() {
 		data: caps = [],
 		isLoading,
 		error,
+		refetch,
 	} = useQuery({
 		queryKey: ["ownedCaps", account?.address],
 		queryFn: async () => {
@@ -37,5 +38,5 @@ export function useOwnedCaps() {
 		enabled: !!account?.address,
 	});
 
-	return { caps, isLoading, error };
+	return { caps, isLoading, error, refetch };
 }

@@ -28,6 +28,7 @@ export default function StatusPage() {
 	const [selectedCap, setSelectedCap] = useState("");
 	const [gasDialogOpen, setGasDialogOpen] = useState(false);
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
+	const { caps } = useOwnedCaps();
 
 	const handleOpenManageGas = (agent: any) => {
 		setSelectedAgentForGas(agent);
@@ -36,13 +37,13 @@ export default function StatusPage() {
 
 	const handleOpenTransferCap = (agent: any) => {
 		setTransferDialogOpen(true);
+		setSelectedCap(agent.capId);
 	};
-
-	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
 	async function refreshAgents() {
 		let allAgents: any[] = [];
 		// Collect all valid cap IDs from caps
+
 		const capIds = caps.filter((cap: any) => cap.data).map((cap: any) => cap.data.objectId);
 		if (capIds.length > 0) {
 			try {
@@ -157,8 +158,7 @@ export default function StatusPage() {
 				setTransferAddress={setTransferAddress}
 				selectedCap={selectedCap}
 				setSelectedCap={setSelectedCap}
-				caps={caps}
-				onTransferSuccess={refreshAgents}
+				onTransferSuccess={() => setAgents((prev: any) => prev.filter((agent: any) => agent.capId !== selectedCap))}
 			/>
 		</main>
 	);
