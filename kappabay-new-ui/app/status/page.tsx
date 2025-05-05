@@ -2,8 +2,6 @@
 
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import AgentsTable from "@/components/agents-table";
 import ManageGasDialog from "@/components/manage-gas-dialog";
 import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
@@ -12,22 +10,9 @@ import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { useCurrentAccount } from "@mysten/dapp-kit";
-import { useToast } from "@/components/ui/use-toast";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { toast } from "@/hooks/use-toast";
