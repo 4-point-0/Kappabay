@@ -17,13 +17,10 @@ import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
-	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-	const { mutateAsync: signTransaction } = useSignTransaction();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
-	const [selectedAgentId, setSelectedAgentId] = useState("");
 	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
 	const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -31,8 +28,6 @@ export default function StatusPage() {
 	const [selectedCap, setSelectedCap] = useState("");
 	const [gasDialogOpen, setGasDialogOpen] = useState(false);
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
-
-	const suiClient = useSuiClient();
 
 	const handleOpenManageGas = (agent: any) => {
 		setSelectedAgentForGas(agent);
