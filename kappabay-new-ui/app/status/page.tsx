@@ -476,20 +476,19 @@ export default function StatusPage() {
 																<Send className="h-4 w-4" />
 															</Button>
 														</motion.div>
-															<Button
-																variant="outline"
-																size="icon"
-																onClick={() => handleService(agent.id, agent.status)}
-															>
-																{loadingAgent === agent.id ? (
-																	<Loader2 className="h-4 w-4 animate-spin" />
-																) : agent.status === "ACTIVE" ? (
-																	<Pause className="h-4 w-4" />
-																) : (
-																	<Play className="h-4 w-4" />
-																)}
-															</Button>
-														</motion.div>
+														<Button
+															variant="outline"
+															size="icon"
+															onClick={() => handleService(agent.id, agent.status)}
+														>
+															{loadingAgent === agent.id ? (
+																<Loader2 className="h-4 w-4 animate-spin" />
+															) : agent.status === "ACTIVE" ? (
+																<Pause className="h-4 w-4" />
+															) : (
+																<Play className="h-4 w-4" />
+															)}
+														</Button>
 														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
 															<Button variant="outline" size="icon">
 																<RefreshCw className="h-4 w-4" />
