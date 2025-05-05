@@ -8,20 +8,12 @@ import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
-import { toast } from "@/hooks/use-toast";
-import { withdrawGas } from "@/lib/actions/withdrawGas";
-
-const formatObjectId = (objectId: string) => {
-	// Display the first 6 and last 4 characters
-	return `${objectId.slice(0, 6)}...${objectId.slice(-4)}`;
-};
 
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
@@ -41,7 +33,6 @@ export default function StatusPage() {
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
 
 	const suiClient = useSuiClient();
-
 
 	const handleOpenManageGas = (agent: any) => {
 		setSelectedAgentForGas(agent);
@@ -122,7 +113,6 @@ export default function StatusPage() {
 			setLoadingAgent(null);
 		}
 	};
-
 
 	return (
 		<main className="min-h-screen bg-background text-foreground">
