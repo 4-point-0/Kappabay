@@ -40,7 +40,7 @@ COPY eliza-kappabay-agent/ ./eliza-kappabay-agent/
 WORKDIR /app/eliza-kappabay-agent
 
 # Install and build
-RUN pnpm install && \
+RUN pnpm install --no-frozen-lockfile && \
     pnpm run build && \
     pnpm prune --prod
 

@@ -1,5 +1,5 @@
 import express from "express";
-import type { Router } from 'express';
+import type { Router } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import path from "path";
@@ -54,7 +54,7 @@ function validateUUIDParams(
 export function createApiRouter(
     agents: Map<string, IAgentRuntime>,
     directClient: DirectClient
-):Router {
+): Router {
     const router = express.Router();
 
     router.use(cors());
@@ -83,7 +83,7 @@ export function createApiRouter(
         res.json({ agents: agentsList });
     });
 
-    router.get('/storage', async (req, res) => {
+    router.get("/storage", async (req, res) => {
         try {
             const uploadDir = path.join(process.cwd(), "data", "characters");
             const files = await fs.promises.readdir(uploadDir);
@@ -407,8 +407,6 @@ export function createApiRouter(
 
     router.post("/agent/start", async (req, res) => {
         const { characterPath, characterJson } = req.body;
-        console.log("characterPath:", characterPath);
-        console.log("characterJson:", characterJson);
         try {
             let character: Character;
             if (characterJson) {
@@ -417,8 +415,9 @@ export function createApiRouter(
                     characterJson
                 );
             } else if (characterPath) {
-                character =
-                    await directClient.loadCharacterTryPath(characterPath);
+                character = await directClient.loadCharacterTryPath(
+                    characterPath
+                );
             } else {
                 throw new Error("No character path or JSON provided");
             }
