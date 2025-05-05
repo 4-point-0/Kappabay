@@ -4,8 +4,9 @@ import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2, Send } from "lucide-react";
+import AgentsTable from "@/components/AgentsTable";
+import ManageGasDialog from "@/components/ManageGasDialog";
+import TransferAgentCapDialog from "@/components/TransferAgentCapDialog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
@@ -51,7 +52,8 @@ export default function StatusPage() {
 	const [transferDialogOpen, setTransferDialogOpen] = useState(false);
 	const [transferAddress, setTransferAddress] = useState("");
 	const [selectedCap, setSelectedCap] = useState("");
-	const [agentForTransfer, setAgentForTransfer] = useState<any>(null);
+	const [gasDialogOpen, setGasDialogOpen] = useState(false);
+	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
 
 	const suiClient = useSuiClient();
 
@@ -109,6 +111,16 @@ export default function StatusPage() {
 			setTransferAddress("");
 			setSelectedCap("");
 		}
+	};
+
+	const handleOpenManageGas = (agent: any) => {
+		setSelectedAgentForGas(agent);
+		setGasDialogOpen(true);
+	};
+
+	const handleOpenTransferCap = (agent: any) => {
+		setAgentForTransfer(agent);
+		setTransferDialogOpen(true);
 	};
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
@@ -342,220 +354,41 @@ export default function StatusPage() {
 					</div>
 
 					<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-						<Card>
-							<CardContent className="p-6">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Agent Name</TableHead>
-											<TableHead>Object ID</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead>Gas Bag</TableHead>
-											<TableHead>Created</TableHead>
-											<TableHead>Last Active</TableHead>
-											<TableHead className="text-right">Actions</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{agents.map((agent: any, index: number) => (
-											<motion.tr
-												key={agent.id}
-												initial={{ opacity: 0, y: 10 }}
-												animate={{ opacity: 1, y: 0 }}
-												transition={{ duration: 0.3, delay: index * 0.1 }}
-												className="border-b border-border"
-											>
-												<TableCell className="font-medium">{agent.name}</TableCell>
-												<TableCell className="font-mono text-xs">{formatObjectId(agent.objectId)}</TableCell>
-												<TableCell>
-													<Badge variant={agent.status === "ACTIVE" ? "default" : "outline"}>
-														{agent.status === "ACTIVE" ? "Active" : "Inactive"}
-													</Badge>
-												</TableCell>
-												<TableCell>
-													<div className="flex items-center">
-														<span className="mr-2">{agent.gasBag} SUI</span>
-														<Dialog>
-															<DialogTrigger asChild>
-																<Button
-																	variant="outline"
-																	size="icon"
-																	className="h-6 w-6"
-																	onClick={() => setSelectedAgentId(agent.id)}
-																>
-																	<Wallet className="h-3 w-3" />
-																</Button>
-															</DialogTrigger>
-															<DialogContent>
-																<DialogHeader>
-																	<DialogTitle>Manage Gas Bag</DialogTitle>
-																	<DialogDescription>Add or withdraw SUI from this agent's gas bag.</DialogDescription>
-																</DialogHeader>
-																<div className="grid gap-4 py-4">
-																	<div className="space-y-2">
-																		<Label htmlFor="deposit">Deposit SUI</Label>
-																		<div className="flex items-center gap-2">
-																			<Input
-																				id="deposit"
-																				type="number"
-																				step="0.01"
-																				min="0"
-																				placeholder="Amount"
-																				value={depositAmount}
-																				onChange={(e) => setDepositAmount(e.target.value)}
-																			/>
-																			<Button onClick={handleDeposit}>Deposit</Button>
-																		</div>
-																	</div>
-																	<div className="space-y-2">
-																		<Label htmlFor="withdraw">Withdraw SUI</Label>
-																		<div className="flex items-center gap-2">
-																			<Input
-																				id="withdraw"
-																				type="number"
-																				step="0.01"
-																				min="0"
-																				max={agent.gasBag}
-																				placeholder="Amount"
-																				value={withdrawAmount}
-																				onChange={(e) => setWithdrawAmount(e.target.value)}
-																			/>
-																			<Button onClick={handleWithdraw}>Withdraw</Button>
-																		</div>
-																	</div>
-																</div>
-																<DialogFooter>
-																	<Button variant="outline" type="button">
-																		Close
-																	</Button>
-																</DialogFooter>
-															</DialogContent>
-														</Dialog>
-													</div>
-												</TableCell>
-												<TableCell>{new Date(agent.createdAt).toLocaleString()}</TableCell>
-												<TableCell>{agent.lastActive}</TableCell>
-												<TableCell className="text-right">
-													<div className="flex justify-end space-x-2">
-														<motion.div
-															whileHover={{
-																scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 1.1 : 1,
-															}}
-															whileTap={{
-																scale: agent.status === "ACTIVE" && terminalEnabledAgents.includes(agent.id) ? 0.9 : 1,
-															}}
-														>
-															{agent.status === "ACTIVE" ? (
-																terminalEnabledAgents.includes(agent.id) ? (
-																	<Link href={`/terminal/${agent.id}`}>
-																		<Button variant="outline" size="icon" title="Open Terminal">
-																			<Terminal className="h-4 w-4" />
-																		</Button>
-																	</Link>
-																) : (
-																	<Button variant="outline" size="icon" title="Enabling Terminal..." disabled>
-																		<Loader2 className="h-4 w-4 animate-spin" />
-																	</Button>
-																)
-															) : (
-																<Button variant="outline" size="icon" title="Terminal unavailable" disabled>
-																	<Terminal className="h-4 w-4 opacity-50" />
-																</Button>
-															)}
-														</motion.div>
-														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Button
-																variant="outline"
-																size="icon"
-																title="Transfer Agent Cap"
-																onClick={() => {
-																	setAgentForTransfer(agent);
-																	setTransferDialogOpen(true);
-																}}
-															>
-																<Send className="h-4 w-4" />
-															</Button>
-														</motion.div>
-														<Button
-															variant="outline"
-															size="icon"
-															onClick={() => handleService(agent.id, agent.status)}
-														>
-															{loadingAgent === agent.id ? (
-																<Loader2 className="h-4 w-4 animate-spin" />
-															) : agent.status === "ACTIVE" ? (
-																<Pause className="h-4 w-4" />
-															) : (
-																<Play className="h-4 w-4" />
-															)}
-														</Button>
-														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Button variant="outline" size="icon">
-																<RefreshCw className="h-4 w-4" />
-															</Button>
-														</motion.div>
-														<motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-															<Link href={`/configure/${agent.id}`}>
-																<Button variant="outline" size="icon">
-																	<Settings className="h-4 w-4" />
-																</Button>
-															</Link>
-														</motion.div>
-													</div>
-												</TableCell>
-											</motion.tr>
-										))}
-									</TableBody>
-								</Table>
-							</CardContent>
-						</Card>
+						<AgentsTable
+							agents={agents}
+							loadingAgent={loadingAgent}
+							terminalEnabledAgents={terminalEnabledAgents}
+							onServiceToggle={handleService}
+							onOpenManageGas={handleOpenManageGas}
+							onOpenTransferCap={handleOpenTransferCap}
+						/>
 					</motion.div>
 				</div>
 			</PageTransition>
-			<Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Transfer Agent Cap</DialogTitle>
-						<DialogDescription>
-							Enter the recipient Sui address and choose an Agent Cap to transfer.
-						</DialogDescription>
-					</DialogHeader>
-					<div className="grid gap-4 py-4">
-						<div className="space-y-2">
-							<Label htmlFor="transfer-address">Recipient Sui Address</Label>
-							<Input
-								id="transfer-address"
-								type="text"
-								placeholder="Enter Sui Address"
-								value={transferAddress}
-								onChange={(e) => setTransferAddress(e.target.value)}
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="agent-cap">Select Agent Cap</Label>
-							<select
-								id="agent-cap"
-								className="input"
-								value={selectedCap}
-								onChange={(e) => setSelectedCap(e.target.value)}
-							>
-								<option value="">Select a cap</option>
-								{caps.map((cap: any) => (
-									<option key={cap.data.objectId} value={cap.data.objectId}>
-										{formatObjectId(cap.data.objectId)}
-									</option>
-								))}
-							</select>
-						</div>
-					</div>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
-							Cancel
-						</Button>
-						<Button onClick={handleTransfer}>Send</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			{gasDialogOpen && selectedAgentForGas && (
+				<ManageGasDialog
+					open={gasDialogOpen}
+					onOpenChange={setGasDialogOpen}
+					agent={selectedAgentForGas}
+					depositAmount={depositAmount}
+					setDepositAmount={setDepositAmount}
+					withdrawAmount={withdrawAmount}
+					setWithdrawAmount={setWithdrawAmount}
+					onDeposit={handleDeposit}
+					onWithdraw={handleWithdraw}
+				/>
+			)}
+
+			<TransferAgentCapDialog
+				open={transferDialogOpen}
+				onOpenChange={setTransferDialogOpen}
+				transferAddress={transferAddress}
+				setTransferAddress={setTransferAddress}
+				selectedCap={selectedCap}
+				setSelectedCap={setSelectedCap}
+				caps={caps}
+				onSend={handleTransfer}
+			/>
 		</main>
 	);
 }
