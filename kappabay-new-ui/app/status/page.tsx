@@ -197,12 +197,16 @@ export default function StatusPage() {
 				agent.objectId,
 				wallet.address
 			);
-			// Build the transaction block using the move call with withdraw parameters.
+			// Build the transaction block using the move call with extract_gas_for_transaction
 			const tx = new Transaction();
 			tx.moveCall({
-				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::withdraw_gas`,
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
 				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
 			});
+			// Capture the returned coin object and add a transfer call in the same tx block
+			const coin = tx.objectReturn(0);
+			tx.transferObject(coin, wallet.address);
+
 			tx.setSender(agentAddress);
 			tx.setGasOwner(wallet.address);
 

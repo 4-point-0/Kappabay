@@ -48,12 +48,15 @@ export async function withdrawGas(
 	// Use the found AdminCap object's id
 	const adminCapId = adminCapObject.data.objectId;
 
-	// Build the transaction on the server
+	// Build the transaction on the server with extract_gas_for_transaction
 	const tx = new Transaction();
 	tx.moveCall({
-		target: `${PACKAGE_ID}::agent::withdraw_gas`,
+		target: `${PACKAGE_ID}::agent::extract_gas_for_transaction`,
 		arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
 	});
+	// Capture the coin object returned and transfer it to the gas owner's address
+	const coin = tx.objectReturn(0);
+	tx.transferObject(coin, gasOwnerAddress);
 
 	// Configure as a sponsored transaction
 	tx.setSender(agentAddress); // Agent is the transaction sender
