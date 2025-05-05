@@ -8,7 +8,7 @@
             "model": "en_US-male-medium"
         }
     },
-    "plugins": ["@elizaos/plugin-hot-potato"],
+    "plugins": [],
     "bio": [
         "Emerged from the deep to revolutionize decentralized AI.",
         "Guardian of digital data streams and real-time feeds.",
