@@ -9,7 +9,7 @@ import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "luc
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { Transaction } from "@mysten/sui/transactions";
+import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import {
 	Dialog,
@@ -199,13 +199,12 @@ export default function StatusPage() {
 			);
 			// Build the transaction block using the move call with extract_gas_for_transaction
 			const tx = new Transaction();
-			tx.moveCall({
+			const coin: TransactionResult = tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
 				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
 			});
 			// Capture the returned coin object and add a transfer call in the same tx block
-			const coin = tx.objectReturn(0);
-			tx.transferObject(coin, wallet.address);
+			tx.transferObjects([coin], wallet.address);
 
 			tx.setSender(agentAddress);
 			tx.setGasOwner(wallet.address);

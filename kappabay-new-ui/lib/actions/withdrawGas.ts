@@ -4,7 +4,7 @@ import { prisma } from "../db";
 import { decrypt } from "../utils";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
+import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 
 export async function withdrawGas(
 	agentId: string,
@@ -50,13 +50,12 @@ export async function withdrawGas(
 
 	// Build the transaction on the server with extract_gas_for_transaction
 	const tx = new Transaction();
-	tx.moveCall({
+	const coin: TransactionResult = tx.moveCall({
 		target: `${PACKAGE_ID}::agent::extract_gas_for_transaction`,
 		arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
 	});
 	// Capture the coin object returned and transfer it to the gas owner's address
-	const coin = tx.objectReturn(0);
-	tx.transferObject(coin, gasOwnerAddress);
+	tx.transferObjects([coin], gasOwnerAddress);
 
 	// Configure as a sponsored transaction
 	tx.setSender(agentAddress); // Agent is the transaction sender
