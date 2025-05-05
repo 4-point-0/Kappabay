@@ -56,7 +56,7 @@ export default function StatusPage() {
 	const suiClient = useSuiClient();
 
 	const handleTransfer = async () => {
-		if (!transferAddress || !selectedCap) {
+		if (!transferAddress || !selectedCap || !wallet?.address) {
 			toast({
 				title: "Transfer Error",
 				description: "Please provide both a recipient address and select a cap.",
@@ -70,22 +70,32 @@ export default function StatusPage() {
 			// Call the transfer move function – adjust the target if needed on the Move side.
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
-				arguments: [tx.object(selectedCap), tx.pure(transferAddress)],
+				arguments: [tx.object(selectedCap), tx.pure.address(transferAddress)],
 			});
 			tx.setSender(wallet.address);
 			tx.setGasOwner(wallet.address);
 
-			const walletSignedTx = await signTransaction({ transaction: tx });
-			await suiClient.executeTransactionBlock({
-				transactionBlock: tx,
-				signature: walletSignedTx.signature,
-				requestType: "WaitForLocalExecution",
-				options: { showEffects: true },
+			signAndExecuteTransaction({ transaction: tx }, {
+				onSuccess: async (result) => {
+					console.log("Deposit transaction:", result);
+					toast({
+						title: "Transfer Successful",
+				description: "Agent cap has been transferred.",
+					});
+					await refreshAgents();
+				},
+				onError: (error) => {
+					console.error("Deposit move call failed:", error);
+					toast({
+						title: "Transfer Failed",
+						description: "The agent cap transfer could not be completed.",
+						variant: "destructive",
+					});
+				},
 			});
 
 			toast({
-				title: "Transfer Successful",
-				description: "Agent cap has been transferred.",
+				
 			});
 		} catch (error) {
 			console.error("Transfer failed", error);
