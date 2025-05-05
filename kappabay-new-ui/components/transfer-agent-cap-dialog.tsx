@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
@@ -16,129 +9,127 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 
 interface TransferAgentCapDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  transferAddress: string;
-  setTransferAddress: (val: string) => void;
-  selectedCap: string;
-  setSelectedCap: (val: string) => void;
-  caps: any[];
-  onTransferSuccess?: () => Promise<void> | void;
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	transferAddress: string;
+	setTransferAddress: (val: string) => void;
+	selectedCap: string;
+	setSelectedCap: (val: string) => void;
+	caps: any[];
+	onTransferSuccess?: () => Promise<void> | void;
 }
 
 const formatObjectId = (objectId: string) => {
-  return `${objectId.slice(0, 6)}...${objectId.slice(-4)}`;
+	return `${objectId.slice(0, 6)}...${objectId.slice(-4)}`;
 };
 
 export default function TransferAgentCapDialog({
-  open,
-  onOpenChange,
-  transferAddress,
-  setTransferAddress,
-  selectedCap,
-  setSelectedCap,
-  caps,
-  onSend,
+	open,
+	onOpenChange,
+	transferAddress,
+	setTransferAddress,
+	selectedCap,
+	setSelectedCap,
+	caps,
 }: TransferAgentCapDialogProps) {
-  const wallet = useCurrentAccount();
-  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const wallet = useCurrentAccount();
+	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
-  const handleTransfer = async () => {
-    if (!transferAddress || !selectedCap || !wallet?.address) {
-      toast({
-        title: "Transfer Error",
-        description: "Please provide both a recipient address and select a cap.",
-        variant: "destructive",
-      });
-      return;
-    }
+	const handleTransfer = async () => {
+		if (!transferAddress || !selectedCap || !wallet?.address) {
+			toast({
+				title: "Transfer Error",
+				description: "Please provide both a recipient address and select a cap.",
+				variant: "destructive",
+			});
+			return;
+		}
 
-    try {
-      const tx = new Transaction();
-      tx.moveCall({
-        target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
-        arguments: [tx.object(selectedCap), tx.pure.address(transferAddress)],
-      });
-      tx.setSender(wallet.address);
-      tx.setGasOwner(wallet.address);
+		try {
+			const tx = new Transaction();
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
+				arguments: [tx.object(selectedCap), tx.pure.address(transferAddress)],
+			});
+			tx.setSender(wallet.address);
+			tx.setGasOwner(wallet.address);
 
-      signAndExecuteTransaction(
-        { transaction: tx },
-        {
-          onSuccess: async (result) => {
-            console.log("Transfer transaction:", result);
-            toast({
-              title: "Transfer Successful",
-              description: "Agent cap has been transferred.",
-            });
-            if (onTransferSuccess) await onTransferSuccess();
-          },
-          onError: (error) => {
-            console.error("Transfer move call failed:", error);
-            toast({
-              title: "Transfer Failed",
-              description: "The agent cap transfer could not be completed.",
-              variant: "destructive",
-            });
-          },
-        }
-      );
-    } catch (error) {
-      console.error("Transfer failed", error);
-      toast({
-        title: "Transfer Failed",
-        description: "The agent cap transfer could not be completed.",
-        variant: "destructive",
-      });
-    } finally {
-      onOpenChange(false);
-      setTransferAddress("");
-      setSelectedCap("");
-    }
-  };
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Transfer Agent Cap</DialogTitle>
-          <DialogDescription>
-            Enter the recipient Sui address and choose an Agent Cap to transfer.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="transfer-address">Recipient Sui Address</Label>
-            <Input
-              id="transfer-address"
-              type="text"
-              placeholder="Enter Sui Address"
-              value={transferAddress}
-              onChange={(e) => setTransferAddress(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="agent-cap">Select Agent Cap</Label>
-            <select
-              id="agent-cap"
-              className="input"
-              value={selectedCap}
-              onChange={(e) => setSelectedCap(e.target.value)}
-            >
-              <option value="">Select a cap</option>
-              {caps.map((cap: any) => (
-                <option key={cap.data.objectId} value={cap.data.objectId}>
-                  {formatObjectId(cap.data.objectId)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleTransfer}>Send</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+			signAndExecuteTransaction(
+				{ transaction: tx },
+				{
+					onSuccess: async (result) => {
+						console.log("Transfer transaction:", result);
+						toast({
+							title: "Transfer Successful",
+							description: "Agent cap has been transferred.",
+						});
+					},
+					onError: (error) => {
+						console.error("Transfer move call failed:", error);
+						toast({
+							title: "Transfer Failed",
+							description: "The agent cap transfer could not be completed.",
+							variant: "destructive",
+						});
+					},
+				}
+			);
+		} catch (error) {
+			console.error("Transfer failed", error);
+			toast({
+				title: "Transfer Failed",
+				description: "The agent cap transfer could not be completed.",
+				variant: "destructive",
+			});
+		} finally {
+			onOpenChange(false);
+			setTransferAddress("");
+			setSelectedCap("");
+		}
+	};
+
+	return (
+		<Dialog open={open} onOpenChange={onOpenChange}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Transfer Agent Cap</DialogTitle>
+					<DialogDescription>Enter the recipient Sui address and choose an Agent Cap to transfer.</DialogDescription>
+				</DialogHeader>
+				<div className="grid gap-4 py-4">
+					<div className="space-y-2">
+						<Label htmlFor="transfer-address">Recipient Sui Address</Label>
+						<Input
+							id="transfer-address"
+							type="text"
+							placeholder="Enter Sui Address"
+							value={transferAddress}
+							onChange={(e) => setTransferAddress(e.target.value)}
+						/>
+					</div>
+					<div className="space-y-2">
+						<Label htmlFor="agent-cap">Select Agent Cap</Label>
+						<select
+							id="agent-cap"
+							className="input"
+							value={selectedCap}
+							onChange={(e) => setSelectedCap(e.target.value)}
+						>
+							<option value="">Select a cap</option>
+							{caps.map((cap: any) => (
+								<option key={cap.data.objectId} value={cap.data.objectId}>
+									{formatObjectId(cap.data.objectId)}
+								</option>
+							))}
+						</select>
+					</div>
+				</div>
+				<DialogFooter>
+					<Button variant="outline" onClick={() => onOpenChange(false)}>
+						Cancel
+					</Button>
+					<Button onClick={handleTransfer}>Send</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
 }
