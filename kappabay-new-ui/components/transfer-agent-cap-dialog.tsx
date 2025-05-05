@@ -47,10 +47,7 @@ export default function TransferAgentCapDialog({
 
 		try {
 			const tx = new Transaction();
-			tx.moveCall({
-				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
-				arguments: [tx.object(selectedCap), tx.pure.address(transferAddress)],
-			});
+			tx.transferObjects([tx.object(selectedCap)], transferAddress);
 			tx.setSender(wallet.address);
 			tx.setGasOwner(wallet.address);
 
