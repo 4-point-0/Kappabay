@@ -9,6 +9,9 @@ import {
   DialogFooter,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
+import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
+import { toast } from "@/hooks/use-toast";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 
@@ -20,7 +23,7 @@ interface TransferAgentCapDialogProps {
   selectedCap: string;
   setSelectedCap: (val: string) => void;
   caps: any[];
-  onSend: () => void;
+  onTransferSuccess?: () => Promise<void> | void;
 }
 
 const formatObjectId = (objectId: string) => {
@@ -37,7 +40,62 @@ export default function TransferAgentCapDialog({
   caps,
   onSend,
 }: TransferAgentCapDialogProps) {
-  return (
+  const wallet = useCurrentAccount();
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+
+  const handleTransfer = async () => {
+    if (!transferAddress || !selectedCap || !wallet?.address) {
+      toast({
+        title: "Transfer Error",
+        description: "Please provide both a recipient address and select a cap.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
+        arguments: [tx.object(selectedCap), tx.pure.address(transferAddress)],
+      });
+      tx.setSender(wallet.address);
+      tx.setGasOwner(wallet.address);
+
+      signAndExecuteTransaction(
+        { transaction: tx },
+        {
+          onSuccess: async (result) => {
+            console.log("Transfer transaction:", result);
+            toast({
+              title: "Transfer Successful",
+              description: "Agent cap has been transferred.",
+            });
+            if (onTransferSuccess) await onTransferSuccess();
+          },
+          onError: (error) => {
+            console.error("Transfer move call failed:", error);
+            toast({
+              title: "Transfer Failed",
+              description: "The agent cap transfer could not be completed.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    } catch (error) {
+      console.error("Transfer failed", error);
+      toast({
+        title: "Transfer Failed",
+        description: "The agent cap transfer could not be completed.",
+        variant: "destructive",
+      });
+    } finally {
+      onOpenChange(false);
+      setTransferAddress("");
+      setSelectedCap("");
+    }
+  };
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -78,7 +136,7 @@ export default function TransferAgentCapDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onSend}>Send</Button>
+          <Button onClick={handleTransfer}>Send</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
