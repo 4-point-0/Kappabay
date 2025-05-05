@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2 } from "lucide-react";
+import { Play, Pause, RefreshCw, Settings, Terminal, Wallet, Loader2, Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
@@ -48,7 +48,58 @@ export default function StatusPage() {
 	const [selectedAgentId, setSelectedAgentId] = useState("");
 	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
+	const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+	const [transferAddress, setTransferAddress] = useState("");
+	const [selectedCap, setSelectedCap] = useState("");
+	const [agentForTransfer, setAgentForTransfer] = useState<any>(null);
+
 	const suiClient = useSuiClient();
+
+	const handleTransfer = async () => {
+		if (!transferAddress || !selectedCap) {
+			toast({
+				title: "Transfer Error",
+				description: "Please provide both a recipient address and select a cap.",
+				variant: "destructive",
+			});
+			return;
+		}
+
+		try {
+			const tx = new Transaction();
+			// Call the transfer move function – adjust the target if needed on the Move side.
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::transfer_cap`,
+				arguments: [tx.object(selectedCap), tx.pure(transferAddress)],
+			});
+			tx.setSender(wallet.address);
+			tx.setGasOwner(wallet.address);
+
+			const walletSignedTx = await signTransaction({ transaction: tx });
+			await suiClient.executeTransactionBlock({
+				transactionBlock: tx,
+				signature: walletSignedTx.signature,
+				requestType: "WaitForLocalExecution",
+				options: { showEffects: true },
+			});
+
+			toast({
+				title: "Transfer Successful",
+				description: "Agent cap has been transferred.",
+			});
+		} catch (error) {
+			console.error("Transfer failed", error);
+			toast({
+				title: "Transfer Failed",
+				description: "The agent cap transfer could not be completed.",
+				variant: "destructive",
+			});
+		} finally {
+			setTransferDialogOpen(false);
+			setTransferAddress("");
+			setSelectedCap("");
+		}
+	};
 
 	const { caps, isLoading: capsLoading, error: capsError } = useOwnedCaps();
 
@@ -406,6 +457,18 @@ export default function StatusPage() {
 															<Button
 																variant="outline"
 																size="icon"
+																title="Transfer Agent Cap"
+																onClick={() => {
+																	setAgentForTransfer(agent);
+																	setTransferDialogOpen(true);
+																}}
+															>
+																<Send className="h-4 w-4" />
+															</Button>
+														</motion.div>
+															<Button
+																variant="outline"
+																size="icon"
 																onClick={() => handleService(agent.id, agent.status)}
 															>
 																{loadingAgent === agent.id ? (
@@ -440,6 +503,50 @@ export default function StatusPage() {
 					</motion.div>
 				</div>
 			</PageTransition>
+			<Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Transfer Agent Cap</DialogTitle>
+						<DialogDescription>
+							Enter the recipient Sui address and choose an Agent Cap to transfer.
+						</DialogDescription>
+					</DialogHeader>
+					<div className="grid gap-4 py-4">
+						<div className="space-y-2">
+							<Label htmlFor="transfer-address">Recipient Sui Address</Label>
+							<Input
+								id="transfer-address"
+								type="text"
+								placeholder="Enter Sui Address"
+								value={transferAddress}
+								onChange={(e) => setTransferAddress(e.target.value)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="agent-cap">Select Agent Cap</Label>
+							<select
+								id="agent-cap"
+								className="input"
+								value={selectedCap}
+								onChange={(e) => setSelectedCap(e.target.value)}
+							>
+								<option value="">Select a cap</option>
+								{caps.map((cap: any) => (
+									<option key={cap.data.objectId} value={cap.data.objectId}>
+										{formatObjectId(cap.data.objectId)}
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+							Cancel
+						</Button>
+						<Button onClick={handleTransfer}>Send</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</main>
 	);
 }
