@@ -4,9 +4,9 @@ import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import AgentsTable from "@/components/AgentsTable";
-import ManageGasDialog from "@/components/ManageGasDialog";
-import TransferAgentCapDialog from "@/components/TransferAgentCapDialog";
+import AgentsTable from "@/components/agents-table";
+import ManageGasDialog from "@/components/manage-gas-dialog";
+import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
@@ -77,28 +77,29 @@ export default function StatusPage() {
 			tx.setSender(wallet.address);
 			tx.setGasOwner(wallet.address);
 
-			signAndExecuteTransaction({ transaction: tx }, {
-				onSuccess: async (result) => {
-					console.log("Deposit transaction:", result);
-					toast({
-						title: "Transfer Successful",
-				description: "Agent cap has been transferred.",
-					});
-					await refreshAgents();
-				},
-				onError: (error) => {
-					console.error("Deposit move call failed:", error);
-					toast({
-						title: "Transfer Failed",
-						description: "The agent cap transfer could not be completed.",
-						variant: "destructive",
-					});
-				},
-			});
+			signAndExecuteTransaction(
+				{ transaction: tx },
+				{
+					onSuccess: async (result) => {
+						console.log("Deposit transaction:", result);
+						toast({
+							title: "Transfer Successful",
+							description: "Agent cap has been transferred.",
+						});
+						await refreshAgents();
+					},
+					onError: (error) => {
+						console.error("Deposit move call failed:", error);
+						toast({
+							title: "Transfer Failed",
+							description: "The agent cap transfer could not be completed.",
+							variant: "destructive",
+						});
+					},
+				}
+			);
 
-			toast({
-				
-			});
+			toast({});
 		} catch (error) {
 			console.error("Transfer failed", error);
 			toast({
@@ -119,7 +120,6 @@ export default function StatusPage() {
 	};
 
 	const handleOpenTransferCap = (agent: any) => {
-		setAgentForTransfer(agent);
 		setTransferDialogOpen(true);
 	};
 
