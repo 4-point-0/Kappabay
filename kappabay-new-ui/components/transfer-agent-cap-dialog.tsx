@@ -107,20 +107,13 @@ export default function TransferAgentCapDialog({
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="agent-cap">Select Agent Cap</Label>
-						<select
+						<Label htmlFor="agent-cap">Agent Cap</Label>
+						<Input
 							id="agent-cap"
-							className="input"
-							value={selectedCap}
-							onChange={(e) => setSelectedCap(e.target.value)}
-						>
-							<option value="">Select a cap</option>
-							{caps.map((cap: any) => (
-								<option key={cap.data.objectId} value={cap.data.objectId}>
-									{formatObjectId(cap.data.objectId)}
-								</option>
-							))}
-						</select>
+							type="text"
+							value={selectedCap ? formatObjectId(selectedCap) : ""}
+							disabled
+						/>
 					</div>
 				</div>
 				<DialogFooter>
