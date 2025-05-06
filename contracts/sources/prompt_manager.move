@@ -66,6 +66,15 @@ module nft_template::prompt_manager {
         timestamp: u64
     }
 
+
+    public struct PromptWithMultiCallbacks has copy, drop {
+        id: ID,
+        prompt_text: String,
+        sender: address,
+        callbacks_json: String,
+        agent_wallet: address
+    }
+
     // === Initialization and Creation ===
 
     public fun create_prompt_manager(
@@ -159,7 +168,7 @@ module nft_template::prompt_manager {
     }
 
     // Entry function to create a prompt with callback
-    public entry fun infer_prompt_with_callback(
+    public entry fun infer_prompt_with_single_callback(
         manager: &mut PromptManager,
         agent_cap: &AgentCap,
         question: String,
@@ -181,6 +190,32 @@ module nft_template::prompt_manager {
             prompt_text: question,
             sender,
             callback,
+            agent_wallet
+        });
+    }
+
+    public entry fun infer_prompt_with_callbacks(
+        manager: &mut PromptManager,
+        agent_cap: &AgentCap,
+        question: String,
+        agent_wallet: address,
+        callbacks_json: String,
+        ctx: &mut TxContext
+    ) {
+        // Verify the capability is for the same agent
+        assert!(manager.agent_id == agent::get_agent_id(agent_cap), ENotAuthorized);
+        
+        let sender = tx_context::sender(ctx);
+        
+        // Store the prompt
+        let prompt_id = store_prompt(manager, question, sender, ctx);
+        
+        // Emit event with JSON callbacks
+        event::emit(PromptWithMultiCallbacks {
+            id: prompt_id,
+            prompt_text: question,
+            sender,
+            callbacks_json,
             agent_wallet
         });
     }

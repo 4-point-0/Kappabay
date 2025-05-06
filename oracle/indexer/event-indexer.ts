@@ -8,7 +8,10 @@ import {
 import { CONFIG } from "../config";
 import { prisma } from "../db";
 import { getClient } from "../sui-utils";
-import { handleAgentPromptCreated } from "./agent-handler";
+import {
+  handleAgentPromptCreated,
+  handlePromptWithMultiCallbacks,
+} from "./agent-handler";
 
 type SuiEventsCursor = EventId | null | undefined;
 
@@ -41,6 +44,19 @@ const EVENTS_TO_TRACK: EventTracker[] = [
         }
       : undefined,
   },
+  {
+    type: `${CONFIG.AGENT_CONTRACT.packageId}::prompt_manager::PromptWithMultiCallbacks`,
+    filter: {
+      MoveEventType: `${CONFIG.AGENT_CONTRACT.packageId}::prompt_manager::PromptWithMultiCallbacks`,
+    },
+    callback: handlePromptWithMultiCallbacks,
+    initialCursor: CONFIG.INITIAL_TRANSACTION_DIGEST
+      ? {
+          txDigest: CONFIG.INITIAL_TRANSACTION_DIGEST,
+          eventSeq: "0",
+        }
+      : undefined,
+  },
   // {
   //   type: `${CONFIG.AGENT_CONTRACT.packageId}::agent::PROMPT_CREATED_WITH_CALLBACK`,
   //   filter: {
@@ -64,7 +80,6 @@ const executeEventJob = async (
 ): Promise<EventExecutionResult> => {
   console.log(`Running event job for ${tracker.type} with cursor:`, cursor);
   try {
-
     // get the events from the chain.
     // For this implementation, we are going from start to finish.
     // This will also allow filling in a database from scratch!
@@ -73,7 +88,6 @@ const executeEventJob = async (
       cursor,
       order: "ascending",
     });
-    
 
     // handle the data transformations defined for each event
     await tracker.callback(data, tracker.type);
