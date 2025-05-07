@@ -361,6 +361,9 @@ export default function AgentDeployer({
 											<SelectValue placeholder="Select voice model" />
 										</SelectTrigger>
 										<SelectContent>
+											{!['en_US-male-medium','en_US-female-medium','en_UK-male-medium','en_UK-female-medium'].includes(agentConfig.settings.voice.model) && (
+												<SelectItem value={agentConfig.settings.voice.model}>{agentConfig.settings.voice.model}</SelectItem>
+											)}
 											<SelectItem value="en_US-male-medium">US Male (Medium)</SelectItem>
 											<SelectItem value="en_US-female-medium">US Female (Medium)</SelectItem>
 											<SelectItem value="en_UK-male-medium">UK Male (Medium)</SelectItem>
