@@ -7,15 +7,11 @@ import path from "path";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { prisma } from "../db";
 import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
+import ngrok from "ngrok";
 
 const execAsync = util.promisify(exec);
 
 const DB_CACHE_DIR = path.join(process.cwd(), "db-cache");
-
-// Ensure the db-cache directory exists
-if (!fs.existsSync(DB_CACHE_DIR)) {
-	fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
-}
 
 /**
  * Retrieves the agentId using the serviceId.
@@ -23,19 +19,38 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
  * @returns The corresponding agentId.
  * @throws Will throw an error if the agent is not found.
  */
-type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash: string };
+// now also pulling port & ngrokUrl so we can reconnect / disconnect
+type AgentRecord = {
+  id: string;
+  dockerServiceId: string;
+  latestBlobHash: string;
+  port: number;
+  ngrokUrl?: string;
+};
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
-	const agent = await prisma.agent.findFirst({
-		where: { id: agentId },
-		select: { id: true, dockerServiceId: true, latestBlobHash: true },
-	});
+  const agent = await prisma.agent.findFirst({
+    where: { id: agentId },
+    select: {
+      id: true,
+      dockerServiceId: true,
+      latestBlobHash: true,
+      port: true,
+      ngrokUrl: true,
+    },
+  });
 
-	if (!agent) {
-		throw new Error(`Agent with id ${agentId} not found.`);
-	}
+  if (!agent) {
+    throw new Error(`Agent with id ${agentId} not found.`);
+  }
 
-	return { id: agent.id, dockerServiceId: agent.dockerServiceId ?? "", latestBlobHash: agent.latestBlobHash ?? "" };
+  return {
+    id: agent.id,
+    dockerServiceId: agent.dockerServiceId ?? "",
+    latestBlobHash: agent.latestBlobHash ?? "",
+    port: agent.port,
+    ngrokUrl: agent.ngrokUrl ?? undefined,
+  };
 }
 
 /**
@@ -107,6 +122,20 @@ export async function stopService(agentId: string, message: string, signature: s
 			where: { id: agentId },
 			data: { status: "INACTIVE" },
 		});
+
+		// close any existing ngrok tunnel and clear it
+		if (agent.ngrokUrl) {
+			try {
+				await ngrok.disconnect(agent.ngrokUrl);
+				console.log(`ngrok tunnel closed: ${agent.ngrokUrl}`);
+				await prisma.agent.update({
+					where: { id: agentId },
+					data: { ngrokUrl: null },
+				});
+			} catch (err) {
+				console.warn(`ngrok disconnect failed for ${agentId}:`, err);
+			}
+		}
 	} catch (error) {
 		console.error(`Failed to stop service for agent id ${agentId}:`, error);
 		throw error;
@@ -246,6 +275,22 @@ export async function startService(
 			where: { id: agentId },
 			data: { status: "ACTIVE" },
 		});
+
+		// re-open ngrok on the same port
+		try {
+			const publicUrl = await ngrok.connect({
+				proto: "http",
+				addr: agent.port,
+				authtoken: process.env.NGROK_AUTH_TOKEN,
+			});
+			console.log(`ngrok re-established: ${publicUrl}`);
+			await prisma.agent.update({
+				where: { id: agentId },
+				data: { ngrokUrl: publicUrl },
+			});
+		} catch (err) {
+			console.warn(`ngrok reconnect failed for ${agentId}:`, err);
+		}
 	} catch (error) {
 		console.error(`Failed to start service for agent id ${agentId}:`, error);
 		throw error;
