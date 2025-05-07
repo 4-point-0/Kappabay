@@ -1,0 +1,6 @@
+model Agent {
+  id           String   @id
+  // … your other fields …
+  port         Int
+  ngrokUrl     String?  @db.Text
+}

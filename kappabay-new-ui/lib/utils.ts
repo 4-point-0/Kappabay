@@ -2,6 +2,17 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { AgentConfig } from "./types";
 import crypto from "crypto";
+import path from "path";
+
+export const ngrokAbsolutePath = path.join(
+	process.cwd(),
+	"node_modules",
+	".pnpm",
+	"ngrok@5.0.0-beta.2",
+	"node_modules",
+	"ngrok",
+	"bin"
+);
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
