@@ -109,9 +109,9 @@ export default function StatusPage() {
 
 			// 3) call your server action with signature proof
 			if (currentStatus === "ACTIVE") {
-				await stopService(agentId, message, signature,                wallet.address);
+				await stopService(agentId, message, signature, wallet.address);
 			} else {
-				await startService(agentId, message, signature,                wallet.address);
+				await startService(agentId, message, signature, wallet.address);
 			}
 
 			await refreshAgents();

@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { prisma } from "../db";
-import { verifyPersonalMessageSignature } from "@mysten/sui";
+import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
 
 const execAsync = util.promisify(exec);
 
@@ -42,12 +42,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
  * @param agentId - The id of the agent whose Docker service should be stopped.
  * @throws Will throw an error if the Docker command fails.
  */
-export async function stopService(
-	agentId: string,
-	message: string,
-	signature: string,
-	address: string
-): Promise<void> {
+export async function stopService(agentId: string, message: string, signature: string, address: string): Promise<void> {
 	// --- AUTHENTICATION ---
 	const msgBytes = Buffer.from(message, "utf8");
 	// verifyPersonalMessageSignature will throw if the signature is bad or
