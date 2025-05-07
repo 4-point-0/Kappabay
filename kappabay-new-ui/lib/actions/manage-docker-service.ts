@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { prisma } from "../db";
+import { verifyMessage, getAddressFromPublicKey } from "@mysten/sui.js";
 
 const execAsync = util.promisify(exec);
 
@@ -41,7 +42,26 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
  * @param agentId - The id of the agent whose Docker service should be stopped.
  * @throws Will throw an error if the Docker command fails.
  */
-export async function stopService(agentId: string): Promise<void> {
+export async function stopService(
+	agentId: string,
+	message: string,
+	signature: string,
+	pubKey: string,
+	address: string
+): Promise<void> {
+	// --- AUTHENTICATION ---
+	const msgBytes = Buffer.from(message, "utf8");
+	const sigBytes = Buffer.from(signature, "base64");
+	const pkBytes = Buffer.from(pubKey, "base64");
+	if (!verifyMessage(msgBytes, sigBytes, pkBytes)) {
+		throw new Error("Invalid signature on stopService");
+	}
+	// optionally confirm signer == supplied address
+	const derived = getAddressFromPublicKey(pkBytes);
+	if (derived !== address) {
+		throw new Error("Signature does not match wallet address");
+	}
+	// ----------------------
 	try {
 		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
@@ -111,7 +131,25 @@ export async function stopService(agentId: string): Promise<void> {
  * @param agentId - The id of the agent whose Docker service should be started.
  * @throws Will throw an error if the Docker command fails.
  */
-export async function startService(agentId: string): Promise<void> {
+export async function startService(
+	agentId: string,
+	message: string,
+	signature: string,
+	pubKey: string,
+	address: string
+): Promise<void> {
+	// --- AUTHENTICATION ---
+	const msgBytes = Buffer.from(message, "utf8");
+	const sigBytes = Buffer.from(signature, "base64");
+	const pkBytes = Buffer.from(pubKey, "base64");
+	if (!verifyMessage(msgBytes, sigBytes, pkBytes)) {
+		throw new Error("Invalid signature on startService");
+	}
+	const derived = getAddressFromPublicKey(pkBytes);
+	if (derived !== address) {
+		throw new Error("Signature does not match wallet address");
+	}
+	// ----------------------
 	try {
 		const agent = await getAgent(agentId);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);

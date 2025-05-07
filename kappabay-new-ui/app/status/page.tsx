@@ -10,12 +10,13 @@ import { useEffect, useState } from "react";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useCurrentAccount, useWallet } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
+	const { signMessage } = useWallet();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -96,14 +97,25 @@ export default function StatusPage() {
 		if (!wallet?.address) return;
 		setLoadingAgent(agentId);
 		try {
+			// 1) build your auth payload
+			const action = currentStatus === "ACTIVE" ? "stop_service" : "start_service";
+			const timestamp = Date.now();
+			const message = JSON.stringify({ agentId, action, timestamp });
+
+			// 2) have the user sign it
+			const encoder = new TextEncoder();
+			const { signature, pubKey } = await signMessage({ message: encoder.encode(message) });
+
+			// 3) call your server action with signature proof
 			if (currentStatus === "ACTIVE") {
-				await stopService(agentId);
+				await stopService(agentId, message, signature, pubKey, wallet.address);
 			} else {
-				await startService(agentId);
+				await startService(agentId, message, signature, pubKey, wallet.address);
 			}
+
 			await refreshAgents();
 		} catch (error) {
-			console.error(`Failed to update service status for agent ${agentId}:`, error);
+			console.error("Failed to update service status:", error);
 		} finally {
 			setLoadingAgent(null);
 		}
