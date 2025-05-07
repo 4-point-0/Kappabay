@@ -218,7 +218,7 @@ export default function AgentDeployer({
 
 				toast({
 					title: "Agent deployed successfully",
-					description: `Agent ID: ${deployResult.agentId}, available at: ${deployResult.agentUrl}`,
+					description: `Agent ID: ${deployResult.agentId}, available at: ${deployResult.publicUrl}`,
 				});
 			} else {
 				toast({

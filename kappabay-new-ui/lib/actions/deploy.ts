@@ -9,7 +9,8 @@ import { prisma } from "@/lib/db";
 import * as net from "net";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { DeploymentData } from "../types";
-import { encrypt } from "../utils";
+import { encrypt, ngrokAbsolutePath } from "../utils";
+import ngrok from "ngrok";
 
 /**
  * Creates a Docker secret from the .env content.
@@ -258,6 +259,16 @@ export async function Deploy(deploymentData: DeploymentData) {
 			hostPortAPI
 		);
 
+		// Expose the API port over the internet via ngrok
+		console.log(`Opening ngrok tunnel on localhost:${port}`);
+		const publicUrl = await ngrok.connect({
+			proto: "http",
+			addr: portTerminal,
+			authtoken: process.env.NGROK_AUTH_TOKEN!,
+			binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
+		});
+		console.log(`ngrok tunnel established: ${publicUrl}`);
+
 		// Create the database record with the deployment information.
 		console.log("Writing to DB");
 		const agent = await prisma.agent.create({
@@ -277,6 +288,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 				oraclePort: hostPortOracle, // For now
 				hasOracle: hostPortOracle >= 5001,
 				terminalPort: portTerminal,
+				ngrokUrl: publicUrl,
 			},
 		});
 
@@ -288,6 +300,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId: agent.id,
 			agentWallet: agentWalletAddress,
 			port,
+			publicUrl,
 			agentUrl,
 			oracle: {
 				success: true,
