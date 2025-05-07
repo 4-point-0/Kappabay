@@ -10,13 +10,14 @@ import { useEffect, useState } from "react";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { useCurrentAccount, useWallet } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 
 export default function StatusPage() {
 	const wallet = useCurrentAccount();
-	const { signMessage } = useWallet();
+	// get the new personal‐message signer
+	const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
 	const [agents, setAgents] = useState<any>([]);
 	const [totalGasBag, setTotalGasBag] = useState("1.25");
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -102,15 +103,15 @@ export default function StatusPage() {
 			const timestamp = Date.now();
 			const message = JSON.stringify({ agentId, action, timestamp });
 
-			// 2) have the user sign it
+			// 2) have the user sign it using the personal‐message hook
 			const encoder = new TextEncoder();
-			const { signature, pubKey } = await signMessage({ message: encoder.encode(message) });
+			const { signature, bytes } = await signPersonalMessage({ message: encoder.encode(message) });
 
 			// 3) call your server action with signature proof
 			if (currentStatus === "ACTIVE") {
-				await stopService(agentId, message, signature, pubKey, wallet.address);
+				await stopService(agentId, message, signature,                wallet.address);
 			} else {
-				await startService(agentId, message, signature, pubKey, wallet.address);
+				await startService(agentId, message, signature,                wallet.address);
 			}
 
 			await refreshAgents();
