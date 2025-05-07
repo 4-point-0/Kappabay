@@ -6,7 +6,7 @@ import fs from "fs";
 import path from "path";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { prisma } from "../db";
-import { verifyMessage, getAddressFromPublicKey } from "@mysten/sui.js";
+import { verifyPersonalMessageSignature } from "@mysten/sui";
 
 const execAsync = util.promisify(exec);
 
