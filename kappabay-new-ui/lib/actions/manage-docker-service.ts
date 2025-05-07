@@ -46,21 +46,13 @@ export async function stopService(
 	agentId: string,
 	message: string,
 	signature: string,
-	pubKey: string,
 	address: string
 ): Promise<void> {
 	// --- AUTHENTICATION ---
 	const msgBytes = Buffer.from(message, "utf8");
-	const sigBytes = Buffer.from(signature, "base64");
-	const pkBytes = Buffer.from(pubKey, "base64");
-	if (!verifyMessage(msgBytes, sigBytes, pkBytes)) {
-		throw new Error("Invalid signature on stopService");
-	}
-	// optionally confirm signer == supplied address
-	const derived = getAddressFromPublicKey(pkBytes);
-	if (derived !== address) {
-		throw new Error("Signature does not match wallet address");
-	}
+	// verifyPersonalMessageSignature will throw if the signature is bad or
+	// if it doesn’t recover the supplied address
+	await verifyPersonalMessageSignature(msgBytes, signature, { address });
 	// ----------------------
 	try {
 		const agent = await getAgent(agentId);
@@ -135,20 +127,12 @@ export async function startService(
 	agentId: string,
 	message: string,
 	signature: string,
-	pubKey: string,
 	address: string
 ): Promise<void> {
 	// --- AUTHENTICATION ---
 	const msgBytes = Buffer.from(message, "utf8");
-	const sigBytes = Buffer.from(signature, "base64");
-	const pkBytes = Buffer.from(pubKey, "base64");
-	if (!verifyMessage(msgBytes, sigBytes, pkBytes)) {
-		throw new Error("Invalid signature on startService");
-	}
-	const derived = getAddressFromPublicKey(pkBytes);
-	if (derived !== address) {
-		throw new Error("Signature does not match wallet address");
-	}
+	// throws if invalid or signer≠address
+	await verifyPersonalMessageSignature(msgBytes, signature, { address });
 	// ----------------------
 	try {
 		const agent = await getAgent(agentId);
