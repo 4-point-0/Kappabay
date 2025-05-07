@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { getFullnodeUrl } from "@mysten/sui/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Config options for the networks you want to connect to
 const { networkConfig } = createNetworkConfig({
@@ -46,15 +47,17 @@ interface ProvidersProps {
 
 const Providers: React.FC<ProvidersProps> = ({ children }) => {
 	return (
-		<QueryClientProvider client={queryClient}>
-			<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
-				<RegisterEnokiWallets />
-				<WalletProvider autoConnect={true}>
-					{children}
-					<Toaster />
-				</WalletProvider>
-			</SuiClientProvider>
-		</QueryClientProvider>
+		<ThemeProvider>
+			<QueryClientProvider client={queryClient}>
+				<SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+					<RegisterEnokiWallets />
+					<WalletProvider autoConnect={true}>
+						{children}
+						<Toaster />
+					</WalletProvider>
+				</SuiClientProvider>
+			</QueryClientProvider>
+		</ThemeProvider>
 	);
 };
 

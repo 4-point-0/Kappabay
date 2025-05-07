@@ -21,7 +21,7 @@ import { serializeAgentConfig } from "@/lib/utils";
 import { bcs } from "@mysten/sui/bcs";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
-import { toast } from "./ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Deploy } from "@/lib/actions/deploy";
 import { generateCharacter } from "@/lib/actions/generate-character";
 
@@ -282,7 +282,11 @@ export default function AgentDeployer({
 						<Tooltip>
 							<TooltipTrigger asChild>
 								<Button variant="outline" onClick={handleGenerateCharacter} disabled={isGenerating}>
-									{isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+									{isGenerating ? (
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+									) : (
+										<Wand2 className="mr-2 h-4 w-4" />
+									)}
 									{isGenerating ? "Generating..." : "AI Assist"}
 								</Button>
 							</TooltipTrigger>
@@ -368,8 +372,15 @@ export default function AgentDeployer({
 											<SelectValue placeholder="Select voice model" />
 										</SelectTrigger>
 										<SelectContent>
-											{!['en_US-male-medium','en_US-female-medium','en_UK-male-medium','en_UK-female-medium'].includes(agentConfig.settings.voice.model) && (
-												<SelectItem value={agentConfig.settings.voice.model}>{agentConfig.settings.voice.model}</SelectItem>
+											{![
+												"en_US-male-medium",
+												"en_US-female-medium",
+												"en_UK-male-medium",
+												"en_UK-female-medium",
+											].includes(agentConfig.settings.voice.model) && (
+												<SelectItem value={agentConfig.settings.voice.model}>
+													{agentConfig.settings.voice.model}
+												</SelectItem>
 											)}
 											<SelectItem value="en_US-male-medium">US Male (Medium)</SelectItem>
 											<SelectItem value="en_US-female-medium">US Female (Medium)</SelectItem>
@@ -815,8 +826,10 @@ export default function AgentDeployer({
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							{isConfiguring ? "Updating..." : "Deploying..."}
 						</>
+					) : isConfiguring ? (
+						"Update Agent"
 					) : (
-						isConfiguring ? "Update Agent" : "Deploy Agent"
+						"Deploy Agent"
 					)}
 				</Button>
 			</div>

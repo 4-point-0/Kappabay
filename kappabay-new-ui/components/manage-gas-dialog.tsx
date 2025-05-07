@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
-import { withdrawGas } from "@/lib/actions/withdrawGas";
+import { withdrawGas } from "@/lib/actions/withdraw-gas";
 
 interface ManageGasDialogProps {
 	open: boolean;
