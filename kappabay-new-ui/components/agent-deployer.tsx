@@ -23,6 +23,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "./ui/use-toast";
 import { Deploy } from "@/lib/actions/deploy";
+import { generateCharacter } from "@/lib/actions/generateCharacter";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -234,7 +235,35 @@ export default function AgentDeployer({
 		}
 	};
 
-	const handleGenerateCharacter = async () => {};
+	const handleGenerateCharacter = async () => {
+		const formData = new FormData();
+		formData.append("description", agentConfig.system);
+		try {
+			const { config, error } = await generateCharacter(formData);
+			if (error) {
+				toast({
+					title: "AI Assist Error",
+					description: Array.isArray(error.description)
+						? error.description.join(", ")
+						: JSON.stringify(error),
+					variant: "destructive",
+				});
+			} else if (config) {
+				setAgentConfig(config);
+				toast({
+					title: "AI Assist",
+					description: "Agent configuration generated successfully",
+				});
+			}
+		} catch (err) {
+			toast({
+				title: "AI Assist Error",
+				description: "Failed to generate config",
+				variant: "destructive",
+			});
+			console.error(err);
+		}
+	};
 
 	return (
 		<div className="space-y-6">
