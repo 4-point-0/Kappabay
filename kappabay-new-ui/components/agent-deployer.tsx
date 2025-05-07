@@ -40,6 +40,7 @@ export default function AgentDeployer({
 	const signAndExec = useSignExecuteAndWaitForTransaction();
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(initialConfig);
 	const [isDeploying, setIsDeploying] = useState(false);
+	const [isGenerating, setIsGenerating] = useState(false);
 	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,6 +124,7 @@ export default function AgentDeployer({
 	};
 
 	const handleDeploy = async () => {
+		setIsDeploying(true);
 		const tx = new Transaction();
 
 		const [coin] = tx.splitCoins(tx.gas, [1 * 10000000]);
@@ -232,10 +234,13 @@ export default function AgentDeployer({
 				variant: "destructive",
 			});
 			console.error(error);
+		} finally {
+			setIsDeploying(false);
 		}
 	};
 
 	const handleGenerateCharacter = async () => {
+		setIsGenerating(true);
 		const formData = new FormData();
 		formData.append("description", agentConfig.system);
 		try {
@@ -260,6 +265,8 @@ export default function AgentDeployer({
 				variant: "destructive",
 			});
 			console.error(err);
+		} finally {
+			setIsGenerating(false);
 		}
 	};
 
@@ -274,9 +281,9 @@ export default function AgentDeployer({
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button variant="outline" onClick={handleGenerateCharacter}>
-									<Wand2 className="mr-2 h-4 w-4" />
-									AI Assist
+								<Button variant="outline" onClick={handleGenerateCharacter} disabled={isGenerating}>
+									{isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+									{isGenerating ? "Generating..." : "AI Assist"}
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent>
@@ -802,8 +809,15 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={handleDeploy}>
-					{isConfiguring ? "Update Agent" : "Deploy Agent"}
+				<Button size="lg" onClick={handleDeploy} disabled={isDeploying}>
+					{isDeploying ? (
+						<>
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							{isConfiguring ? "Updating..." : "Deploying..."}
+						</>
+					) : (
+						isConfiguring ? "Update Agent" : "Deploy Agent"
+					)}
 				</Button>
 			</div>
 		</div>
