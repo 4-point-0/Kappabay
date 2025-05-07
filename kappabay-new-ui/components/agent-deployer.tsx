@@ -23,7 +23,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "./ui/use-toast";
 import { Deploy } from "@/lib/actions/deploy";
-import { generateCharacter } from "@/lib/actions/generateCharacter";
+import { generateCharacter } from "@/lib/actions/generate-character";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -243,9 +243,7 @@ export default function AgentDeployer({
 			if (error) {
 				toast({
 					title: "AI Assist Error",
-					description: Array.isArray(error.description)
-						? error.description.join(", ")
-						: JSON.stringify(error),
+					description: Array.isArray(error.description) ? error.description.join(", ") : JSON.stringify(error),
 					variant: "destructive",
 				});
 			} else if (config) {

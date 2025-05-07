@@ -51,6 +51,19 @@ const AgentConfigSchema = z.object({
 	image: z.string().optional(),
 });
 
+function extractJsonFromMarkdown(markdown: string | null): string | null {
+	if (!markdown) return null;
+	// Remove the starting ```json and ending ```
+	const jsonStart = markdown.indexOf("{");
+	const jsonEnd = markdown.lastIndexOf("}") + 1;
+
+	if (jsonStart === -1 || jsonEnd === 0) {
+		return null;
+	}
+
+	return markdown.slice(jsonStart, jsonEnd);
+}
+
 export async function generateCharacter(formData: FormData): Promise<{ config?: AgentConfig; error?: any }> {
 	const input = CharacterSchema.safeParse({
 		description: formData.get("description"),
@@ -112,7 +125,8 @@ Template:
 	});
 
 	try {
-		const raw = completion.choices[0].message.content;
+		const raw = extractJsonFromMarkdown(completion.choices[0].message.content);
+
 		const parsed = AgentConfigSchema.safeParse(JSON.parse(raw ?? ""));
 		if (!parsed.success) {
 			return {
