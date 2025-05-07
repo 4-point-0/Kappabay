@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,10 @@ export default function AgentDeployer({
 	const [isDeploying, setIsDeploying] = useState(false);
 	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	useEffect(() => {
+		agentConfig.image = imageUrl;
+	}, [imageUrl]);
 
 	const handleChange = (field: string, value: any) => {
 		setAgentConfig((prev) => ({
@@ -230,6 +234,8 @@ export default function AgentDeployer({
 		}
 	};
 
+	const handleGenerateCharacter = async () => {};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
@@ -241,13 +247,13 @@ export default function AgentDeployer({
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button variant="outline" className="opacity-50 cursor-not-allowed" disabled>
+								<Button variant="outline" onClick={handleGenerateCharacter}>
 									<Wand2 className="mr-2 h-4 w-4" />
 									AI Assist
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p>Coming soon: AI assisted parameter generation</p>
+								<p>AI assisted parameter generation</p>
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
@@ -269,7 +275,7 @@ export default function AgentDeployer({
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
 					<TabsTrigger value="examples">Examples</TabsTrigger>
-					<TabsTrigger value="plugins">Plugins</TabsTrigger>
+					<TabsTrigger value="plugins">Integrations</TabsTrigger>
 					<TabsTrigger value="advanced">Advanced</TabsTrigger>
 				</TabsList>
 
@@ -301,7 +307,6 @@ export default function AgentDeployer({
 											<SelectItem value="anthropic">Anthropic</SelectItem>
 											<SelectItem value="mistral">Mistral AI</SelectItem>
 											<SelectItem value="llama">Llama</SelectItem>
-											<SelectItem value="deepseek">DeepSeek</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
@@ -615,12 +620,23 @@ export default function AgentDeployer({
 				</TabsContent>
 
 				<TabsContent value="plugins" className="space-y-4 mt-4">
-					<Card className="relative">
-						<div className="absolute inset-0 bg-gray-200 bg-opacity-50 flex items-center justify-center z-10 rounded-md">
-							<Badge className="text-lg py-2 px-4">Coming Soon</Badge>
-						</div>
+					<Card>
 						<CardContent className="pt-6">
-							<PluginSelector />
+							<PluginSelector
+								agentConfig={agentConfig}
+								onPluginChange={(plugins) => {
+									setAgentConfig((prev) => ({
+										...prev,
+										plugins: plugins,
+									}));
+								}}
+								onEnvChange={(env) => {
+									setAgentConfig((prev) => ({
+										...prev,
+										env: env,
+									}));
+								}}
+							/>
 						</CardContent>
 					</Card>
 				</TabsContent>
@@ -756,24 +772,8 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button
-					size="lg"
-					onClick={async () => {
-						setIsDeploying(true);
-						try {
-							await handleDeploy();
-						} catch (error) {
-							console.error("Deploy failed:", error);
-						} finally {
-							setIsDeploying(false);
-						}
-					}}
-				>
-					{isDeploying ? (
-						<Loader2 className="animate-spin h-4 w-4" />
-					) : (
-						isConfiguring ? "Update Agent" : "Deploy Agent"
-					)}
+				<Button size="lg" onClick={handleDeploy}>
+					{isConfiguring ? "Update Agent" : "Deploy Agent"}
 				</Button>
 			</div>
 		</div>

@@ -146,6 +146,9 @@ importers:
       next-themes:
         specifier: latest
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      openai:
+        specifier: ^4.97.0
+        version: 4.97.0(ws@8.18.0)(zod@3.24.3)
       react:
         specifier: ^19
         version: 19.1.0
@@ -3391,6 +3394,18 @@ packages:
 
   openai@4.82.0:
     resolution: {integrity: sha512-1bTxOVGZuVGsKKUWbh3BEwX1QxIXUftJv+9COhhGGVDTFwiaOd4gWsMynF2ewj1mg6by3/O+U8+EEHpWRdPaJg==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.23.8
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
+  openai@4.97.0:
+    resolution: {integrity: sha512-LRoiy0zvEf819ZUEJhgfV8PfsE8G5WpQi4AwA1uCV8SKvvtXQkoWUFkepD6plqyJQRghy2+AEPQ07FrJFKHZ9Q==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -7706,6 +7721,21 @@ snapshots:
       onnxruntime-common: 1.15.1
 
   openai@4.82.0(ws@8.18.0)(zod@3.24.3):
+    dependencies:
+      '@types/node': 18.19.87
+      '@types/node-fetch': 2.6.12
+      abort-controller: 3.0.0
+      agentkeepalive: 4.6.0
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      node-fetch: 2.7.0
+    optionalDependencies:
+      ws: 8.18.0
+      zod: 3.24.3
+    transitivePeerDependencies:
+      - encoding
+
+  openai@4.97.0(ws@8.18.0)(zod@3.24.3):
     dependencies:
       '@types/node': 18.19.87
       '@types/node-fetch': 2.6.12
