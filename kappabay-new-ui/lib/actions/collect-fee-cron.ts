@@ -5,6 +5,7 @@ import { decrypt } from "@/lib/utils";
 import { withdrawGas } from "@/lib/actions/withdraw-gas";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { stopService } from "@/lib/actions/manage-docker-service";
 
 const FEE_AMOUNT = 1_000_000; // Mist
 const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
@@ -21,7 +22,26 @@ async function collectFeesOnce() {
 	// process one by one (or switch back to Promise.all for parallel)
 	for (const agent of activeAgents) {
 		if (!agent.agentWalletKey || !agent.objectId) continue;
-		await collectFeeForAgent(agent.objectId, agent.id);
+		try {
+			await collectFeeForAgent(agent.objectId, agent.id);
+		} catch (err) {
+			console.error(`Fee collection failed for agent ${agent.id}:`, err);
+
+			// on failure, stop the agent's Docker service
+			try {
+				const message   = agent.id;
+				const msgBytes  = Buffer.from(message, "utf8");
+				// sign the message with your sponsor key
+				const { signature: rawSig } = await sponsorKeypair.signData(msgBytes);
+				const signature = Buffer.from(rawSig).toString("base64");
+				const address   = sponsorKeypair.getPublicKey().toSuiAddress();
+
+				await stopService(agent.id, message, signature, address);
+				console.log(`Service for agent ${agent.id} stopped due to cron error.`);
+			} catch (stopErr) {
+				console.error(`Failed to stop service for agent ${agent.id}:`, stopErr);
+			}
+		}
 	}
 }
 
