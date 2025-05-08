@@ -141,14 +141,11 @@ export default function AgentDeployer({
 		// --- NEW: take a little SUI as platform fee and send it to fee wallet ---
 		const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
 		// amount in MIST (adjust NUMBER to the amount you want to collect)
-		const FEE_AMOUNT = 1 * 1_000_000; 
+		const FEE_AMOUNT = 1 * 10_000_000;
 		// split that fee off your gas coin
 		const [feeCoin] = tx.splitCoins(tx.gas, [FEE_AMOUNT]);
 		// transfer it
-		tx.transferObjects(
-			[feeCoin],
-			tx.pure.address(feeAddress)
-		);
+		tx.transferObjects([feeCoin], tx.pure.address(feeAddress));
 		// ---------------------------------------------------------------------
 
 		try {
