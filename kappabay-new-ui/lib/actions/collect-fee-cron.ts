@@ -13,26 +13,56 @@ const sponsorKeypair = Ed25519Keypair.fromSecretKey(decrypt(sponsorPkEnv));
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 
 async function collectFeesOnce() {
-	// only agents with status === "active"
-	const active = await prisma.agent.findMany({ where: { status: "active" } });
+  // fetch all active agents
+  const activeAgents = await prisma.agent.findMany({
+    where: { status: "active" },
+  });
 
-	await Promise.all(
-		active.map(async (agent) => {
-			if (!agent.agentWalletKey || !agent.objectId) return;
+  // process one by one (or switch back to Promise.all for parallel)
+  for (const agent of activeAgents) {
+    if (!agent.agentWalletKey || !agent.objectId) continue;
+    await collectFeeForAgent(agent.agentWalletKey, agent.objectId, agent.id);
+  }
+}
 
-			// build & presign the extract-and-send transaction
-			const { presignedTxBytes } = await withdrawGas(agent.id, FEE_AMOUNT.toString(), agent.objectId, feeAddress);
+/**
+ * Build, presign and execute a sponsored fee‐withdrawal for one agent
+ */
+async function collectFeeForAgent(
+  encryptedKey: string,
+  agentObjectId: string,
+  agentId: string
+) {
+  // 1) backend: build & presign extract_gas transaction
+  const {
+    presignedTxBytes,   // Serialized transaction block bytes
+    agentSignature,     // signature by agent key
+  } = await withdrawGas(
+    agentId,
+    FEE_AMOUNT.toString(),
+    agentObjectId,
+    feeAddress
+  );
 
-			// re-derive agent keypair so we can sign our block here
-			const agentKey = Ed25519Keypair.fromSecretKey(decrypt(agent.agentWalletKey));
+  // 2) rehydrate agent keypair for completeness (unused if you call client.signAndExecute, but shown for clarity)
+  const agentKey = Ed25519Keypair.fromSecretKey(decrypt(encryptedKey));
 
-			// sign & execute with BOTH keys (agent + sponsor)
-			await client.signAndExecuteTransactionBlock({
-				transactionBlock: presignedTxBytes,
-				signers: [agentKey, sponsorKeypair],
-			});
-		})
-	);
+  // 3) sponsor signs the same tx bytes
+  const sponsorSigRes = await sponsorKeypair.signTransaction(presignedTxBytes);
+
+  // 4) submit with both signatures
+  await client.executeTransactionBlock({
+    transactionBlock: presignedTxBytes,
+    signature: [agentSignature, sponsorSigRes.signature],
+    requestType: "WaitForLocalExecution",
+    options: {
+      showEvents: true,
+      showEffects: true,
+      showObjectChanges: true,
+      showBalanceChanges: true,
+      showInput: true,
+    },
+  });
 }
 
 // schedule once per process
