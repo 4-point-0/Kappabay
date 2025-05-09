@@ -1,15 +1,17 @@
-import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { Buffer } from "buffer";
+import { getFullnodeUrl, SuiClient }         from "@mysten/sui/client";
+import { TransactionBlock as Transaction }   from "@mysten/sui/transactions";
+import { Ed25519Keypair }                   from "@mysten/sui/keypairs/ed25519";
+import { Buffer }                           from "buffer";
+import { encoding_for_model }               from "tiktoken";
 
+/** We now pass raw strings into our fee calculator */
 export interface Usage {
-    /** either snake or camel */
-    prompt_tokens?: number;
-    promptTokens?: number;
-    completion_tokens?: number;
-    completionTokens?: number;
-    model?: string;
+  /** the text you sent the LLM */
+  prompt:      string;
+  /** the text the LLM returned */
+  completion:  string;
+  /** model name for both encoding & pricing (e.g. "gpt-4") */
+  model?:      string;
 }
 
 export interface FeeStrategy {
@@ -27,19 +29,27 @@ const OPENAI_PRICES: Record<string, { input: number; output: number }> = {
 
 class OpenAIFeeStrategy implements FeeStrategy {
     calculateMist(usage: Usage): bigint {
-        const devFeeMultiplier =
-            1 + parseInt(process.env.DEV_FEE_PERCENT ?? "5") / 100; // 5% dev fee
-        const p = usage.prompt_tokens ?? usage.promptTokens ?? 0;
-        const c = usage.completion_tokens ?? usage.completionTokens ?? 0;
+        // 1) fee‐multiplier (e.g. dev fee %)
+        const devFeeMult = 1 + (parseFloat(process.env.DEV_FEE_PERCENT ?? "5") / 100);
+
+        // 2) pick model
         const model = usage.model ?? "gpt-4";
-        const su = parseFloat(process.env.SUI_USD_PRICE ?? "1");
+        const prices = OPENAI_PRICES[model];
+        if (!prices) throw new Error(`Unknown model price config: ${model}`);
 
-        const price = OPENAI_PRICES[model];
-        if (!price) throw new Error(`Unknown OpenAI model: ${model}`);
+        // 3) count tokens via tiktoken
+        const enc = encoding_for_model(model);
+        const pTokens = enc.encode(usage.prompt).length;
+        const cTokens = enc.encode(usage.completion).length;
+        enc.free();
 
-        const usd = (p / 1000) * price.input + (c / 1000) * price.output;
-        const sui = usd / su;
-        return BigInt(Math.ceil(sui * 1e9 * devFeeMultiplier)); // Mist
+        // 4) USD cost = (tokens/1k)*rate, then apply dev fee
+        const usd = ((pTokens/1000)*prices.input + (cTokens/1000)*prices.output) * devFeeMult;
+
+        // 5) convert USD → SUI → Mist
+        const suiPerUsd = parseFloat(process.env.SUI_USD_PRICE ?? "1");
+        const totalSui   = usd / suiPerUsd;
+        return BigInt(Math.ceil(totalSui * 1e9));
     }
 }
 

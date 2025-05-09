@@ -300,10 +300,14 @@ export class DirectClient {
                 console.log("response model", response);
 
                 // ── modular fee‐charging ──
-                if (response?.usage) {
-                    // usage is our interface of prompt_/completion_ tokens
+                if (response) {
                     await chargeFee(
-                        response.usage as Usage,
+                        {
+                            prompt:     text,
+                            completion: response.text,
+                            // pass the actual OpenAI model if available, else default
+                            model:      response.usage?.model ?? "gpt-4",
+                        },
                         runtime.modelProvider
                     );
                 }
