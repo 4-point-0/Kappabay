@@ -141,7 +141,7 @@ async function buildAndStartAgentDocker(
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
 	const baseEnv = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
 	// ensure no trailing blank lines, then append AGENT_PK
-	const envContentAgent = `${baseEnv.trimEnd()}\nSUI_AGENT_PK=${walletKey}\nSUI_AGENT_OBJECT_ID=${agentObjectId}\nSUI_ADMMIN_CAP_ID=${agentAdminCapId}\n`;
+	const envContentAgent = `${baseEnv.trimEnd()}\nSUI_AGENT_PK=${walletKey}\nSUI_AGENT_OBJECT_ID=${agentObjectId}\nSUI_ADMIN_CAP_ID=${agentAdminCapId}\n`;
 	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
 
