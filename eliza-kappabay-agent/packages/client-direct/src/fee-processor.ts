@@ -1,17 +1,17 @@
-import { getFullnodeUrl, SuiClient }         from "@mysten/sui/client";
-import { TransactionBlock as Transaction }   from "@mysten/sui/transactions";
-import { Ed25519Keypair }                   from "@mysten/sui/keypairs/ed25519";
-import { Buffer }                           from "buffer";
-import { encoding_for_model }               from "tiktoken";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Buffer } from "buffer";
+import { encoding_for_model, TiktokenModel } from "@dqbd/tiktoken";
 
 /** We now pass raw strings into our fee calculator */
 export interface Usage {
-  /** the text you sent the LLM */
-  prompt:      string;
-  /** the text the LLM returned */
-  completion:  string;
-  /** model name for both encoding & pricing (e.g. "gpt-4") */
-  model?:      string;
+    /** the text you sent the LLM */
+    prompt: string;
+    /** the text the LLM returned */
+    completion: string;
+    /** model name for both encoding & pricing (e.g. "gpt-4") */
+    model?: string;
 }
 
 export interface FeeStrategy {
@@ -30,10 +30,11 @@ const OPENAI_PRICES: Record<string, { input: number; output: number }> = {
 class OpenAIFeeStrategy implements FeeStrategy {
     calculateMist(usage: Usage): bigint {
         // 1) fee‐multiplier (e.g. dev fee %)
-        const devFeeMult = 1 + (parseFloat(process.env.DEV_FEE_PERCENT ?? "5") / 100);
+        const devFeeMult =
+            1 + parseFloat(process.env.DEV_FEE_PERCENT ?? "5") / 100;
 
         // 2) pick model
-        const model = usage.model ?? "gpt-4";
+        const model = (usage.model ?? "gpt-4o") as TiktokenModel;
         const prices = OPENAI_PRICES[model];
         if (!prices) throw new Error(`Unknown model price config: ${model}`);
 
@@ -44,11 +45,14 @@ class OpenAIFeeStrategy implements FeeStrategy {
         enc.free();
 
         // 4) USD cost = (tokens/1k)*rate, then apply dev fee
-        const usd = ((pTokens/1000)*prices.input + (cTokens/1000)*prices.output) * devFeeMult;
+        const usd =
+            ((pTokens / 1000) * prices.input +
+                (cTokens / 1000) * prices.output) *
+            devFeeMult;
 
         // 5) convert USD → SUI → Mist
-        const suiPerUsd = parseFloat(process.env.SUI_USD_PRICE ?? "1");
-        const totalSui   = usd / suiPerUsd;
+        const suiPerUsd = parseFloat(process.env.SUI_USD_PRICE ?? "3");
+        const totalSui = usd / suiPerUsd;
         return BigInt(Math.ceil(totalSui * 1e9));
     }
 }
@@ -70,9 +74,6 @@ export async function chargeFee(
     usage: Usage,
     modelProvider: string
 ): Promise<void> {
-    console.log("usage", usage);
-    console.log("modelProvider", modelProvider);
-
     const withdrawAmountMist =
         strategies[modelProvider]?.calculateMist(usage) ??
         strategies.openai.calculateMist(usage);
@@ -117,6 +118,4 @@ export async function chargeFee(
             showInput: true,
         },
     });
-
-    console.log("response", response);
 }

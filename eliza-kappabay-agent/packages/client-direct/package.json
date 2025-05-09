@@ -19,6 +19,7 @@
         "dist"
     ],
     "dependencies": {
+        "@dqbd/tiktoken": "^1.0.21",
         "@elizaos/core": "workspace:*",
         "@mysten/sui": "^1.29.1",
         "@types/body-parser": "1.19.5",

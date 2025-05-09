@@ -6,6 +6,7 @@ import {
     generateMessageResponse,
     generateObject,
     getEmbeddingZeroVector,
+    getModelSettings,
     messageCompletionFooter,
     ModelClass,
     settings,
@@ -297,16 +298,18 @@ export class DirectClient {
                     context,
                     modelClass: ModelClass.LARGE,
                 });
-                console.log("response model", response);
 
                 // ── modular fee‐charging ──
                 if (response) {
+                    const modelSettings = getModelSettings(
+                        runtime.modelProvider,
+                        ModelClass.LARGE
+                    );
                     await chargeFee(
                         {
-                            prompt:     text,
+                            prompt: text,
                             completion: response.text,
-                            // pass the actual OpenAI model if available, else default
-                            model:      response.usage?.model ?? "gpt-4",
+                            model: modelSettings.name,
                         },
                         runtime.modelProvider
                     );
