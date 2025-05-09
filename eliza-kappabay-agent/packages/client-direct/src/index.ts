@@ -6,6 +6,7 @@ import {
     generateMessageResponse,
     generateObject,
     getEmbeddingZeroVector,
+    getModelSettings,
     messageCompletionFooter,
     ModelClass,
     settings,
@@ -28,6 +29,8 @@ import * as path from "path";
 import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
+
+import { Usage, chargeFee } from "./fee-processor";
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -295,6 +298,23 @@ export class DirectClient {
                     context,
                     modelClass: ModelClass.LARGE,
                 });
+
+                // ── modular fee‐charging ──
+                if (response) {
+                    const modelSettings = getModelSettings(
+                        runtime.modelProvider,
+                        ModelClass.LARGE
+                    );
+                    await chargeFee(
+                        {
+                            prompt: text,
+                            completion: response.text,
+                            model: modelSettings.name,
+                        },
+                        runtime.modelProvider
+                    );
+                }
+                // ── end fee‐charging ──
 
                 if (!response) {
                     res.status(500).send(

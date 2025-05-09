@@ -130,21 +130,19 @@ async function buildAndStartAgentDocker(
 	envSecretNameOracle: string,
 	envSecretNameTerminal: string,
 	hostOraclePort: number,
-	hostPortAPI: number
+	hostPortAPI: number,
+	agentObjectId: string,
+	agentAdminCapId: string
 ): Promise<{ port: number; portTerminal: number; serviceId: string }> {
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
 	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
-	const baseEnv           = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
+	const baseEnv = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
 	// ensure no trailing blank lines, then append AGENT_PK
-	const envContentAgent   = `${baseEnv.trimEnd()}\nAGENT_PK=${walletKey}\n`;
-	const agentEnvSecretName = await createDockerSecretFromEnv(
-		agentId,
-		envContentAgent,
-		`agent_env_secret_${agentId}`
-	);
+	const envContentAgent = `${baseEnv.trimEnd()}\nSUI_AGENT_PK=${walletKey}\nSUI_AGENT_OBJECT_ID=${agentObjectId}\nSUI_ADMMIN_CAP_ID=${agentAdminCapId}\n`;
+	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
 
 	// ----- Create the Docker secret for the wallet key -----
@@ -216,6 +214,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 		const agentKeypair = Ed25519Keypair.generate();
 		const agentWalletAddress = agentKeypair.getPublicKey().toSuiAddress();
 		const agentWalletKey = agentKeypair.getSecretKey();
+		const agentObjectId = deploymentData.onChainData.agentObjectId;
+		const agentAdminCapId = deploymentData.onChainData.adminCapId;
 
 		// Encrypt the wallet key for storage.
 		const encryptedWalletKey = encrypt(agentWalletKey);
@@ -262,7 +262,9 @@ export async function Deploy(deploymentData: DeploymentData) {
 			oracleEnvSecretName,
 			terminalEnvSecretName,
 			hostPortOracle,
-			hostPortAPI
+			hostPortAPI,
+			agentObjectId,
+			agentAdminCapId
 		);
 
 		// Expose the API port over the internet via ngrok
