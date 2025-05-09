@@ -1,7 +1,7 @@
 {
     "name": "AiBay",
     "clients": ["direct"],
-    "modelProvider": "deepseek",
+    "modelProvider": "openai",
     "settings": {},
     "plugins": [],
     "bio": [

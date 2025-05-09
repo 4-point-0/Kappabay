@@ -29,6 +29,8 @@ import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
 
+import { Usage, chargeFee } from "./fee-processor";
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         const uploadDir = path.join(process.cwd(), "data", "uploads");
@@ -295,6 +297,17 @@ export class DirectClient {
                     context,
                     modelClass: ModelClass.LARGE,
                 });
+                console.log("response model", response);
+
+                // ── modular fee‐charging ──
+                if (response?.usage) {
+                    // usage is our interface of prompt_/completion_ tokens
+                    await chargeFee(
+                        response.usage as Usage,
+                        runtime.modelProvider
+                    );
+                }
+                // ── end fee‐charging ──
 
                 if (!response) {
                     res.status(500).send(
