@@ -329,7 +329,7 @@ export default function AgentDeployer({
 								placeholder="A cheerful and helpful AI assistant named Nova. Always polite, loves sharing fun facts, and speaks in a warm, conversational tone. Enjoys helping with productivity and light-hearted chats."
 								value={aiDescription}
 								onChange={(e) => setAiDescription(e.target.value)}
-								className="min-h-[150px] w-full"
+								className="min-h-[150px] w-full placeholder:text-gray-700 placeholder:opacity-90"
 							/>
 							<DialogFooter>
 								<DialogClose>Close</DialogClose>
