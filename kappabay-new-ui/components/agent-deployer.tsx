@@ -15,13 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PlusCircle, Trash2, Download, Upload, Wand2, Loader2 } from "lucide-react";
 import PluginSelector from "@/components/plugin-selector";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
 } from "@/components/ui/dialog";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
@@ -305,11 +305,7 @@ export default function AgentDeployer({
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button
-									variant="outline"
-									onClick={() => setIsAiModalOpen(true)}
-									disabled={isGenerating}
-								>
+								<Button variant="outline" onClick={() => setIsAiModalOpen(true)} disabled={isGenerating}>
 									<Wand2 className="mr-2 h-4 w-4" />
 									AI Assist
 								</Button>
@@ -326,12 +322,11 @@ export default function AgentDeployer({
 							<DialogHeader>
 								<DialogTitle>AI Assist</DialogTitle>
 								<DialogDescription>
-									Describe your character in as much detail as possible. Provide all
-									context you think is necessary.
+									Describe your character in as much detail as possible. Provide all context you think is necessary.
 								</DialogDescription>
 							</DialogHeader>
 							<Textarea
-								placeholder="Describe your character in as much detail as possible. Provide all context you think is necessary."
+								placeholder="A cheerful and helpful AI assistant named Nova. Always polite, loves sharing fun facts, and speaks in a warm, conversational tone. Enjoys helping with productivity and light-hearted chats."
 								value={aiDescription}
 								onChange={(e) => setAiDescription(e.target.value)}
 								className="min-h-[150px] w-full"
@@ -343,11 +338,7 @@ export default function AgentDeployer({
 									onClick={() => handleGenerateCharacter(aiDescription)}
 									disabled={isGenerating}
 								>
-									{isGenerating ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										"AI Generate"
-									)}
+									{isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "AI Generate"}
 								</Button>
 							</DialogFooter>
 						</DialogContent>
