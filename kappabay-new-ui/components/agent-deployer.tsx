@@ -14,6 +14,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Trash2, Download, Upload, Wand2, Loader2 } from "lucide-react";
 import PluginSelector from "@/components/plugin-selector";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
+} from "@/components/ui/dialog";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
 import { Transaction } from "@mysten/sui/transactions";
@@ -41,6 +50,9 @@ export default function AgentDeployer({
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(initialConfig);
 	const [isDeploying, setIsDeploying] = useState(false);
 	const [isGenerating, setIsGenerating] = useState(false);
+	// new: dialog state + user‐entered prompt
+	const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+	const [aiDescription, setAiDescription] = useState("");
 	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -249,10 +261,10 @@ export default function AgentDeployer({
 		}
 	};
 
-	const handleGenerateCharacter = async () => {
+	const handleGenerateCharacter = async (description: string) => {
 		setIsGenerating(true);
 		const formData = new FormData();
-		formData.append("description", agentConfig.system);
+		formData.append("description", description);
 		try {
 			const { config, error } = await generateCharacter(formData);
 			if (error) {
@@ -267,6 +279,8 @@ export default function AgentDeployer({
 					title: "AI Assist",
 					description: "Agent configuration generated successfully",
 				});
+				setIsAiModalOpen(false);
+				setAiDescription("");
 			}
 		} catch (err) {
 			toast({
@@ -291,13 +305,9 @@ export default function AgentDeployer({
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button variant="outline" onClick={handleGenerateCharacter} disabled={isGenerating}>
-									{isGenerating ? (
-										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-									) : (
-										<Wand2 className="mr-2 h-4 w-4" />
-									)}
-									{isGenerating ? "Generating..." : "AI Assist"}
+								<Button variant="outline" onClick={() => setIsAiModalOpen(true)} disabled={isGenerating}>
+									<Wand2 className="mr-2 h-4 w-4" />
+									AI Assist
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent>
@@ -305,6 +315,34 @@ export default function AgentDeployer({
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
+
+					{/* -------------- AI Assist Modal -------------- */}
+					<Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>AI Assist</DialogTitle>
+								<DialogDescription>
+									Describe your character in as much detail as possible. Provide all context you think is necessary.
+								</DialogDescription>
+							</DialogHeader>
+							<Textarea
+								placeholder="A cheerful and helpful AI assistant named Nova. Always polite, loves sharing fun facts, and speaks in a warm, conversational tone. Enjoys helping with productivity and light-hearted chats."
+								value={aiDescription}
+								onChange={(e) => setAiDescription(e.target.value)}
+								className="min-h-[150px] w-full placeholder:text-gray-500 placeholder:opacity-90"
+							/>
+							<DialogFooter>
+								<DialogClose>Close</DialogClose>
+								<Button
+									variant="outline"
+									onClick={() => handleGenerateCharacter(aiDescription)}
+									disabled={isGenerating}
+								>
+									{isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "AI Generate"}
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
 
 					<Button variant="outline" onClick={importConfig}>
 						<Upload className="mr-2 h-4 w-4" />
