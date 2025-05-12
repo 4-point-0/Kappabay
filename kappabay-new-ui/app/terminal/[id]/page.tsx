@@ -78,7 +78,7 @@ export default function TerminalPage() {
 			}
 
 			// Construct base URL from agent port.
-			const _baseUrl = `http://localhost:${agentInfo.port}`;
+			const _baseUrl = agentInfo.ngrokUrl ?? `http://localhost:${agentInfo.port}`;
 			setBaseUrl(_baseUrl);
 
 			try {
