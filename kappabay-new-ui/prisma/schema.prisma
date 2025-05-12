@@ -38,4 +38,5 @@ model Agent {
   terminalPort      Int?      // Port the terminal is running on
   ngrokUrl          String?   // ngrok URL
   latestBlobHash    String?   // Latest blob hash
+  agentType         String?    // Custom or Kappabay agent
 }

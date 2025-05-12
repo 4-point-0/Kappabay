@@ -1,0 +1,13 @@
+"use client";
+import { StatusContent } from "@/components/status-content";
+
+export default function WaifuStatusPage() {
+  return (
+    <StatusContent
+      createHref="/kappabay/create"
+      createButtonText="Create New Companion"
+      moneyLabel="Pocket Money"
+      filterByAgentType="kappabay-create"
+    />
+  );
+}

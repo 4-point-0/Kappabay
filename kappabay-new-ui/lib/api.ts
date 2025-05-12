@@ -20,6 +20,7 @@ const fetcher = async ({
 			: {
 					Accept: "application/json",
 					"Content-Type": "application/json",
+					"ngrok-skip-browser-warning": "1",
 			  },
 	};
 
