@@ -11,9 +11,21 @@ import { ArrowLeft, ArrowRight, Cog, Sparkles } from "lucide-react"
 import CharacterQuestionnaire from "@/components/character-questionnaire"
 import { useRouter } from "next/navigation"
 
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
+import { serializeAgentConfig } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+import { Deploy } from "@/lib/actions/deploy";
+import { Loader2 } from "lucide-react";
+
 export default function CreateCompanionPage() {
   const [showConfig, setShowConfig] = useState(false)
   const [characterConfig, setCharacterConfig] = useState<any>(null)
+  const account = useCurrentAccount();
+  const signAndExec = useSignExecuteAndWaitForTransaction();
+  const [isDeploying, setIsDeploying] = useState(false);
   const router = useRouter()
 
   const handleComplete = (config: any) => {
@@ -21,10 +33,99 @@ export default function CreateCompanionPage() {
     setShowConfig(true)
   }
 
-  const handleDeploy = () => {
-    // In a real app, this would submit the character for creation
-    alert("Character creation initiated!")
-    router.push("/kappabay/status")
+  const handleDeploy = async () => {
+    setIsDeploying(true);
+    const tx = new Transaction();
+
+    // fund the create_agent call
+    const [coin] = tx.splitCoins(tx.gas, [1 * 10_000_000]);
+    tx.moveCall({
+      target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
+      arguments: [
+        tx.pure(
+          bcs
+            .vector(bcs.u8())
+            .serialize(Array.from(Buffer.from(serializeAgentConfig(characterConfig))))
+        ),
+        coin,
+        tx.pure.string(characterConfig.image || "https://example.com/placeholder.png"),
+      ],
+    });
+
+    // collect platform fee
+    const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
+    const FEE_AMOUNT = 1 * 10_000_000;
+    const [feeCoin] = tx.splitCoins(tx.gas, [FEE_AMOUNT]);
+    tx.transferObjects([feeCoin], tx.pure.address(feeAddress));
+
+    try {
+      const txResult = await signAndExec(tx);
+
+      // extract object IDs
+      let agentObjectId = "";
+      let agentCapId = "";
+      let adminCapId = "";
+      if (txResult.objectChanges && Array.isArray(txResult.objectChanges)) {
+        for (const c of txResult.objectChanges) {
+          if (c.type === "created") {
+            if (c.objectType.includes("::agent::Agent")) agentObjectId = c.objectId;
+            else if (c.objectType.includes("::agent::AgentCap")) agentCapId = c.objectId;
+            else if (c.objectType.includes("::agent::AdminCap")) adminCapId = c.objectId;
+          }
+        }
+      }
+      if (!agentObjectId || !agentCapId || !adminCapId) {
+        toast({
+          title: "Deployment Warning",
+          description: "Could not extract object IDs. Check console.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // call backend
+      const deployResult = await Deploy({
+        agentConfig: characterConfig,
+        onChainData: {
+          agentObjectId,
+          agentCapId,
+          adminCapId,
+          ownerWallet: account?.address || "",
+          txDigest: txResult.digest,
+        },
+      });
+
+      if (deployResult.success) {
+        // transfer AdminCap to agent wallet
+        const transferTx = new Transaction();
+        transferTx.transferObjects(
+          [transferTx.object(adminCapId)],
+          transferTx.pure.address(deployResult.agentWallet!)
+        );
+        await signAndExec(transferTx);
+
+        toast({
+          title: "Agent deployed successfully",
+          description: `Agent ID: ${deployResult.agentId}`,
+        });
+        router.push("/kappabay/status");
+      } else {
+        toast({
+          title: "Backend Deployment Error",
+          description: deployResult.error || "Unknown error",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: `${err}`,
+        description: "Failed to deploy",
+        variant: "destructive",
+      });
+      console.error(err);
+    } finally {
+      setIsDeploying(false);
+    }
   }
 
   return (
@@ -128,7 +229,12 @@ export default function CreateCompanionPage() {
                     >
                       <Cog className="h-4 w-4" /> Advanced Configuration
                     </Button>
-                    <Button className="gap-2" onClick={handleDeploy}>
+                    <Button
+                      className="gap-2"
+                      onClick={handleDeploy}
+                      disabled={isDeploying}
+                    >
+                      {isDeploying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Meet Your Waifu <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
