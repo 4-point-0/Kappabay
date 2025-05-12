@@ -16,6 +16,7 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { deployAgent } from "@/lib/deploy-agent";
+import { generateCharacter } from "@/lib/actions/generate-character";
 
 export default function CreateCompanionPage() {
 	const [showConfig, setShowConfig] = useState(false);
@@ -33,7 +34,33 @@ export default function CreateCompanionPage() {
 	const handleDeploy = async () => {
 		setIsDeploying(true);
 		try {
-			const result = await deployAgent(characterConfig, signAndExec, account?.address || "", "kappabay-create");
+			// 1) generate an AI-tweaked config
+			const formData = new FormData();
+			formData.append(
+				"description",
+				`Create Kappbay Waifu (ai girlfriend) with characteristic: ${JSON.stringify(characterConfig)}`
+			);
+			const { config: aiConfig, error: aiError } = await generateCharacter(formData);
+			if (aiError) {
+				toast({
+					title: "AI Generation Error",
+					description: Array.isArray(aiError.description)
+						? aiError.description.join(", ")
+						: JSON.stringify(aiError),
+					variant: "destructive",
+				});
+				return;
+			}
+
+			// 2) deploy using the AI-driven config (fallback to original if none)
+			const result = await deployAgent(
+				aiConfig || characterConfig,
+				signAndExec,
+				account?.address || "",
+				"kappabay-create"
+			);
+
+			// 3) handle deployment outcome
 			if (result.success) {
 				toast({
 					title: "Agent deployed successfully",
