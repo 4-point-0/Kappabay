@@ -14,7 +14,8 @@ export type DeployAgentResult = {
 export async function deployAgent(
 	agentConfig: any,
 	signAndExec: (tx: Transaction) => Promise<any>,
-	ownerWallet: string
+	ownerWallet: string,
+	agentType: string
 ): Promise<DeployAgentResult> {
 	const tx = new Transaction();
 
@@ -66,6 +67,7 @@ export async function deployAgent(
 			ownerWallet,
 			txDigest: txResult.digest,
 		},
+		agentType,
 	});
 	if (!deployResult.success) {
 		return { success: false, error: deployResult.error };

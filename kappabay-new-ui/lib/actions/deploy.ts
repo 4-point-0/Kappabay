@@ -297,6 +297,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 				hasOracle: hostPortOracle >= 5001,
 				terminalPort: portTerminal,
 				ngrokUrl: publicUrl,
+				agentType: deploymentData.agentType,
 			},
 		});
 

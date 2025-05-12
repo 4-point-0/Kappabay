@@ -33,7 +33,12 @@ export default function CreateCompanionPage() {
   const handleDeploy = async () => {
     setIsDeploying(true);
     try {
-      const result = await deployAgent(characterConfig, signAndExec, account?.address || "");
+      const result = await deployAgent(
+        characterConfig,
+        signAndExec,
+        account?.address || "",
+        "kappabay-create"
+      );
       if (result.success) {
         toast({
           title: "Agent deployed successfully",

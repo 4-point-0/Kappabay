@@ -135,7 +135,12 @@ export default function AgentDeployer({
 	const handleDeploy = async () => {
 		setIsDeploying(true);
 		try {
-			const result = await deployAgent(agentConfig, signAndExec, account?.address || "");
+			const result = await deployAgent(
+				agentConfig,
+				signAndExec,
+				account?.address || "",
+				"agent-deployer"
+			);
 			if (result.success) {
 				toast({
 					title: "Agent deployed successfully",

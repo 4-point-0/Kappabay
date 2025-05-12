@@ -41,4 +41,5 @@ export interface DeploymentData {
 		ownerWallet: string;
 		txDigest: string;
 	};
+	agentType: string;
 }
