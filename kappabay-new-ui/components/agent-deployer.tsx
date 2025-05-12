@@ -25,14 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
-import { Transaction } from "@mysten/sui/transactions";
-import { serializeAgentConfig } from "@/lib/utils";
-import { bcs } from "@mysten/sui/bcs";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
-import { Deploy } from "@/lib/actions/deploy";
 import { generateCharacter } from "@/lib/actions/generate-character";
+import { deployAgent } from "@/lib/deploy-agent";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -137,125 +134,27 @@ export default function AgentDeployer({
 
 	const handleDeploy = async () => {
 		setIsDeploying(true);
-		const tx = new Transaction();
-
-		const [coin] = tx.splitCoins(tx.gas, [1 * 10000000]);
-
-		tx.moveCall({
-			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
-			arguments: [
-				tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(Buffer.from(serializeAgentConfig(agentConfig))))),
-				coin,
-				tx.pure.string(agentConfig.image || "https://example.com/placeholder.png"),
-			],
-		});
-
-		// --- NEW: take a little SUI as platform fee and send it to fee wallet ---
-		const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
-		// amount in MIST (adjust NUMBER to the amount you want to collect)
-		const FEE_AMOUNT = 1 * 10_000_000;
-		// split that fee off your gas coin
-		const [feeCoin] = tx.splitCoins(tx.gas, [FEE_AMOUNT]);
-		// transfer it
-		tx.transferObjects([feeCoin], tx.pure.address(feeAddress));
-		// ---------------------------------------------------------------------
-
 		try {
-			const txResult = await signAndExec(tx);
-
-			console.log("Transaction result:", txResult);
-			console.log("Transaction result structure:", JSON.stringify(txResult, null, 2));
-
-			// Extract object IDs from transaction result
-			let agentObjectId = "";
-			let agentCapId = "";
-			let adminCapId = "";
-
-			// The structure of txResult can vary between SDK versions
-			// Let's inspect the structure more carefully
-			const txResultStr = JSON.stringify(txResult);
-			console.log("Full transaction result:", txResultStr);
-			console.log("Conditional:", txResult.objectChanges && Array.isArray(txResult.objectChanges));
-
-			if (txResult.objectChanges && Array.isArray(txResult.objectChanges)) {
-				for (const change of txResult.objectChanges) {
-					if (change.type === "created") {
-						if (change.objectType.includes("::agent::AgentCap")) {
-							agentCapId = change.objectId;
-						} else if (change.objectType.includes("::agent::AdminCap")) {
-							adminCapId = change.objectId;
-						} else if (change.objectType.includes("::agent::Agent")) {
-							agentObjectId = change.objectId;
-						}
-					}
-				}
-			}
-			console.log("AgentObjectId: ", agentObjectId);
-			console.log("AgentCapId: ", agentCapId);
-			console.log("AdminCapId: ", adminCapId);
-			// If we still couldn't find the objects, try another approach
-			if (!agentObjectId || !agentCapId || !adminCapId) {
-				// Attempt to get the digest and then use the Sui explorer API or blockchain API
-				const txDigest = txResult.digest;
-				console.error("Could not extract objects directly. Transaction digest:", txDigest);
-				toast({
-					title: "Deployment Warning",
-					description: "Could not automatically extract object IDs. Please check the console and input them manually.",
-					variant: "destructive",
-				});
-				return;
-			}
-
-			// Call Deploy server action
-			const deployResult = await Deploy({
-				agentConfig,
-				onChainData: {
-					agentObjectId,
-					agentCapId,
-					adminCapId,
-					ownerWallet: account?.address || "",
-					txDigest: txResult.digest,
-				},
-			});
-
-			if (deployResult.success) {
-				// Create a second transaction to transfer the caps to the agent wallet
-				const transferTx = new Transaction();
-				if (deployResult.agentWallet) {
-					// Transfer AdminCap
-					transferTx.transferObjects(
-						[transferTx.object(adminCapId)],
-						transferTx.pure.address(deployResult.agentWallet)
-					);
-				} else {
-					toast({
-						title: "No Agent Wallet Found",
-						description: deployResult.error || "Unknown error occurred",
-						variant: "destructive",
-					});
-				}
-
-				// Execute the transfer
-				await signAndExec(transferTx);
-
+			const result = await deployAgent(agentConfig, signAndExec, account?.address || "");
+			if (result.success) {
 				toast({
 					title: "Agent deployed successfully",
-					description: `Agent ID: ${deployResult.agentId}, available at: ${deployResult.publicUrl}`,
+					description: `Agent ID: ${result.agentId}`,
 				});
 			} else {
 				toast({
-					title: "Backend Deployment Error",
-					description: deployResult.error || "Unknown error occurred",
+					title: "Deployment Error",
+					description: result.error || "Unknown error",
 					variant: "destructive",
 				});
 			}
-		} catch (error: unknown) {
+		} catch (err: any) {
 			toast({
-				title: `${error}`,
+				title: err.message || "Deployment Error",
 				description: "Failed to deploy",
 				variant: "destructive",
 			});
-			console.error(error);
+			console.error(err);
 		} finally {
 			setIsDeploying(false);
 		}

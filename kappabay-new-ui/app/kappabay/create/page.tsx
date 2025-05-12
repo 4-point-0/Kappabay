@@ -13,12 +13,9 @@ import { useRouter } from "next/navigation"
 
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
-import { Transaction } from "@mysten/sui/transactions";
-import { bcs } from "@mysten/sui/bcs";
-import { serializeAgentConfig } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import { Deploy } from "@/lib/actions/deploy";
 import { Loader2 } from "lucide-react";
+import { deployAgent } from "@/lib/deploy-agent";
 
 export default function CreateCompanionPage() {
   const [showConfig, setShowConfig] = useState(false)
@@ -35,90 +32,24 @@ export default function CreateCompanionPage() {
 
   const handleDeploy = async () => {
     setIsDeploying(true);
-    const tx = new Transaction();
-
-    // fund the create_agent call
-    const [coin] = tx.splitCoins(tx.gas, [1 * 10_000_000]);
-    tx.moveCall({
-      target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
-      arguments: [
-        tx.pure(
-          bcs
-            .vector(bcs.u8())
-            .serialize(Array.from(Buffer.from(serializeAgentConfig(characterConfig))))
-        ),
-        coin,
-        tx.pure.string(characterConfig.image || "https://example.com/placeholder.png"),
-      ],
-    });
-
-    // collect platform fee
-    const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
-    const FEE_AMOUNT = 1 * 10_000_000;
-    const [feeCoin] = tx.splitCoins(tx.gas, [FEE_AMOUNT]);
-    tx.transferObjects([feeCoin], tx.pure.address(feeAddress));
-
     try {
-      const txResult = await signAndExec(tx);
-
-      // extract object IDs
-      let agentObjectId = "";
-      let agentCapId = "";
-      let adminCapId = "";
-      if (txResult.objectChanges && Array.isArray(txResult.objectChanges)) {
-        for (const c of txResult.objectChanges) {
-          if (c.type === "created") {
-            if (c.objectType.includes("::agent::Agent")) agentObjectId = c.objectId;
-            else if (c.objectType.includes("::agent::AgentCap")) agentCapId = c.objectId;
-            else if (c.objectType.includes("::agent::AdminCap")) adminCapId = c.objectId;
-          }
-        }
-      }
-      if (!agentObjectId || !agentCapId || !adminCapId) {
-        toast({
-          title: "Deployment Warning",
-          description: "Could not extract object IDs. Check console.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // call backend
-      const deployResult = await Deploy({
-        agentConfig: characterConfig,
-        onChainData: {
-          agentObjectId,
-          agentCapId,
-          adminCapId,
-          ownerWallet: account?.address || "",
-          txDigest: txResult.digest,
-        },
-      });
-
-      if (deployResult.success) {
-        // transfer AdminCap to agent wallet
-        const transferTx = new Transaction();
-        transferTx.transferObjects(
-          [transferTx.object(adminCapId)],
-          transferTx.pure.address(deployResult.agentWallet!)
-        );
-        await signAndExec(transferTx);
-
+      const result = await deployAgent(characterConfig, signAndExec, account?.address || "");
+      if (result.success) {
         toast({
           title: "Agent deployed successfully",
-          description: `Agent ID: ${deployResult.agentId}`,
+          description: `Agent ID: ${result.agentId}`,
         });
         router.push("/kappabay/status");
       } else {
         toast({
-          title: "Backend Deployment Error",
-          description: deployResult.error || "Unknown error",
+          title: "Deployment Error",
+          description: result.error || "Unknown error",
           variant: "destructive",
         });
       }
     } catch (err: any) {
       toast({
-        title: `${err}`,
+        title: err.message || "Deployment Error",
         description: "Failed to deploy",
         variant: "destructive",
       });
