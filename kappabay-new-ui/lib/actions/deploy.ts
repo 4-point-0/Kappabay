@@ -271,7 +271,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 		console.log(`Opening ngrok tunnel on localhost:${port}`);
 		const publicUrl = await ngrok.connect({
 			proto: "http",
-			addr: portTerminal,
+			addr: port,
 			authtoken: process.env.NGROK_AUTH_TOKEN!,
 			binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
 		});

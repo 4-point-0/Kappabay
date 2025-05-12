@@ -12,6 +12,7 @@ interface AgentsTableProps {
 	agents: Agent[];
 	loadingAgent: string | null;
 	terminalEnabledAgents: string[];
+	moneyLabel?: string;
 	onServiceToggle: (agentId: string, currentStatus: string) => Promise<void>;
 	onOpenManageGas: (agent: any) => void;
 	onOpenTransferCap: (agent: any) => void;
@@ -21,6 +22,7 @@ export default function AgentsTable({
 	agents,
 	loadingAgent,
 	terminalEnabledAgents,
+	moneyLabel,
 	onServiceToggle,
 	onOpenManageGas,
 	onOpenTransferCap,
@@ -105,7 +107,7 @@ export default function AgentsTable({
 										))}
 								</div>
 							</TableHead>
-							<TableHead>Gas Bag</TableHead>
+							<TableHead>{moneyLabel || "Gas Bag"}</TableHead>
 							<TableHead className="cursor-pointer" onClick={() => handleSort("createdAt")}>
 								<div className="flex items-center">
 									Created
