@@ -168,45 +168,11 @@ export default function AgentDeployer({
 
 	// new: update just the config of an existing agent
 	const handleUpdate = async () => {
+		if (!agentId) return toast({ title: "Missing agentId", variant: "destructive" });
 		setIsDeploying(true);
 		try {
-			if (!agentId) throw new Error("Missing agentId");
-			// 1) pull DB record
-			const agent = await getAgentInfo(agentId);
-			if (!agent.objectId) throw new Error("Missing on-chain Agent objectId");
-
-			// 1a) derive AdminCap if not already stored
-			let adminCapId = agent.adminCapId;
-			if (!adminCapId) {
-				const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
-				const adminCapType = `${PACKAGE_ID}::agent::AdminCap`;
-				const client = new SuiClient({ url: getFullnodeUrl("testnet") });
-				const owned = await client.getOwnedObjects({
-					owner: agent.agentWalletAddress!,
-					options: { showType: true },
-				});
-				const capObj = owned.data.find((o) => o.data?.type === adminCapType);
-				if (!capObj?.data?.objectId) throw new Error("No AdminCap found");
-				adminCapId = capObj.data.objectId;
-			}
-
-			// 2) build & send your update_configuration Move call
-			const tx = new Transaction();
-			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
-			tx.moveCall({
-				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
-				arguments: [
-					tx.object(agent.objectId),
-					tx.object(adminCapId),
-					tx.pure(bcs.vector(bcs.u8()).serialize(raw)),
-				],
-			});
-			await signAndExec(tx);
-
-			// 4) persist new config in Prisma directly
 			await updateAgentConfig(agentId, agentConfig);
 			toast({ title: "Configuration updated" });
-
 		} catch (err: any) {
 			toast({ title: "Update Error", description: err.message, variant: "destructive" });
 		} finally {
