@@ -69,7 +69,7 @@ export default function ConfigurePage() {
 			<PageTransition>
 				<div className="container mx-auto px-4 py-8">
 					<div className="flex items-center mb-8">
-						<Link href="/kappabay/status">
+						<Link href="/kappabae/status">
 							<Button variant="ghost" size="icon" className="mr-2">
 								<ArrowLeft className="h-4 w-4" />
 							</Button>
@@ -95,12 +95,7 @@ export default function ConfigurePage() {
 							<CharacterQuestionnaire initialConfig={waifuConfig} onComplete={handleComplete} />
 						</motion.div>
 					) : waifuConfig && started && !showDeployer ? (
-						<CompanionSummary
-							config={waifuConfig}
-							isConfiguring
-							agentId={id}
-							onBack={() => setStarted(false)}
-						/>
+						<CompanionSummary config={waifuConfig} isConfiguring agentId={id} onBack={() => setStarted(false)} />
 					) : (
 						<div className="flex justify-center items-center h-64">
 							<p>Failed to load companion configuration. Please try again.</p>

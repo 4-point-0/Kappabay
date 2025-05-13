@@ -33,13 +33,8 @@ import { deployAgent } from "@/lib/deploy-agent";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import { serializeAgentConfig } from "@/lib/utils";
-import { getAgentInfo } from "@/lib/actions/get-agent-info";
-import {
-  updateAgentConfig,
-  persistAgentConfig,
-} from "@/lib/actions/update-agent-config";
+import { updateAgentConfig, persistAgentConfig } from "@/lib/actions/update-agent-config";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -171,34 +166,27 @@ export default function AgentDeployer({
 	};
 
 	// new: update just the config of an existing agent
-	const signTransaction = useSignTransaction();
+	const { mutateAsync: signTransaction } = useSignTransaction();
 	const suiClient = useSuiClient();
 
 	const handleUpdate = async () => {
-		if (!agentId || !account?.address)
-			return toast({ title: "Missing parameters", variant: "destructive" });
+		if (!agentId || !account?.address) return toast({ title: "Missing parameters", variant: "destructive" });
 
 		setIsDeploying(true);
 		try {
 			// 1) ask backend to build & agent-sign the tx
-			const {
-				presignedTxBytes,
-				agentSignature,
-				adminCapId,
-				agentObjectId,
-				agentAddress,
-			} = await updateAgentConfig(agentId, agentConfig, account.address);
+			const { presignedTxBytes, agentSignature, adminCapId, agentObjectId, agentAddress } = await updateAgentConfig(
+				agentId,
+				agentConfig,
+				account.address
+			);
 
 			// 2) replicate the exact same Move call locally to get the sponsor‐signature
 			const tx = new Transaction();
 			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
-				arguments: [
-					tx.object(agentObjectId),
-					tx.object(adminCapId),
-					tx.pure(bcs.vector(bcs.u8()).serialize(raw)),
-				],
+				arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure(bcs.vector(bcs.u8()).serialize(raw))],
 			});
 			tx.setSender(agentAddress);
 			tx.setGasOwner(account.address);
@@ -210,6 +198,10 @@ export default function AgentDeployer({
 				transactionBlock: presignedTxBytes,
 				signature: [agentSignature, walletSigned.signature],
 				requestType: "WaitForLocalExecution",
+				options: {
+					showEffects: true,
+					showEvents: true,
+				},
 			});
 
 			if (result.effects?.status.status === "success") {
@@ -217,7 +209,7 @@ export default function AgentDeployer({
 				await persistAgentConfig(agentId, agentConfig);
 				toast({ title: "Configuration updated" });
 			} else {
-				throw new Error("On-chain update failed");
+				throw new Error("On-chain update failed: ", result.effects?.status?.error as any);
 			}
 		} catch (err: any) {
 			toast({

@@ -14,136 +14,101 @@ import { deployAgent } from "@/lib/deploy-agent";
 import { updateAgentConfig } from "@/lib/actions/update-agent-config";
 
 export interface CompanionSummaryProps {
-  config: any;
-  /** if true, we’re on the /configure/[id] page */
-  isConfiguring?: boolean;
-  /** required only when isConfiguring===true */
-  agentId?: string;
-  /** callback to go “back” (to questionnaire) */
-  onBack?: () => void;
+	config: any;
+	/** if true, we’re on the /configure/[id] page */
+	isConfiguring?: boolean;
+	/** callback to go “back” (to questionnaire) */
+	onBack?: () => void;
+	handleDeploy: () => void;
+	isBusy: boolean;
 }
 
 export function CompanionSummary({
-  config,
-  isConfiguring = false,
-  agentId,
-  onBack,
+	config,
+	isConfiguring = false,
+	onBack,
+	handleDeploy,
+	isBusy,
 }: CompanionSummaryProps) {
-  const [isBusy, setIsBusy] = useState(false);
-  const account = useCurrentAccount();
-  const signAndExec = useSignExecuteAndWaitForTransaction();
-  const router = useRouter();
+	const router = useRouter();
 
-  const handleDeploy = async () => {
-    setIsBusy(true);
-    try {
-      if (isConfiguring) {
-        // update flow
-        await updateAgentConfig(agentId!, config, account.address!);
-        toast({ title: "Configuration updated" });
-        router.push("/kappabay/status");
-      } else {
-        // create flow
-        const result = await deployAgent(
-          config,
-          signAndExec,
-          account.address || "",
-          "kappabay-create"
-        );
-        if (result.success) {
-          toast({
-            title: "Agent deployed successfully",
-            description: `Agent ID: ${result.agentId}`,
-          });
-          router.push("/kappabay/status");
-        } else {
-          throw new Error(result.error || "Unknown error");
-        }
-      }
-    } catch (err: any) {
-      toast({
-        title: isConfiguring ? "Update Error" : "Deployment Error",
-        description: err.message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsBusy(false);
-    }
-  };
+	const handleAdvanced = () => {
+		// stash for configure page
+		sessionStorage.setItem("waifuConfig", JSON.stringify(config));
+		router.push(`/kappabae/configure/${config.id}`);
+	};
 
-  const handleAdvanced = () => {
-    // stash for configure page
-    sessionStorage.setItem("waifuConfig", JSON.stringify(config));
-    router.push(`/configure/${config.id}`);
-  };
+	return (
+		<AnimatePresence mode="wait">
+			<motion.div
+				key="summary"
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				exit={{ opacity: 0, y: -20 }}
+				transition={{ duration: 0.3 }}
+				className="space-y-6"
+			>
+				<Card className="p-6">
+					<div className="flex justify-between items-center mb-6">
+						<h2 className="text-2xl font-bold">Character Summary</h2>
+						{onBack && (
+							<Button variant="outline" onClick={onBack}>
+								<ArrowLeft className="h-4 w-4 mr-2" /> Back
+							</Button>
+						)}
+					</div>
 
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="summary"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-      >
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Character Summary</h2>
-            {onBack && (
-              <Button variant="outline" onClick={onBack}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back
-              </Button>
-            )}
-          </div>
+					<div className="grid md:grid-cols-2 gap-8">
+						<div className="bg-muted rounded-lg p-6 flex items-center justify-center">
+							<div className="text-center">
+								<div className="w-48 h-48 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
+									<Sparkles className="h-16 w-16 text-primary/50" />
+								</div>
+								<p className="text-muted-foreground">Character preview here</p>
+							</div>
+						</div>
+						<div>
+							<h3 className="text-xl font-bold mb-4">{config.name}</h3>
+							<div className="space-y-3">
+								<div>
+									<span className="font-medium">Visual Style:</span>{" "}
+									{config.visualStyle === "anime" ? "Anime / Stylized" : "Realistic / Relatable"}
+								</div>
+								<div>
+									<span className="font-medium">Archetype:</span> {config.archetype}
+								</div>
+								<div>
+									<span className="font-medium">Personality:</span> {config.topTraits.join(", ")}
+								</div>
+								<div>
+									<span className="font-medium">Voice:</span> {config.voiceModel}
+								</div>
+								<p>Relationship roles: {config.roles.join(", ")}</p>
+								<p>Communication style: {config.commStyle}</p>
+								<p>World setting: {config.world}</p>
+								<p>Origin twist: {config.origin}</p>
+								<p>Lore snippet: {config.lore || "N/A"}</p>
+								<p>
+									Appearance: {config.artStyle}, {config.hair}, {config.eyes}, {config.build}, {config.attire},{" "}
+									{config.accessory}
+								</p>
+							</div>
+						</div>
+					</div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-muted rounded-lg p-6 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-48 h-48 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <Sparkles className="h-16 w-16 text-primary/50" />
-                </div>
-                <p className="text-muted-foreground">Character preview here</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl font-bold mb-4">{config.name}</h3>
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium">Visual Style:</span>{" "}
-                  {config.visualStyle === "anime"
-                    ? "Anime / Stylized"
-                    : "Realistic / Relatable"}
-                </div>
-                <div>
-                  <span className="font-medium">Archetype:</span> {config.archetype}
-                </div>
-                <div>
-                  <span className="font-medium">Personality:</span>{" "}
-                  {config.topTraits.join(", ")}
-                </div>
-                <div>
-                  <span className="font-medium">Voice:</span> {config.voiceModel}
-                </div>
-                {/* …any other fields you want to show */}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 flex justify-between">
-            {!isConfiguring && (
-              <Button variant="outline" onClick={handleAdvanced} className="gap-2">
-                <Cog className="h-4 w-4" /> Advanced Configuration
-              </Button>
-            )}
-            <Button onClick={handleDeploy} disabled={isBusy} className="gap-2">
-              {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isConfiguring ? "Update Companion" : "Meet Your Waifu"}{" "}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </Card>
-      </motion.div>
-    </AnimatePresence>
-  );
+					<div className="mt-8 flex justify-between">
+						{!isConfiguring && (
+							<Button variant="outline" onClick={handleAdvanced} className="gap-2">
+								<Cog className="h-4 w-4" /> Advanced Configuration
+							</Button>
+						)}
+						<Button onClick={handleDeploy} disabled={isBusy} className="gap-2">
+							{isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+							"Meet Your Waifu" <ArrowRight className="h-4 w-4" />
+						</Button>
+					</div>
+				</Card>
+			</motion.div>
+		</AnimatePresence>
+	);
 }

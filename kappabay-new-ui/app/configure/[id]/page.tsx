@@ -28,7 +28,6 @@ const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
 	if (!suiObj.data?.content) {
 		throw new Error(`On‐chain object ${agent.objectId} not found`);
 	}
-
 	// 3) pull the live configuration out of its fields
 	//    config comes back as a number[][] (chunks of u8)
 	const raw: number[][] = (suiObj.data.content as any).fields.configuration;
@@ -50,7 +49,6 @@ export default function ConfigurePage() {
 		const loadConfig = async () => {
 			try {
 				const config = await fetchAgentConfig(id);
-				debugger;
 				setAgentConfig(config);
 			} catch (error) {
 				console.error("Failed to load agent config:", error);

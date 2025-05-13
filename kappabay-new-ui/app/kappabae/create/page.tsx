@@ -65,7 +65,7 @@ export default function CreateCompanionPage() {
 					title: "Agent deployed successfully",
 					description: `Agent ID: ${result.agentId}`,
 				});
-				router.push("/kappabay/status");
+				router.push("/kappabae/status");
 			} else {
 				toast({
 					title: "Deployment Error",
@@ -91,7 +91,7 @@ export default function CreateCompanionPage() {
 			<PageTransition>
 				<div className="container mx-auto px-4 py-8">
 					<div className="flex items-center mb-8">
-						<Link href="/kappabay">
+						<Link href="/kappabae">
 							<Button variant="ghost" size="icon" className="mr-2">
 								<ArrowLeft className="h-4 w-4" />
 							</Button>
@@ -116,6 +116,8 @@ export default function CreateCompanionPage() {
 							<CompanionSummary
 								config={characterConfig}
 								onBack={() => setShowConfig(false)}
+								handleDeploy={handleDeploy}
+								isBusy={isDeploying}
 							/>
 						)}
 					</AnimatePresence>
