@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import CharacterQuestionnaire from "@/components/character-questionnaire";
 import AgentDeployer from "@/components/agent-deployer";
+import { CompanionSummary } from "@/components/companion-summary";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Sparkles } from "lucide-react";
@@ -94,51 +95,12 @@ export default function ConfigurePage() {
 							<CharacterQuestionnaire initialConfig={waifuConfig} onComplete={handleComplete} />
 						</motion.div>
 					) : waifuConfig && started && !showDeployer ? (
-						<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-							<Card className="p-6 space-y-6">
-								<div className="flex justify-between items-center mb-6">
-									<h2 className="text-2xl font-bold">Character Summary</h2>
-									<Button variant="outline" onClick={() => setStarted(false)}>
-										<ArrowLeft className="h-4 w-4 mr-2" />
-										Back to Questionnaire
-									</Button>
-								</div>
-
-								<div className="grid md:grid-cols-2 gap-8">
-									<div className="bg-muted rounded-lg p-6 flex items-center justify-center">
-										<div className="text-center">
-											<div className="w-48 h-48 bg-primary/10 rounded-full mx-auto mb-4 flex items-center justify-center">
-												<Sparkles className="h-16 w-16 text-primary/50" />
-											</div>
-											<p className="text-muted-foreground">Character preview here</p>
-										</div>
-									</div>
-
-									<div>
-										<h3 className="text-xl font-bold mb-4">{waifuConfig.name}</h3>
-										<div className="space-y-3">
-											<div>
-												<span className="font-medium">Visual Style:&nbsp;</span>
-												{waifuConfig.visualStyle === "anime" ? "Anime / Stylized" : "Realistic / Relatable"}
-											</div>
-											<div>
-												<span className="font-medium">Archetype:&nbsp;</span>
-												{waifuConfig.archetype}
-											</div>
-											<div>
-												<span className="font-medium">Personality:&nbsp;</span>
-												{waifuConfig.topTraits.join(", ")}
-											</div>
-											{/* add any other fields you want to display */}
-										</div>
-									</div>
-								</div>
-
-								<div className="mt-8 flex justify-end">
-									<Button onClick={() => setShowDeployer(true)}>Update Companion</Button>
-								</div>
-							</Card>
-						</motion.div>
+						<CompanionSummary
+							config={waifuConfig}
+							isConfiguring
+							agentId={id}
+							onBack={() => setStarted(false)}
+						/>
 					) : (
 						<div className="flex justify-center items-center h-64">
 							<p>Failed to load companion configuration. Please try again.</p>
