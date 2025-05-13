@@ -24,7 +24,7 @@ export function CompanionSummary({ config, isConfiguring = false, onBack }: Comp
 	const handleAdvanced = () => {
 		// stash for configure page
 		sessionStorage.setItem("waifuConfig", JSON.stringify(config));
-		router.push(`/kappabae/configure/${config.id}`);
+		router.push(`/kappabae/configure/${config.name}`);
 	};
 
 	return (

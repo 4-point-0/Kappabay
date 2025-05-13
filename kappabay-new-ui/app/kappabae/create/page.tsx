@@ -12,19 +12,9 @@ import { ArrowLeft } from "lucide-react";
 import CharacterQuestionnaire from "@/components/character-questionnaire";
 import { CompanionSummary } from "@/components/companion-summary";
 
-import { useCurrentAccount } from "@mysten/dapp-kit";
-import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import { deployAgent } from "@/lib/deploy-agent";
-import { generateCharacter } from "@/lib/actions/generate-character";
-
 export default function CreateCompanionPage() {
 	const [showConfig, setShowConfig] = useState(false);
 	const [characterConfig, setCharacterConfig] = useState<any>(null);
-	const account = useCurrentAccount();
-	const signAndExec = useSignExecuteAndWaitForTransaction();
-	const router = useRouter();
 
 	const handleComplete = (config: any) => {
 		setCharacterConfig(config);
@@ -59,10 +49,7 @@ export default function CreateCompanionPage() {
 								</Card>
 							</motion.div>
 						) : (
-							<CompanionSummary
-								config={characterConfig}
-								onBack={() => setShowConfig(false)}
-							/>
+							<CompanionSummary config={characterConfig} onBack={() => setShowConfig(false)} />
 						)}
 					</AnimatePresence>
 				</div>
