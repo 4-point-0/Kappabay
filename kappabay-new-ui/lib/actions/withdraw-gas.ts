@@ -1,8 +1,6 @@
 "use server";
 
-import { prisma } from "../db";
-import { decrypt } from "../utils";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { getAgentKeypair, getAdminCapId } from "./sui-utils";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 
@@ -12,41 +10,15 @@ export async function withdrawGas(
 	agentObjectId: string,
 	gasOwnerAddress: string
 ) {
-	// Retrieve the agent from the database
-	const agent = await prisma.agent.findUnique({
-		where: { id: agentId },
-	});
-
-	if (!agent?.agentWalletKey) {
-		throw new Error(`Agent wallet key not found for agent ${agentId}`);
-	}
-
-	// Derive the agent's backend sender address from the stored agentWalletKey
-	const decryptedKey = decrypt(agent.agentWalletKey);
-	const keypair = Ed25519Keypair.fromSecretKey(decryptedKey);
-	const agentAddress = keypair.getPublicKey().toSuiAddress();
+	// load the agent record, its keypair and address
+	const { keypair, address: agentAddress } = await getAgentKeypair(agentId);
 
 	// Initialize a Sui client
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 	const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID;
-	// Define the expected AdminCap type
-	const adminCapType = `${PACKAGE_ID}::agent::AdminCap`;
 
-	// Get owned objects for the derived address
-	const ownedCaps = await client.getOwnedObjects({
-		owner: agentAddress,
-		options: { showType: true },
-	});
-
-	// Filter the owned objects for one with the correct AdminCap type
-	const adminCapObject = ownedCaps.data.find((obj) => obj.data?.type === adminCapType);
-
-	if (!adminCapObject?.data?.objectId) {
-		throw new Error(`No AdminCap found for address ${agentAddress}`);
-	}
-
-	// Use the found AdminCap object's id
-	const adminCapId = adminCapObject.data.objectId;
+	// derive the AdminCap object id via our utility
+	const adminCapId = await getAdminCapId(client, agentAddress);
 
 	// Build the transaction on the server with extract_gas_for_transaction
 	const tx = new Transaction();
@@ -68,7 +40,6 @@ export async function withdrawGas(
 	const agentSignature = await keypair.signTransaction(builtTx);
 	const serializedAgentSignature = agentSignature.signature;
 
-	// Return everything needed for the frontend to complete the transaction
 	return {
 		adminCapId,
 		agentAddress,
