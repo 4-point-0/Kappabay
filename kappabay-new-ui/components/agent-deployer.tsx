@@ -30,6 +30,10 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
 import { generateCharacter } from "@/lib/actions/generate-character";
 import { deployAgent } from "@/lib/deploy-agent";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
+import { serializeAgentConfig } from "@/lib/utils";
+import { getAgentInfo } from "@/lib/actions/get-agent-info";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -155,6 +159,44 @@ export default function AgentDeployer({
 				variant: "destructive",
 			});
 			console.error(err);
+		} finally {
+			setIsDeploying(false);
+		}
+	};
+
+	// new: update just the config of an existing agent
+	const handleUpdate = async () => {
+		setIsDeploying(true);
+		try {
+			if (!agentId) throw new Error("Missing agentId");
+			// 1) pull on-chain IDs from your DB
+			const agent = await getAgentInfo(agentId);
+			if (!agent.objectId || !agent.adminCapId) throw new Error("Missing on-chain IDs");
+
+			// 2) build the SUI moveCall
+			const tx = new Transaction();
+			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
+				arguments: [
+					tx.object(agent.objectId),
+					tx.object(agent.adminCapId),
+					tx.pure(bcs.vector(bcs.u8()).serialize(raw)),
+				],
+			});
+			// 3) sign & execute on-chain
+			await signAndExec(tx);
+
+			// 4) persist new config in Prisma via API
+			const res = await fetch(`/api/agents/${agentId}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ config: agentConfig }),
+			});
+			if (!res.ok) throw new Error("DB update failed");
+			toast({ title: "Configuration updated" });
+		} catch (err: any) {
+			toast({ title: "Update Error", description: err.message, variant: "destructive" });
 		} finally {
 			setIsDeploying(false);
 		}
@@ -767,17 +809,20 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={handleDeploy} disabled={isDeploying}>
-					{isDeploying ? (
-						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							{isConfiguring ? "Updating..." : "Deploying..."}
-						</>
-					) : isConfiguring ? (
-						"Update Agent"
-					) : (
-						"Deploy Agent"
-					)}
+				<Button
+					size="lg"
+					onClick={isConfiguring ? handleUpdate : handleDeploy}
+					disabled={isDeploying}
+				>
+					{isDeploying
+						? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								{isConfiguring ? "Updating..." : "Deploying..."}
+							</>
+						)
+						: (isConfiguring ? "Update Agent" : "Deploy Agent")
+					}
 				</Button>
 			</div>
 		</div>
