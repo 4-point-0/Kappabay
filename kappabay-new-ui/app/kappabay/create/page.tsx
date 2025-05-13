@@ -41,7 +41,6 @@ export default function CreateCompanionPage() {
 				`Create Kappbay Waifu (ai girlfriend) with characteristic: ${JSON.stringify(characterConfig)}`
 			);
 			const { config: aiConfig, error: aiError } = await generateCharacter(formData);
-			debugger;
 			if (aiError) {
 				toast({
 					title: "AI Generation Error",
