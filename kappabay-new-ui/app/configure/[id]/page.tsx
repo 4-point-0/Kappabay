@@ -8,34 +8,29 @@ import { defaultAgentConfig } from "@/lib/default-config"
 import type { AgentConfig } from "@/lib/types"
 import { PageTransition } from "@/components/page-transition"
 import { motion } from "framer-motion"
-import { JsonRpcProvider } from "@mysten/sui.js"
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client"
+import { getAgentInfo } from "@/lib/actions/get-agent-info"
 
-// fetch on‐chain agent configuration
+ // fetch on‐chain agent configuration
 const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
-  // 1) get Prisma record to learn its SUI objectId
-  const agentRes = await fetch(`/api/agents/${id}`)
-  if (!agentRes.ok) {
-    throw new Error(`Failed to load agent record: ${agentRes.statusText}`)
-  }
-  const { objectId } = (await agentRes.json()) as { objectId?: string }
-  if (!objectId) {
-    throw new Error('Agent record missing objectId')
+  // 1) load the DB record (and get its objectId)
+  const agent = await getAgentInfo(id)
+  if (!agent?.objectId) {
+    throw new Error(`Agent ${id} missing objectId`)
   }
 
-  // 2) fetch the NFT object from SUI and read its .fields.configuration
-  const provider = new JsonRpcProvider({
-    url: 'https://fullnode.testnet.sui.io:443'
+  // 2) fetch the NFT object from Sui
+  const client = new SuiClient({ url: getFullnodeUrl("testnet") })
+  const suiObj = await client.getObject({
+    id: agent.objectId,
+    options: { showContent: true },
   })
-  const suiObj = await provider.getObject({
-    id: objectId,
-    options: { showContent: true }
-  })
-  if (suiObj.data?.status !== 'Exists') {
-    throw new Error(`SUI object ${objectId} not found`)
+  if (suiObj.data?.status !== "Exists") {
+    throw new Error(`On‐chain object ${agent.objectId} not found`)
   }
-  // .content.fields.configuration holds your AgentConfig
-  const config = (suiObj.data.content as any).fields.configuration
-  return config as AgentConfig
+
+  // 3) pull the live configuration out of its fields
+  return (suiObj.data.content as any).fields.configuration as AgentConfig
 }
 
 export default function ConfigurePage() {
