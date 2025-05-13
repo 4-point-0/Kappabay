@@ -95,7 +95,12 @@ export default function ConfigurePage() {
 							<CharacterQuestionnaire initialConfig={waifuConfig} onComplete={handleComplete} />
 						</motion.div>
 					) : waifuConfig && started && !showDeployer ? (
-						<CompanionSummary config={waifuConfig} isConfiguring agentId={id} onBack={() => setStarted(false)} />
+						<CompanionSummary
+							config={waifuConfig}
+							isConfiguring
+							agentId={id}
+							onBack={() => setStarted(false)}
+						/>
 					) : (
 						<div className="flex justify-center items-center h-64">
 							<p>Failed to load companion configuration. Please try again.</p>
