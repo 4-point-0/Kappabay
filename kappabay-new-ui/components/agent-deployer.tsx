@@ -34,6 +34,8 @@ import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import { serializeAgentConfig } from "@/lib/utils";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
+import { updateAgentConfig } from "@/lib/actions/update-agent-config";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -169,32 +171,42 @@ export default function AgentDeployer({
 		setIsDeploying(true);
 		try {
 			if (!agentId) throw new Error("Missing agentId");
-			// 1) pull on-chain IDs from your DB
+			// 1) pull DB record
 			const agent = await getAgentInfo(agentId);
-			if (!agent?.objectId || !agent?.adminCapId) throw new Error("Missing on-chain IDs");
+			if (!agent.objectId) throw new Error("Missing on-chain Agent objectId");
 
-			// 2) build the SUI moveCall
+			// 1a) derive AdminCap if not already stored
+			let adminCapId = agent.adminCapId;
+			if (!adminCapId) {
+				const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
+				const adminCapType = `${PACKAGE_ID}::agent::AdminCap`;
+				const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+				const owned = await client.getOwnedObjects({
+					owner: agent.agentWalletAddress!,
+					options: { showType: true },
+				});
+				const capObj = owned.data.find((o) => o.data?.type === adminCapType);
+				if (!capObj?.data?.objectId) throw new Error("No AdminCap found");
+				adminCapId = capObj.data.objectId;
+			}
+
+			// 2) build & send your update_configuration Move call
 			const tx = new Transaction();
 			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
 				arguments: [
 					tx.object(agent.objectId),
-					tx.object(agent.adminCapId),
+					tx.object(adminCapId),
 					tx.pure(bcs.vector(bcs.u8()).serialize(raw)),
 				],
 			});
-			// 3) sign & execute on-chain
 			await signAndExec(tx);
 
-			// 4) persist new config in Prisma via API
-			const res = await fetch(`/api/agents/${agentId}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ config: agentConfig }),
-			});
-			if (!res.ok) throw new Error("DB update failed");
+			// 4) persist new config in Prisma directly
+			await updateAgentConfig(agentId, agentConfig);
 			toast({ title: "Configuration updated" });
+
 		} catch (err: any) {
 			toast({ title: "Update Error", description: err.message, variant: "destructive" });
 		} finally {
