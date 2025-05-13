@@ -30,7 +30,14 @@ const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
 	}
 
 	// 3) pull the live configuration out of its fields
-	return (suiObj.data.content as any).fields.configuration as AgentConfig;
+	//    config comes back as a number[][] (chunks of u8)
+	const raw: number[][] = (suiObj.data.content as any).fields.configuration;
+	// flatten into one big byte array
+	const flat = raw.flat();
+	// decode into a UTF-8 string
+	const jsonText = new TextDecoder().decode(Uint8Array.from(flat));
+	// parse into your AgentConfig
+	return JSON.parse(jsonText) as AgentConfig;
 };
 
 export default function ConfigurePage() {
