@@ -8,14 +8,34 @@ import { defaultAgentConfig } from "@/lib/default-config"
 import type { AgentConfig } from "@/lib/types"
 import { PageTransition } from "@/components/page-transition"
 import { motion } from "framer-motion"
+import { JsonRpcProvider } from "@mysten/sui.js"
 
-// fetch real agent config via our new API route
+// fetch on‐chain agent configuration
 const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
-  const res = await fetch(`/api/agents/${id}`)
-  if (!res.ok) {
-    throw new Error(`could not fetch agent config: ${res.statusText}`)
+  // 1) get Prisma record to learn its SUI objectId
+  const agentRes = await fetch(`/api/agents/${id}`)
+  if (!agentRes.ok) {
+    throw new Error(`Failed to load agent record: ${agentRes.statusText}`)
   }
-  return (await res.json()) as AgentConfig
+  const { objectId } = (await agentRes.json()) as { objectId?: string }
+  if (!objectId) {
+    throw new Error('Agent record missing objectId')
+  }
+
+  // 2) fetch the NFT object from SUI and read its .fields.configuration
+  const provider = new JsonRpcProvider({
+    url: 'https://fullnode.testnet.sui.io:443'
+  })
+  const suiObj = await provider.getObject({
+    id: objectId,
+    options: { showContent: true }
+  })
+  if (suiObj.data?.status !== 'Exists') {
+    throw new Error(`SUI object ${objectId} not found`)
+  }
+  // .content.fields.configuration holds your AgentConfig
+  const config = (suiObj.data.content as any).fields.configuration
+  return config as AgentConfig
 }
 
 export default function ConfigurePage() {
