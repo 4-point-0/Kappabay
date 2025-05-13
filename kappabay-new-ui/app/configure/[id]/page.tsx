@@ -9,16 +9,13 @@ import type { AgentConfig } from "@/lib/types"
 import { PageTransition } from "@/components/page-transition"
 import { motion } from "framer-motion"
 
-// Mock function to fetch agent config by ID
+// fetch real agent config via our new API route
 const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
-  // In a real app, this would fetch from an API
-  console.log(`Fetching config for agent: ${id}`)
-
-  // For demo purposes, return the default config with a modified name
-  return {
-    ...defaultAgentConfig,
-    name: `${defaultAgentConfig.name} (${id.slice(0, 6)})`,
+  const res = await fetch(`/api/agents/${id}`)
+  if (!res.ok) {
+    throw new Error(`could not fetch agent config: ${res.statusText}`)
   }
+  return (await res.json()) as AgentConfig
 }
 
 export default function ConfigurePage() {
