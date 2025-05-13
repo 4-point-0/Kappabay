@@ -10,7 +10,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Cog, Sparkles } from "lucide-react";
 import CharacterQuestionnaire from "@/components/character-questionnaire";
-import { useRouter } from "next/navigation";
 
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
@@ -185,10 +184,7 @@ export default function CreateCompanionPage() {
 											onClick={() => {
 												if (!characterConfig) return;
 												// persist the waifu config for the configure page
-												sessionStorage.setItem(
-													"waifuConfig",
-													JSON.stringify(characterConfig)
-												);
+												sessionStorage.setItem("waifuConfig", JSON.stringify(characterConfig));
 												// navigate to the config screen for this companion
 												// (replace :id with whatever identifier you’re using)
 												router.push(`/configure/${characterConfig.id}`);
