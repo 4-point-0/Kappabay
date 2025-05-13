@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/header";
 import { PageTransition } from "@/components/page-transition";
 import { Button } from "@/components/ui/button";
@@ -181,7 +182,17 @@ export default function CreateCompanionPage() {
 										<Button
 											variant="outline"
 											className="gap-2"
-											onClick={() => alert("Advanced configuration coming soon!")}
+											onClick={() => {
+												if (!characterConfig) return;
+												// persist the waifu config for the configure page
+												sessionStorage.setItem(
+													"waifuConfig",
+													JSON.stringify(characterConfig)
+												);
+												// navigate to the config screen for this companion
+												// (replace :id with whatever identifier you’re using)
+												router.push(`/configure/${characterConfig.id}`);
+											}}
 										>
 											<Cog className="h-4 w-4" /> Advanced Configuration
 										</Button>
