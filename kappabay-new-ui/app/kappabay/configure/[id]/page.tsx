@@ -6,40 +6,18 @@ import Header from "@/components/header"
 import { PageTransition } from "@/components/page-transition"
 import { motion } from "framer-motion"
 import CharacterQuestionnaire from "@/components/character-questionnaire"
+import AgentDeployer from "@/components/agent-deployer"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-// Mock function to fetch waifu config by ID
-const fetchWaifuConfig = async (id: string): Promise<any> => {
-  // In a real app, this would fetch from an API
-  console.log(`Fetching config for waifu: ${id}`)
-
-  // For demo purposes, return a mock config
-  return {
-    name: id === "0x1a2b3c4d5e6f7g8h9i0j" ? "Sakura" : id === "0x9i8h7g6f5e4d3c2b1a0" ? "Aria" : "Miko",
-    visualStyle: "anime",
-    archetype: "deredere",
-    sliderValues: {
-      sociability: 4,
-      energy: 3,
-      quirkiness: 2,
-      affection: 5,
-      humor: 3,
-    },
-    roles: ["best-friend", "wholesome-partner"],
-    commStyle: "emoji-heavy",
-    world: "slice-of-life",
-    origin: "runaway-idol",
-    lore: "Loves to bake cookies for friends on rainy days",
-    artStyle: "watercolor",
-    hair: "pink-long",
-    eyes: "azure-large",
-    build: "petite",
-    attire: "sailor-uniform",
-    accessory: "fox-ears",
-    voiceModel: "en_US-female-soft",
-    topTraits: ["Sweet", "Caring", "Playful"],
+// Try to read the raw questionnaire from sessionStorage
+const loadSavedConfig = (): any | null => {
+  try {
+    const raw = sessionStorage.getItem("waifuConfig")
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
   }
 }
 
@@ -48,14 +26,25 @@ export default function ConfigurePage() {
   const id = params.id as string
   const [loading, setLoading] = useState(true)
   const [waifuConfig, setWaifuConfig] = useState<any>(null)
+  const [started, setStarted] = useState(false)
 
   useEffect(() => {
     const loadConfig = async () => {
+      // 1) first check sessionStorage (piped in by the create page)
+      const saved = loadSavedConfig()
+      if (saved) {
+        setWaifuConfig(saved)
+        setLoading(false)
+        return
+      }
+      // 2) fallback: load from your real endpoint (if you have one)
       try {
-        const config = await fetchWaifuConfig(id)
-        setWaifuConfig(config)
-      } catch (error) {
-        console.error("Failed to load waifu config:", error)
+        const res = await fetch(`/api/agents/${id}`)
+        if (!res.ok) throw new Error(res.statusText)
+        const data = await res.json()
+        setWaifuConfig(data.config)
+      } catch (err) {
+        console.error("Fetch agent config failed:", err)
       } finally {
         setLoading(false)
       }
@@ -64,9 +53,10 @@ export default function ConfigurePage() {
     loadConfig()
   }, [id])
 
+  // when the user finishes the questionnaire, show the Update UI
   const handleComplete = (config: any) => {
     setWaifuConfig(config)
-    alert("Configuration updated!")
+    setStarted(true)
   }
 
   return (
@@ -96,9 +86,17 @@ export default function ConfigurePage() {
                 className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full"
               />
             </div>
-          ) : waifuConfig ? (
+          ) : waifuConfig && !started ? (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
               <CharacterQuestionnaire initialConfig={waifuConfig} onComplete={handleComplete} />
+            </motion.div>
+          ) : waifuConfig && started ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+              <AgentDeployer
+                agentConfig={waifuConfig}
+                isConfiguring
+                agentId={id}
+              />
             </motion.div>
           ) : (
             <div className="flex justify-center items-center h-64">
