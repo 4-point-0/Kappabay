@@ -171,7 +171,7 @@ export default function AgentDeployer({
 			if (!agentId) throw new Error("Missing agentId");
 			// 1) pull on-chain IDs from your DB
 			const agent = await getAgentInfo(agentId);
-			if (!agent.objectId || !agent.adminCapId) throw new Error("Missing on-chain IDs");
+			if (!agent?.objectId || !agent?.adminCapId) throw new Error("Missing on-chain IDs");
 
 			// 2) build the SUI moveCall
 			const tx = new Transaction();
@@ -809,20 +809,17 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button
-					size="lg"
-					onClick={isConfiguring ? handleUpdate : handleDeploy}
-					disabled={isDeploying}
-				>
-					{isDeploying
-						? (
-							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								{isConfiguring ? "Updating..." : "Deploying..."}
-							</>
-						)
-						: (isConfiguring ? "Update Agent" : "Deploy Agent")
-					}
+				<Button size="lg" onClick={isConfiguring ? handleUpdate : handleDeploy} disabled={isDeploying}>
+					{isDeploying ? (
+						<>
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							{isConfiguring ? "Updating..." : "Deploying..."}
+						</>
+					) : isConfiguring ? (
+						"Update Agent"
+					) : (
+						"Deploy Agent"
+					)}
 				</Button>
 			</div>
 		</div>
