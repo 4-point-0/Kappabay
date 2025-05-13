@@ -8,32 +8,55 @@ import { serializeAgentConfig } from "../utils";
 import { getAgentKeypair, getAdminCapId } from "./sui-utils";
 import type { AgentConfig } from "../types";
 
-export async function updateAgentConfig(agentId: string, newConfig: AgentConfig) {
-	// 1) load agent + keypair
-	const { keypair, address, agent } = await getAgentKeypair(agentId);
+// shape returned to client so it can sponsor & execute
+export type PreparedConfigTx = {
+  presignedTxBytes: Uint8Array;
+  agentSignature: string;
+  agentAddress: string;
+  adminCapId: string;
+  agentObjectId: string;
+};
 
-	// 2) init Sui client & derive AdminCap
-	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
-	const adminCap = await getAdminCapId(client, address);
+// 1) build & agent‐sign only (no submit, no prisma write)
+export async function updateAgentConfig(
+  agentId: string,
+  newConfig: AgentConfig,
+  sponsorAddress: string
+): Promise<PreparedConfigTx> {
+  const { keypair, address: agentAddress, agent } = await getAgentKeypair(agentId);
+  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+  const adminCapId = await getAdminCapId(client, agentAddress);
 
-	// 3) build the Move call
-	const tx = new Transaction();
-	const bytes = Array.from(Buffer.from(serializeAgentConfig(newConfig)));
-	tx.moveCall({
-		target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
-		arguments: [tx.object(agent.objectId), tx.object(adminCap), tx.pure(bcs.vector(bcs.u8()).serialize(bytes))],
-	});
+  const tx = new Transaction();
+  const raw = Array.from(Buffer.from(serializeAgentConfig(newConfig)));
+  tx.moveCall({
+    target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
+    arguments: [
+      tx.object(agent.objectId),
+      tx.object(adminCapId),
+      tx.pure(bcs.vector(bcs.u8()).serialize(raw)),
+    ],
+  });
+  // sponsor pattern: sender=agent, gasOwner=front‐end
+  tx.setSender(agentAddress);
+  tx.setGasOwner(sponsorAddress);
 
-	// 4) sign & execute on‐chain
-	await client.signAndExecuteTransaction({
-		transaction: tx,
-		signer: keypair,
-		requestType: "WaitForLocalExecution",
-	});
+  const presignedTxBytes = await tx.build({ client });
+  const { signature } = await keypair.signTransaction(presignedTxBytes);
 
-	// 5) persist new config in Prisma
-	await prisma.agent.update({
-		where: { id: agentId },
-		data: { config: newConfig as any },
-	});
+  return {
+    presignedTxBytes,
+    agentSignature: signature,
+    agentAddress,
+    adminCapId,
+    agentObjectId: agent.objectId,
+  };
+}
+
+// 2) call *after* on‐chain success to persist config JSON
+export async function persistAgentConfig(agentId: string, newConfig: AgentConfig) {
+  await prisma.agent.update({
+    where: { id: agentId },
+    data: { config: newConfig as any },
+  });
 }
