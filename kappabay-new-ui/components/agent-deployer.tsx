@@ -30,6 +30,11 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
 import { generateCharacter } from "@/lib/actions/generate-character";
 import { deployAgent } from "@/lib/deploy-agent";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
+import { serializeAgentConfig } from "@/lib/utils";
+import { updateAgentConfig, persistAgentConfig } from "@/lib/actions/update-agent-config";
+import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -155,6 +160,63 @@ export default function AgentDeployer({
 				variant: "destructive",
 			});
 			console.error(err);
+		} finally {
+			setIsDeploying(false);
+		}
+	};
+
+	// new: update just the config of an existing agent
+	const { mutateAsync: signTransaction } = useSignTransaction();
+	const suiClient = useSuiClient();
+
+	const handleUpdate = async () => {
+		if (!agentId || !account?.address) return toast({ title: "Missing parameters", variant: "destructive" });
+
+		setIsDeploying(true);
+		try {
+			// 1) ask backend to build & agent-sign the tx
+			const { presignedTxBytes, agentSignature, adminCapId, agentObjectId, agentAddress } = await updateAgentConfig(
+				agentId,
+				agentConfig,
+				account.address
+			);
+
+			// 2) replicate the exact same Move call locally to get the sponsor‐signature
+			const tx = new Transaction();
+			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
+				arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure(bcs.vector(bcs.u8()).serialize(raw))],
+			});
+			tx.setSender(agentAddress);
+			tx.setGasOwner(account.address);
+
+			const walletSigned = await signTransaction({ transaction: tx });
+
+			// 3) submit the sponsored tx with both signatures
+			const result = await suiClient.executeTransactionBlock({
+				transactionBlock: presignedTxBytes,
+				signature: [agentSignature, walletSigned.signature],
+				requestType: "WaitForLocalExecution",
+				options: {
+					showEffects: true,
+					showEvents: true,
+				},
+			});
+
+			if (result.effects?.status.status === "success") {
+				// 4) now persist the JSON in Prisma
+				await persistAgentConfig(agentId, agentConfig);
+				toast({ title: "Configuration updated" });
+			} else {
+				throw new Error("On-chain update failed: ", result.effects?.status?.error as any);
+			}
+		} catch (err: any) {
+			toast({
+				title: "Update Error",
+				description: err.message,
+				variant: "destructive",
+			});
 		} finally {
 			setIsDeploying(false);
 		}
@@ -767,7 +829,7 @@ export default function AgentDeployer({
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={handleDeploy} disabled={isDeploying}>
+				<Button size="lg" onClick={isConfiguring ? handleUpdate : handleDeploy} disabled={isDeploying}>
 					{isDeploying ? (
 						<>
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />

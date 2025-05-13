@@ -40,7 +40,7 @@ export default function Header() {
 							{ path: "/deploy", label: "Deploy" },
 							{ path: "/marketplace", label: "Marketplace" },
 							{ path: "/status", label: "My Agents" },
-							{ path: "/kappabay", label: "KappaBae" },
+							{ path: "/kappabae", label: "KappaBae" },
 						].map((item) => (
 							<motion.div key={item.path} whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
 								<Link
