@@ -64,7 +64,8 @@ export function TerminalContent() {
 			let exposedUrl: string | undefined;
 			try {
 				// hit ngrok’s local API on the port returned by getAgentInfo()
-				const res = await fetch(`http://localhost:${info.ngrokPort}/api/tunnels`);
+				// proxy through our own API route (same-origin)
+				const res = await fetch(`/api/ngrok-tunnels?port=${info.ngrokPort}`);
 				const xmlText = await res.text();
 				console.log("xmlText", xmlText);
 
