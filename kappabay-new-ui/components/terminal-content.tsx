@@ -67,17 +67,10 @@ export function TerminalContent() {
 				const res = await fetch(`/api/ngrok-tunnels?port=${info.ngrokPort}`);
 				if (res.ok) {
 					const xmlText = await res.text();
-					const parser = new DOMParser();
-					const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-					// each <Tunnels> node wraps one tunnel
-					const tunnelNodes = Array.from(xmlDoc.getElementsByTagName("Tunnels"));
-					for (const tNode of tunnelNodes) {
-						const addr = tNode.getElementsByTagName("Addr")[0]?.textContent;
-						if (addr === `http://localhost:${info.port}`) {
-							exposedUrl = tNode.getElementsByTagName("PublicURL")[0]?.textContent ?? undefined;
-							break;
-						}
-					}
+					const json = JSON.parse(xmlText);
+					console.log("json", json);
+
+					//apply code here
 				} else {
 					console.error(`ngrok proxy error ${res.status}`);
 				}
