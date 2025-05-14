@@ -63,7 +63,8 @@ export function TerminalContent() {
 			// try to discover the ngrok‐exposed URL for our local port
 			let exposedUrl: string | undefined;
 			try {
-				const res = await fetch("http://localhost:4040/api/tunnels");
+				// hit ngrok’s local API on the port returned by getAgentInfo()
+				const res = await fetch(`http://localhost:${info.ngrokPort}/api/tunnels`);
 				const xmlText = await res.text();
 				const parser = new DOMParser();
 				const xmlDoc = parser.parseFromString(xmlText, "application/xml");
@@ -80,11 +81,8 @@ export function TerminalContent() {
 			} catch (e) {
 				console.error("ngrok API failed", e);
 			}
-			// fall back to any ngrokUrl from the action, or to localhost directly
-			const _base =
-				exposedUrl ??
-				info.ngrokUrl ??
-				`http://localhost:${info.port}`;
+			// fall back to localhost if no tunnel found
+			const _base = exposedUrl ?? `http://localhost:${info.port}`;
 			setBaseUrl(_base);
 
 			try {
