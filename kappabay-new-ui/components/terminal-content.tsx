@@ -76,7 +76,7 @@ export function TerminalContent() {
 					};
 					for (const t of data.tunnels ?? []) {
 						// match the tunnel whose addr points at our local port
-						if (t.config?.addr === `http://localhost:${info.port}`) {
+						if (t.config?.addr === `http://localhost:3000`) {
 							exposedUrl = t.public_url;
 							break;
 						}
