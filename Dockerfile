@@ -63,11 +63,19 @@ RUN apt-get update && \
     apt-get install -y \
     git \
     python3 \
-    ffmpeg && \
+    ffmpeg \
+    procps \
+    unzip \
+    curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Install pnpm globally
 RUN npm install -g pnpm@9.15.4
+
+# Download ngrok
+RUN curl -sLo /tmp/ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz && \
+    tar -xzf /tmp/ngrok.tgz -C /usr/local/bin && \
+    rm /tmp/ngrok.tgz
 
 WORKDIR /app
 
@@ -105,7 +113,11 @@ WORKDIR /app/oracle
 
 RUN pnpm install && pnpm db:setup:dev
 
-# Expose agent, terminal and oracle ports
-EXPOSE 3000 7000 3030
+# Expose agent, ngrok, terminal and oracle ports
+EXPOSE 3000 4040 7000 3030
 
-CMD ["sh", "-c", "(cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json) & (cd /app/kappabay-terminal-next && exec pnpm start) & (cd /app/oracle && exec pnpm dev) && wait"]
+# Entrypoint: start services and ngrok
+ENV NGROK_AUTHTOKEN=""
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+ENTRYPOINT ["docker-entrypoint.sh"]

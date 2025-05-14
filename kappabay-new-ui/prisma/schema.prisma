@@ -36,7 +36,7 @@ model Agent {
   oraclePid         Int?      // Process ID of the running oracle
   dockerServiceId   String?   @unique // Docker service ID
   terminalPort      Int?      // Port the terminal is running on
-  ngrokUrl          String?   // ngrok URL
+  ngrokPort          Int?   // ngrok port
   latestBlobHash    String?   // Latest blob hash
   agentType         String?    // Custom or Kappabay agent
 }

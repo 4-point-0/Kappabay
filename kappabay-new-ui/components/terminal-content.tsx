@@ -60,7 +60,35 @@ export function TerminalContent() {
 		(async () => {
 			const info = await getAgentInfo(id);
 			if (!info?.port) return console.error("No port for agent", id);
-			const _base = info.ngrokUrl ?? `http://localhost:${info.port}`;
+			// try to discover the ngrok‐exposed URL for our local port
+			let exposedUrl: string | undefined;
+			try {
+				// fetch raw XML from our same-origin ngrok proxy
+				const res = await fetch(`/api/ngrok-tunnels?port=${info.ngrokPort}`);
+				if (res.ok) {
+					// we get back a JSON string with shape { tunnels: [...] }
+					const text = await res.text();
+					const data = JSON.parse(text) as {
+						tunnels?: Array<{
+							config?: { addr?: string };
+							public_url?: string;
+						}>;
+					};
+					for (const t of data.tunnels ?? []) {
+						// match the tunnel whose addr points at our local port
+						if (t.config?.addr === `http://localhost:3000`) {
+							exposedUrl = t.public_url;
+							break;
+						}
+					}
+				} else {
+					console.error(`ngrok proxy error ${res.status}`);
+				}
+			} catch (e) {
+				console.error("ngrok API failed", e);
+			}
+			// use the discovered tunnel or fall back to direct localhost
+			const _base = exposedUrl ?? `http://localhost:${info.port}`;
 			setBaseUrl(_base);
 
 			try {
@@ -136,6 +164,19 @@ export function TerminalContent() {
 						<Badge variant="outline" className="ml-4">
 							active
 						</Badge>
+						{baseUrl && (
+							<>
+								Public Api link:{" "}
+								<a
+									href={baseUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="ml-4 text-sm text-primary underline"
+								>
+									{baseUrl}
+								</a>
+							</>
+						)}
 					</div>
 
 					<Card className="flex-1 flex flex-col">
