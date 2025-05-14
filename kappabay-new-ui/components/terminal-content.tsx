@@ -66,13 +66,15 @@ export function TerminalContent() {
 				// hit ngrok’s local API on the port returned by getAgentInfo()
 				const res = await fetch(`http://localhost:${info.ngrokPort}/api/tunnels`);
 				const xmlText = await res.text();
+				console.log("xmlText", xmlText);
+
 				const parser = new DOMParser();
 				const xmlDoc = parser.parseFromString(xmlText, "application/xml");
 				// find all <Tunnels> entries
 				const tunnels = Array.from(xmlDoc.getElementsByTagName("Tunnels"));
 				for (const t of tunnels) {
 					const addrNode = t.getElementsByTagName("Addr")[0];
-					if (addrNode?.textContent === `http://localhost:${info.port}`) {
+					if (addrNode?.textContent === `http://localhost:3000`) {
 						const pub = t.getElementsByTagName("PublicURL")[0];
 						exposedUrl = pub?.textContent ?? undefined;
 						break;
