@@ -66,21 +66,6 @@ export function TerminalContent() {
 				// hit ngrok’s local API on the port returned by getAgentInfo()
 				// proxy through our own API route (same-origin)
 				const res = await fetch(`/api/ngrok-tunnels?port=${info.ngrokPort}`);
-				const xmlText = await res.text();
-				console.log("xmlText", xmlText);
-
-				const parser = new DOMParser();
-				const xmlDoc = parser.parseFromString(xmlText, "application/xml");
-				// find all <Tunnels> entries
-				const tunnels = Array.from(xmlDoc.getElementsByTagName("Tunnels"));
-				for (const t of tunnels) {
-					const addrNode = t.getElementsByTagName("Addr")[0];
-					if (addrNode?.textContent === `http://localhost:3000`) {
-						const pub = t.getElementsByTagName("PublicURL")[0];
-						exposedUrl = pub?.textContent ?? undefined;
-						break;
-					}
-				}
 			} catch (e) {
 				console.error("ngrok API failed", e);
 			}
