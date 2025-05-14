@@ -63,20 +63,23 @@ export function TerminalContent() {
 			// try to discover the ngrok‐exposed URL for our local port
 			let exposedUrl: string | undefined;
 			try {
-				// fetch JSON from our same-origin ngrok proxy
+				// fetch raw XML from our same-origin ngrok proxy
 				const res = await fetch(`/api/ngrok-tunnels?port=${info.ngrokPort}`);
-				if (!res.ok) throw new Error(`ngrok proxy error ${res.status}`);
-				const data = await res.json();
-				console.log("data", data);
-
-				// data.Tunnels should be an array of tunnel objects
-				const tunnels = Array.isArray(data.Tunnels) ? data.Tunnels : [];
-				for (const t of tunnels) {
-					// find the one pointing at our local port
-					if (t.Config?.Addr === `http://localhost:${info.port}`) {
-						exposedUrl = t.PublicURL;
-						break;
+				if (res.ok) {
+					const xmlText = await res.text();
+					const parser = new DOMParser();
+					const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+					// each <Tunnels> node wraps one tunnel
+					const tunnelNodes = Array.from(xmlDoc.getElementsByTagName("Tunnels"));
+					for (const tNode of tunnelNodes) {
+						const addr = tNode.getElementsByTagName("Addr")[0]?.textContent;
+						if (addr === `http://localhost:${info.port}`) {
+							exposedUrl = tNode.getElementsByTagName("PublicURL")[0]?.textContent ?? undefined;
+							break;
+						}
 					}
+				} else {
+					console.error(`ngrok proxy error ${res.status}`);
 				}
 			} catch (e) {
 				console.error("ngrok API failed", e);

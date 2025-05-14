@@ -8,9 +8,9 @@ export async function GET(request: Request) {
 	}
 	// server-side fetch to ngrok’s API (no CORS here)
 	const res = await fetch(`http://localhost:${port}/api/tunnels`);
-	const json = await res.json();
-
-	return new NextResponse(json, {
+	const text = await res.text();
+	return new NextResponse(text, {
 		status: res.status,
+		headers: { "Content-Type": "application/xml" },
 	});
 }
