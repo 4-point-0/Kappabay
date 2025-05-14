@@ -164,6 +164,16 @@ export function TerminalContent() {
 						<Badge variant="outline" className="ml-4">
 							active
 						</Badge>
+						{baseUrl && (
+							<a
+								href={baseUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="ml-4 text-sm text-primary underline"
+							>
+								AgentAPI Public Url
+							</a>
+						)}
 					</div>
 
 					<Card className="flex-1 flex flex-col">
