@@ -78,7 +78,7 @@ export function StatusContent({
 			if (agent.status === "ACTIVE") {
 				return setTimeout(() => {
 					setTerminalEnabledAgents((prev) => (prev.includes(agent.id) ? prev : [...prev, agent.id]));
-				}, 3000);
+				}, 5000);
 			} else {
 				setTerminalEnabledAgents((prev) => prev.filter((id) => id !== agent.id));
 				return null;

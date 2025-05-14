@@ -165,14 +165,17 @@ export function TerminalContent() {
 							active
 						</Badge>
 						{baseUrl && (
-							<a
-								href={baseUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="ml-4 text-sm text-primary underline"
-							>
-								AgentAPI Public Url
-							</a>
+							<>
+								Public Api link:{" "}
+								<a
+									href={baseUrl}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="ml-4 text-sm text-primary underline"
+								>
+									{baseUrl}
+								</a>
+							</>
 						)}
 					</div>
 
