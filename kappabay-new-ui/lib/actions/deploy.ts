@@ -133,9 +133,14 @@ async function buildAndStartAgentDocker(
 	hostPortAPI: number,
 	agentObjectId: string,
 	agentAdminCapId: string
-): Promise<{ port: number; portTerminal: number; serviceId: string }> {
+): Promise<{ port: number; portTerminal: number; serviceId: string; portNgrok: number }> {
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
+	const hostPortNgrok = await findAvailablePort(4040, 5000, "ngrokPort");
+	const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
+	if (!ngrokAuthToken) {
+		throw new Error("NGROK_AUTH_TOKEN environment variable not set.");
+	}
 
 	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
@@ -174,6 +179,8 @@ async function buildAndStartAgentDocker(
 		`--publish published=${hostPortAPI},target=3000 ` +
 		`--publish published=${hostPortTerminal},target=7000 ` +
 		`--publish published=${hostOraclePort},target=3015 ` +
+		`--publish published=${hostPortNgrok},target=4040 ` +
+		`--env NGROK_AUTHTOKEN=${ngrokAuthToken} ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
 		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
@@ -194,7 +201,7 @@ async function buildAndStartAgentDocker(
 	});
 	console.log("Service created.");
 
-	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
+	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId, portNgrok: hostPortNgrok };
 }
 
 // -----------------
@@ -255,7 +262,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 
 		// Build and start the agent container via Docker using Docker secrets and configs.
 		console.log("Awaiting docker deployment.");
-		const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(
+		const { port, portTerminal, serviceId, portNgrok } = await buildAndStartAgentDocker(
 			agentId,
 			agentWalletKey,
 			configName,
@@ -268,14 +275,14 @@ export async function Deploy(deploymentData: DeploymentData) {
 		);
 
 		// Expose the API port over the internet via ngrok
-		console.log(`Opening ngrok tunnel on localhost:${port}`);
-		const publicUrl = await ngrok.connect({
-			proto: "http",
-			addr: port,
-			authtoken: process.env.NGROK_AUTH_TOKEN!,
-			binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
-		});
-		console.log(`ngrok tunnel established: ${publicUrl}`);
+		// console.log(`Opening ngrok tunnel on localhost:${port}`);
+		// const publicUrl = await ngrok.connect({
+		// 	proto: "http",
+		// 	addr: port,
+		// 	authtoken: process.env.NGROK_AUTH_TOKEN!,
+		// 	binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
+		// });
+		// console.log(`ngrok tunnel established: ${publicUrl}`);
 
 		// Create the database record with the deployment information.
 		console.log("Writing to DB");
@@ -296,7 +303,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 				oraclePort: hostPortOracle, // For now
 				hasOracle: hostPortOracle >= 5001,
 				terminalPort: portTerminal,
-				ngrokUrl: publicUrl,
+				ngrokPort: portNgrok,
 				agentType: deploymentData.agentType,
 			},
 		});
@@ -309,7 +316,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId: agent.id,
 			agentWallet: agentWalletAddress,
 			port,
-			publicUrl,
+			portNgrok,
 			agentUrl,
 			oracle: {
 				success: true,

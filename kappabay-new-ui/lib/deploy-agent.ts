@@ -72,6 +72,7 @@ export async function deployAgent(
 	if (!deployResult.success) {
 		return { success: false, error: deployResult.error };
 	}
+	console.log("deployResult", deployResult);
 
 	// 6) transfer AdminCap to final wallet
 	if (deployResult.agentWallet) {

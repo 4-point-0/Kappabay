@@ -27,7 +27,7 @@ type AgentRecord = {
 	latestBlobHash: string;
 	port: number;
 	terminalPort: number;
-	ngrokUrl?: string;
+	ngrokPort: number;
 };
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
@@ -38,7 +38,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 			dockerServiceId: true,
 			latestBlobHash: true,
 			port: true,
-			ngrokUrl: true,
+			ngrokPort: true,
 			terminalPort: true,
 		},
 	});
@@ -49,11 +49,11 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 
 	return {
 		id: agent.id,
-		dockerServiceId: agent.dockerServiceId ?? "",
+		dockerServiceId: agent.dockerServiceId!,
 		latestBlobHash: agent.latestBlobHash ?? "",
 		port: agent.port!,
 		terminalPort: agent.terminalPort!,
-		ngrokUrl: agent.ngrokUrl ?? undefined,
+		ngrokPort: agent.ngrokPort!,
 	};
 }
 
@@ -126,20 +126,6 @@ export async function stopService(agentId: string, message: string, signature: s
 			where: { id: agentId },
 			data: { status: "INACTIVE" },
 		});
-
-		// close any existing ngrok tunnel and clear it
-		if (agent.ngrokUrl) {
-			try {
-				await ngrok.disconnect(agent.ngrokUrl);
-				console.log(`ngrok tunnel closed: ${agent.ngrokUrl}`);
-				await prisma.agent.update({
-					where: { id: agentId },
-					data: { ngrokUrl: null },
-				});
-			} catch (err) {
-				console.warn(`ngrok disconnect failed for ${agentId}:`, err);
-			}
-		}
 	} catch (error) {
 		console.error(`Failed to stop service for agent id ${agentId}:`, error);
 		throw error;
@@ -196,58 +182,9 @@ export async function startService(
 		const trimmedContainerId = containerId.trim();
 
 		if (fs.existsSync(localDbPath)) {
-			// Check if PID 105 exists and is running using /proc/105/comm - agent framework
-			let pidExists = false;
-			const maxAttempts = 10;
-			const checkInterval = 1000; // 1 second between checks
-
-			for (let attempt = 0; attempt < maxAttempts; attempt++) {
-				try {
-					// Check if process exists using /proc
-					const { stdout: comm } = await execAsync(`docker exec ${trimmedContainerId} cat /proc/105/comm`);
-					if (comm.trim().length > 0) {
-						pidExists = true;
-						console.log(`Process with PID 105 found in container ${trimmedContainerId} (command: ${comm.trim()})`);
-						break;
-					}
-				} catch (error) {
-					// Ignore errors as they likely mean the process doesn't exist
-				}
-
-				if (attempt < maxAttempts - 1) {
-					console.log(`Waiting for process with PID 105 to start (attempt ${attempt + 1}/${maxAttempts})`);
-					await new Promise((resolve) => setTimeout(resolve, checkInterval));
-				}
-			}
-
-			if (pidExists) {
-				// Stop the running process with PID 105 in the container
-				try {
-					await execAsync(`docker exec ${trimmedContainerId} sh -c "kill -15 105"`);
-					console.log(`Sent SIGTERM to process with PID 105 in container ${trimmedContainerId}`);
-
-					// Wait for process to exit by checking /proc/105/comm
-					for (let attempt = 0; attempt < maxAttempts; attempt++) {
-						try {
-							const { stdout: comm } = await execAsync(`docker exec ${trimmedContainerId} cat /proc/105/comm`);
-							if (!comm.trim().includes("No such file or directory")) {
-								console.log(`Process with PID 105 still running, waiting... (attempt ${attempt + 1}/${maxAttempts})`);
-								await new Promise((resolve) => setTimeout(resolve, checkInterval));
-							} else {
-								console.log(`Process with PID 105 has stopped`);
-								break;
-							}
-						} catch (error) {
-							console.log(`Process with PID 105 has stopped`);
-							break;
-						}
-					}
-				} catch (error) {
-					console.warn(`Failed to stop process with PID 105:`, error);
-				}
-			} else {
-				console.warn(`Process with PID 105 not found in container ${trimmedContainerId}, proceeding without stopping`);
-			}
+			const { stdout } = await execAsync(
+				`docker exec ${trimmedContainerId} pkill -f "node --loader ts-node/esm src/index.ts"`
+			);
 
 			// Remove any existing DB file in the container
 			const removeCommand = `docker exec ${trimmedContainerId} rm -f ${containerDbPath}`;
@@ -279,24 +216,6 @@ export async function startService(
 			where: { id: agentId },
 			data: { status: "ACTIVE" },
 		});
-		console.log("agent.terminalPort", agent.terminalPort);
-
-		// re-open ngrok on the same port
-		try {
-			const publicUrl = await ngrok.connect({
-				proto: "http",
-				addr: agent.port,
-				authtoken: process.env.NGROK_AUTH_TOKEN!,
-				binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
-			});
-			console.log(`ngrok re-established: ${publicUrl}`);
-			await prisma.agent.update({
-				where: { id: agentId },
-				data: { ngrokUrl: publicUrl },
-			});
-		} catch (err) {
-			console.warn(`ngrok reconnect failed for ${agentId}:`, err);
-		}
 	} catch (error) {
 		console.error(`Failed to start service for agent id ${agentId}:`, error);
 		throw error;
