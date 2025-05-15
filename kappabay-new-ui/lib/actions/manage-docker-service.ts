@@ -27,7 +27,7 @@ type AgentRecord = {
 	latestBlobHash: string;
 	port: number;
 	terminalPort: number;
-	ngrokPort: number;
+	publicAgentUrl: string;
 };
 
 async function getAgent(agentId: string): Promise<AgentRecord> {
@@ -38,7 +38,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 			dockerServiceId: true,
 			latestBlobHash: true,
 			port: true,
-			ngrokPort: true,
+			publicAgentUrl: true,
 			terminalPort: true,
 		},
 	});
@@ -53,7 +53,7 @@ async function getAgent(agentId: string): Promise<AgentRecord> {
 		latestBlobHash: agent.latestBlobHash ?? "",
 		port: agent.port!,
 		terminalPort: agent.terminalPort!,
-		ngrokPort: agent.ngrokPort!,
+		publicAgentUrl: agent.publicAgentUrl!,
 	};
 }
 
@@ -124,7 +124,7 @@ export async function stopService(agentId: string, message: string, signature: s
 		// Update agent status to INACTIVE in the Prisma DB.
 		await prisma.agent.update({
 			where: { id: agentId },
-			data: { status: "INACTIVE" },
+			data: { status: "INACTIVE", publicAgentUrl: null },
 		});
 	} catch (error) {
 		console.error(`Failed to stop service for agent id ${agentId}:`, error);
@@ -203,6 +203,23 @@ export async function startService(
 		} else {
 			console.warn(`Local DB file ${localDbPath} not found. Skipping DB import.`);
 		}
+		await new Promise((r) => setTimeout(r, 5_000));
+		// fetch the service logs and extract the Cloudflare URL
+		const cloudflareUrl = await new Promise<string>((resolve, reject) => {
+			exec(`docker service logs agent-${agentId}`, (error, stdout, stderr) => {
+				if (error) {
+					return reject(error);
+				}
+
+				const m = stdout.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
+
+				if (m) {
+					resolve(m[0]);
+				} else {
+					reject(new Error("Cloudflare URL not found in service logs"));
+				}
+			});
+		});
 
 		if (stderr) {
 			console.error(`Error starting service ${agent.dockerServiceId}:`, stderr);
@@ -214,7 +231,7 @@ export async function startService(
 		// Update agent status to ACTIVE in the Prisma DB.
 		await prisma.agent.update({
 			where: { id: agentId },
-			data: { status: "ACTIVE" },
+			data: { status: "ACTIVE", publicAgentUrl: cloudflareUrl },
 		});
 	} catch (error) {
 		console.error(`Failed to start service for agent id ${agentId}:`, error);

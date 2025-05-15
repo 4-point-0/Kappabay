@@ -72,10 +72,10 @@ RUN apt-get update && \
 # Install pnpm globally
 RUN npm install -g pnpm@9.15.4
 
-# Download ngrok
-RUN curl -sLo /tmp/ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz && \
-    tar -xzf /tmp/ngrok.tgz -C /usr/local/bin && \
-    rm /tmp/ngrok.tgz
+# Install cloudflared for Cloudflare Quick Tunnels
+RUN curl -L -o /usr/local/bin/cloudflared \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+    && chmod +x /usr/local/bin/cloudflared
 
 WORKDIR /app
 
@@ -116,8 +116,7 @@ RUN pnpm install && pnpm db:setup:dev
 # Expose agent, ngrok, terminal and oracle ports
 EXPOSE 3000 4040 7000 3030
 
-# Entrypoint: start services and ngrok
-ENV NGROK_AUTHTOKEN=""
+# Entrypoint: start services and Cloudflare Tunnel
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]

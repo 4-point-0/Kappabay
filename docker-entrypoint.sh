@@ -1,31 +1,23 @@
 #!/usr/bin/env bash
 set -e
 
-# Create ngrok config directory if it doesn't exist
-mkdir -p /root/.config/ngrok
+# Start a Cloudflare Quick Tunnel and log to a file
+echo "🚀 launching Cloudflare Tunnel to http://localhost:3000"
+cloudflared tunnel --loglevel debug --logfile /tmp/cloudflared.log --url http://localhost:3000 &
 
-# Write ngrok config file (sets web interface to 0.0.0.0:4040)
-cat > /root/.config/ngrok/ngrok.yml <<EOF
-version: "2"
-authtoken: $NGROK_AUTHTOKEN
-web_addr: 0.0.0.0:4040
-tunnels:
-  app:
-    addr: 3000
-    proto: http
-EOF
+# Start cloudflared log watcher
+tail -F /tmp/cloudflared.log &
+TAIL_PID=$!
 
-# Start ngrok if authtoken is provided
-if [ -n "$NGROK_AUTHTOKEN" ]; then
-  ngrok start --config /root/.config/ngrok/ngrok.yml --log=stdout --all &
-else
-  echo "Warning: NGROK_AUTHTOKEN not provided, skipping ngrok startup"
-fi
+# Start services (foreground one of them so its logs go to container output)
+(cd /app/eliza-kappabay-agent && pnpm start --characters=characters/agent.json) &
+AGENT_PID=$!
 
-# Start services in background
-(cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json) &
-(cd /app/kappabay-terminal-next && exec pnpm start) &
-(cd /app/oracle && exec pnpm dev) &
+(cd /app/kappabay-terminal-next && pnpm start) &
+TERMINAL_PID=$!
 
-# Wait on all
-wait
+(cd /app/oracle && pnpm dev) &
+ORACLE_PID=$!
+
+# Wait for all
+wait $AGENT_PID $TERMINAL_PID $ORACLE_PID $TAIL_PID
