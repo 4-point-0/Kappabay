@@ -134,15 +134,13 @@ async function buildAndStartAgentDocker(
 	agentObjectId: string,
 	agentAdminCapId: string
 ): Promise<{
-	port: number
-	portTerminal: number
-	serviceId: string
-	portNgrok: number
-	cloudflareUrl: string
+	port: number;
+	portTerminal: number;
+	serviceId: string;
+	cloudflareUrl: string;
 }> {
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
-	const hostPortNgrok = await findAvailablePort(4040, 5000, "ngrokPort");
 
 	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
@@ -201,7 +199,7 @@ async function buildAndStartAgentDocker(
 	});
 	console.log("Service created.");
 	// Optional delay to give the service time to initialize (adjust if needed)
-	await new Promise((r) => setTimeout(r, 10_000));
+	await new Promise((r) => setTimeout(r, 5_000));
 
 	// fetch the service logs and extract the Cloudflare URL
 	const cloudflareUrl = await new Promise<string>((resolve, reject) => {
@@ -222,7 +220,6 @@ async function buildAndStartAgentDocker(
 		port: hostPortAPI,
 		portTerminal: hostPortTerminal,
 		serviceId,
-		portNgrok: hostPortNgrok,
 		cloudflareUrl,
 	};
 }
@@ -258,7 +255,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 		// Create Oracle .env content
 		const oracleEnvContent = `BASE_URL='http://localhost:${hostPortAPI}'
       INITIAL_TRANSACTION_DIGEST='${deploymentData.onChainData.txDigest}'
-      PACKAGE_ID='0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d'
+      PACKAGE_ID='${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}'
       NETWORK='testnet'
       AGENT_ID='${agentId}'
       PRIVATE_SEED='${agentWalletKey}'
@@ -272,8 +269,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 			`oracle_env_secret_${agentId}`
 		);
 
-		const terminalEnvContent = `ENOKI_API_KEY=enoki_public_c23791490124930fcfb553615237ecc5
-      GOOGLE_CLIENT_ID=800626683888-hi6a3moj65nlqlsfqqrdtkvjujuo7f8f.apps.googleusercontent.com
+		const terminalEnvContent = `ENOKI_API_KEY=${process.env.NEXT_PUBLIC_ENOKI_API_KEY}
+      GOOGLE_CLIENT_ID=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
       AGENT_API=http://localhost:${hostPortAPI}
     `;
 
@@ -285,7 +282,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 
 		// Build and start the agent container via Docker using Docker secrets and configs.
 		console.log("Awaiting docker deployment.");
-		const { port, portTerminal, serviceId, portNgrok } = await buildAndStartAgentDocker(
+		const { port, portTerminal, serviceId, cloudflareUrl } = await buildAndStartAgentDocker(
 			agentId,
 			agentWalletKey,
 			configName,
@@ -296,16 +293,6 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentObjectId,
 			agentAdminCapId
 		);
-
-		// Expose the API port over the internet via ngrok
-		// console.log(`Opening ngrok tunnel on localhost:${port}`);
-		// const publicUrl = await ngrok.connect({
-		// 	proto: "http",
-		// 	addr: port,
-		// 	authtoken: process.env.NGROK_AUTH_TOKEN!,
-		// 	binPath: () => ngrokAbsolutePath, // Adjust the path to the ngrok binary
-		// });
-		// console.log(`ngrok tunnel established: ${publicUrl}`);
 
 		// Create the database record with the deployment information.
 		console.log("Writing to DB");
@@ -326,7 +313,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 				oraclePort: hostPortOracle, // For now
 				hasOracle: hostPortOracle >= 5001,
 				terminalPort: portTerminal,
-				ngrokPort: portNgrok,
+				publicAgentUrl: cloudflareUrl,
 				agentType: deploymentData.agentType,
 			},
 		});
@@ -339,7 +326,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId: agent.id,
 			agentWallet: agentWalletAddress,
 			port,
-			portNgrok,
+			publicAgentUrl: cloudflareUrl,
 			agentUrl,
 			oracle: {
 				success: true,

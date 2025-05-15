@@ -74,7 +74,7 @@ RUN npm install -g pnpm@9.15.4
 
 # Install cloudflared for Cloudflare Quick Tunnels
 RUN curl -L -o /usr/local/bin/cloudflared \
-      https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+    https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
     && chmod +x /usr/local/bin/cloudflared
 
 WORKDIR /app
