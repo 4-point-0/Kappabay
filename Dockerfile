@@ -72,10 +72,10 @@ RUN apt-get update && \
 # Install pnpm globally
 RUN npm install -g pnpm@9.15.4
 
-# Download ngrok
-RUN curl -sLo /tmp/ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz && \
-    tar -xzf /tmp/ngrok.tgz -C /usr/local/bin && \
-    rm /tmp/ngrok.tgz
+# Install cloudflared for Cloudflare Quick Tunnels
+RUN curl -L -o /usr/local/bin/cloudflared \
+      https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 \
+    && chmod +x /usr/local/bin/cloudflared
 
 WORKDIR /app
 
