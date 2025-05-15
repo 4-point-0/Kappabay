@@ -1,7 +1,7 @@
 "use server";
 
 import { exec } from "child_process";
-import fs from "fs/promises";
+import fs, { writeFile } from "fs/promises";
 import path from "path";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
@@ -137,10 +137,6 @@ async function buildAndStartAgentDocker(
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 	const hostPortNgrok = await findAvailablePort(4040, 5000, "ngrokPort");
-	const ngrokAuthToken = process.env.NGROK_AUTH_TOKEN;
-	if (!ngrokAuthToken) {
-		throw new Error("NGROK_AUTH_TOKEN environment variable not set.");
-	}
 
 	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
@@ -169,18 +165,16 @@ async function buildAndStartAgentDocker(
 	});
 	await fs.unlink(secretFilePath); // Remove temporary file
 	console.log("Created secret, deleted temp file.");
-
+	const serviceName = `agent-${agentId}`;
 	// ----- Create the Docker service with port mappings, secrets, and config -----
 	// The Docker config will be mounted at /characters/agent.json,
 	// and the Docker secret will be available at /run/secrets/WALLET_KEY.
 	console.log("Creating service command:");
 	const serviceCreateCmd =
-		`docker service create --name agent-${agentId} ` +
+		`docker service create --name ${serviceName} ` +
 		`--publish published=${hostPortAPI},target=3000 ` +
 		`--publish published=${hostPortTerminal},target=7000 ` +
 		`--publish published=${hostOraclePort},target=3015 ` +
-		`--publish published=${hostPortNgrok},target=4040 ` +
-		`--env NGROK_AUTHTOKEN=${ngrokAuthToken} ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
 		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
@@ -200,6 +194,24 @@ async function buildAndStartAgentDocker(
 		});
 	});
 	console.log("Service created.");
+	// Optional delay to give the service time to initialize (adjust if needed)
+	await new Promise((r) => setTimeout(r, 10_000));
+
+	console.log("Fetching service logs...");
+	exec(`docker service logs ${serviceName}`, async (error, stdout, stderr) => {
+		if (error) {
+			console.error("Error fetching service logs:", stderr);
+			return;
+		}
+
+		const logFilePath = path.join(`logs-${serviceName}.txt`);
+		try {
+			await writeFile(logFilePath, stdout, "utf8");
+			console.log(`Logs saved to ${logFilePath}`);
+		} catch (writeError) {
+			console.error("Failed to write log file:", writeError);
+		}
+	});
 
 	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId, portNgrok: hostPortNgrok };
 }
