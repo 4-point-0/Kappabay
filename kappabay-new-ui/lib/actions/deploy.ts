@@ -133,7 +133,13 @@ async function buildAndStartAgentDocker(
 	hostPortAPI: number,
 	agentObjectId: string,
 	agentAdminCapId: string
-): Promise<{ port: number; portTerminal: number; serviceId: string; portNgrok: number }> {
+): Promise<{
+	port: number
+	portTerminal: number
+	serviceId: string
+	portNgrok: number
+	cloudflareUrl: string
+}> {
 	// Assign available host ports for the container mappings.
 	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 	const hostPortNgrok = await findAvailablePort(4040, 5000, "ngrokPort");
@@ -197,23 +203,28 @@ async function buildAndStartAgentDocker(
 	// Optional delay to give the service time to initialize (adjust if needed)
 	await new Promise((r) => setTimeout(r, 10_000));
 
-	console.log("Fetching service logs...");
-	exec(`docker service logs ${serviceName}`, async (error, stdout, stderr) => {
-		if (error) {
-			console.error("Error fetching service logs:", stderr);
-			return;
-		}
-
-		const logFilePath = path.join(`logs-${serviceName}.txt`);
-		try {
-			await writeFile(logFilePath, stdout, "utf8");
-			console.log(`Logs saved to ${logFilePath}`);
-		} catch (writeError) {
-			console.error("Failed to write log file:", writeError);
-		}
+	// fetch the service logs and extract the Cloudflare URL
+	const cloudflareUrl = await new Promise<string>((resolve, reject) => {
+		exec(`docker service logs ${serviceName}`, (error, stdout, stderr) => {
+			if (error) {
+				return reject(error);
+			}
+			const m = stdout.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
+			if (m) {
+				resolve(m[0]);
+			} else {
+				reject(new Error("Cloudflare URL not found in service logs"));
+			}
+		});
 	});
 
-	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId, portNgrok: hostPortNgrok };
+	return {
+		port: hostPortAPI,
+		portTerminal: hostPortTerminal,
+		serviceId,
+		portNgrok: hostPortNgrok,
+		cloudflareUrl,
+	};
 }
 
 // -----------------
