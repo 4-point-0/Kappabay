@@ -7,7 +7,6 @@ module nft_template::agent_marketplace {
     use sui::package::Publisher;
     use sui::transfer_policy::{Self, TransferPolicy};
     use std::string::String;
-    // Remove duplicate alias: use std::vector;
     use nft_template::agent::{Self, Agent, AgentCap, AdminCap};
     use nft_template::agent_royalty;
 
@@ -224,7 +223,7 @@ module nft_template::agent_marketplace {
         // Get listing info and price
         let listing_info = table::borrow(&marketplace.listings, agent_cap_id);
         let price = listing_info.price;
-        let seller = listing_info.seller; // Save this for later
+        let seller = listing_info.seller;
         
         // Verify this is the correct kiosk
         assert!(object::id(kiosk) == listing_info.kiosk_id, EInvalidKiosk);
@@ -243,10 +242,10 @@ module nft_template::agent_marketplace {
         
         // Purchase using the PurchaseCap
         // The payment will go to the seller's kiosk
-        let (agent_cap, mut request) = kiosk::purchase_with_cap<AgentCap>( // Add mut here
+        let (agent_cap, mut request) = kiosk::purchase_with_cap<AgentCap>(
             kiosk,
             purchase_cap,
-            payment // This is now just the seller portion
+            payment
         );
         
         // Pay royalty to the policy
