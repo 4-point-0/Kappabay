@@ -116,8 +116,7 @@ RUN pnpm install && pnpm db:setup:dev
 # Expose agent, ngrok, terminal and oracle ports
 EXPOSE 3000 4040 7000 3030
 
-# Entrypoint: start services and ngrok
-ENV NGROK_AUTHTOKEN=""
+# Entrypoint: start services and Cloudflare Tunnel
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
