@@ -23,6 +23,8 @@ const PORTAINER_API_KEY = process.env.PORTAINER_API_KEY!;
 const PORTAINER_ENDPOINT_ID = process.env.PORTAINER_ENDPOINT_ID!; // e.g., '1'
 
 async function portainerFetch(path: string, options: any = {}) {
+	console.log("path", path);
+
 	const response = await axios({
 		method: options.method || "GET",
 		url: `${PORTAINER_URL}${path}`,
