@@ -112,8 +112,18 @@ async function createTarArchive(sourcePath: string, targetDir: string): Promise<
 		// Get the directory where the source file is located
 		const sourceDir = path.dirname(sourcePath);
 
-		// Run tar command to create the archive
-		await exec(`tar -cvf "${tarPath}" -C "${sourceDir}" "${baseFilename}"`);
+		// Create a temporary directory and copy the file with the desired name
+		const tempDir = await fs.promises.mkdtemp(path.join(process.cwd(), "tar-"));
+		const tempFilePath = path.join(tempDir, "db.sqlite");
+
+		// Copy the source file to the temporary location with the new name
+		await fs.promises.copyFile(sourcePath, tempFilePath);
+
+		// Run tar command to create the archive from the temporary file
+		await exec(`tar -cvf "${tarPath}" -C "${tempDir}" "db.sqlite"`);
+
+		// Clean up the temporary directory
+		await fs.promises.rm(tempDir, { recursive: true, force: true });
 
 		// Verify the tar file was created
 		if (!fs.existsSync(tarPath)) {
