@@ -11,6 +11,7 @@ import { prisma } from "../db";
 import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
 import { Agent } from "https";
+import axios from "axios";
 
 const exec = util.promisify(require("child_process").exec);
 const DB_CACHE_DIR = path.join(process.cwd(), "db-cache");
@@ -21,43 +22,45 @@ const PORTAINER_URL = process.env.PORTAINER_URL!; // e.g., http://localhost:9000
 const PORTAINER_API_KEY = process.env.PORTAINER_API_KEY!;
 const PORTAINER_ENDPOINT_ID = process.env.PORTAINER_ENDPOINT_ID!; // e.g., '1'
 
-async function portainerFetch(path: string, options: RequestInit = {}) {
-	const res = await fetch(`${PORTAINER_URL}${path}`, {
-		...options,
-		// @ts-ignore: agent is not in RequestInit but works with Node.js fetch
-		agent: new Agent({ rejectUnauthorized: false }),
+async function portainerFetch(path: string, options: any = {}) {
+	const response = await axios({
+		method: options.method || "GET",
+		url: `${PORTAINER_URL}${path}`,
 		headers: {
 			"X-API-Key": PORTAINER_API_KEY,
 			...(options.headers || {}),
 		},
+		httpsAgent: new Agent({ rejectUnauthorized: false }), // Bypass self-signed certificate
+		...options,
 	});
-	if (!res.ok) {
-		const text = await res.text();
-		throw new Error(`Portainer API error (${res.status}): ${text}`);
+
+	if (response.status < 200 || response.status >= 300) {
+		throw new Error(`Portainer API error (${response.status}): ${response.data}`);
 	}
-	return res;
+
+	return response;
 }
 
 async function getContainerId(name: string): Promise<string> {
-	const res = await portainerFetch(`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/json?all=1`);
-	const containers = await res.json();
+	const response = await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/json?all=1`);
+	const containers = response.data;
 	const match = containers.find((c: any) => c.Names?.some((n: string) => n.includes(name)));
 	if (!match) throw new Error(`Container with name ${name} not found.`);
 	return match.Id;
 }
 
 async function downloadDbFromContainer(containerId: string, containerPath: string, localPath: string) {
-	const res = await portainerFetch(
-		`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+	const response = await portainerFetch(
+		`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
 			containerPath
-		)}`
+		)}`,
+		{ responseType: "stream" } // Enable streaming for binary data
 	);
 
-	if (!res.body) throw new Error("No response body from Portainer");
+	if (!response.data) throw new Error("No response body from Portainer");
 
-	const fileStream = fs.createWriteStream(localPath + ".tar");
-
-	await streamPipeline(res.body as any, fileStream);
+	const fileStream = fs.createWriteStream(`${localPath}.tar`);
+	await pipeline(response.data, fileStream);
 }
 
 async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
