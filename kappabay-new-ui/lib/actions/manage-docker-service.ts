@@ -278,9 +278,30 @@ export async function startService(agentId: string, message: string, signature: 
 			// Wait a moment before executing the command
 			await new Promise((r) => setTimeout(r, 2000));
 
-			await exec(
-				`docker exec -d ${containerId} sh -c "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"`
+			// run the agent start command inside the container via Portainer API,
+			// so it’s scheduled on the correct swarm node:
+			const execConfig = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"],
+				Tty: false,
+			};
+			// 1) create an Exec instance
+			const createRes = await portainerFetch(
+				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					data: execConfig,
+				}
 			);
+			const execId = createRes.data.Id;
+			// 2) start it detached
+			await portainerFetch(`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${execId}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
 		}
 
 		await new Promise((r) => setTimeout(r, 5000));
