@@ -22,25 +22,33 @@ const PORTAINER_URL = process.env.PORTAINER_URL!; // e.g., http://localhost:9000
 const PORTAINER_API_KEY = process.env.PORTAINER_API_KEY!;
 const PORTAINER_ENDPOINT_ID = process.env.PORTAINER_ENDPOINT_ID!; // e.g., '1'
 
+// Ensure DB_CACHE_DIR exists
+if (!fs.existsSync(DB_CACHE_DIR)) {
+	fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
+}
+
 async function portainerFetch(path: string, options: any = {}) {
 	console.log("path", path);
 
-	const response = await axios({
-		method: options.method || "GET",
-		url: `${PORTAINER_URL}${path}`,
-		headers: {
-			"X-API-Key": PORTAINER_API_KEY,
-			...(options.headers || {}),
-		},
-		httpsAgent: new Agent({ rejectUnauthorized: false }), // Bypass self-signed certificate
-		...options,
-	});
+	try {
+		const response = await axios({
+			method: options.method || "GET",
+			url: `${PORTAINER_URL}${path}`,
+			headers: {
+				"X-API-Key": PORTAINER_API_KEY,
+				...(options.headers || {}),
+			},
+			httpsAgent: new Agent({ rejectUnauthorized: false }), // Bypass self-signed certificate
+			...options,
+		});
 
-	if (response.status < 200 || response.status >= 300) {
-		throw new Error(`Portainer API error (${response.status}): ${response.data}`);
+		return response;
+	} catch (error: any) {
+		console.error(`Portainer API error: ${error.message}`);
+		console.error(`Status: ${error.response?.status}`);
+		console.error(`Response data:`, error.response?.data);
+		throw error;
 	}
-
-	return response;
 }
 
 async function getContainerId(name: string): Promise<string> {
@@ -50,9 +58,9 @@ async function getContainerId(name: string): Promise<string> {
 
 	const match = containers.find((c: any) => {
 		console.log("c.Names", c.Names);
-
 		return c.Names?.some((n: string) => n.includes(name));
 	});
+
 	if (!match) throw new Error(`Container with name ${name} not found.`);
 	return match.Id;
 }
@@ -67,26 +75,64 @@ async function downloadDbFromContainer(containerId: string, containerPath: strin
 
 	if (!response.data) throw new Error("No response body from Portainer");
 
-	const fileStream = fs.createWriteStream(`${localPath}`);
+	const fileStream = fs.createWriteStream(localPath);
 	await streamPipeline(response.data, fileStream);
 }
 
-async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
-	const tarPath = localPath;
-	// Assumes you created a tar archive containing the file at the right containerPath
-	const form = new FormData();
-	form.append("file", fs.createReadStream(tarPath));
+async function createTarArchive(sourcePath: string, targetDir: string): Promise<string> {
+	const tarFilename = `${path.basename(sourcePath)}.tar`;
+	const tarPath = path.join(targetDir, tarFilename);
 
-	await portainerFetch(
-		`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
-			containerPath
-		)}`,
-		{
-			method: "PUT",
-			data: form as any,
-			headers: form.getHeaders(),
+	// Create a tar file with the SQLite DB
+	await exec(`tar -cf ${tarPath} -C ${path.dirname(sourcePath)} ${path.basename(sourcePath)}`);
+
+	return tarPath;
+}
+
+async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
+	try {
+		// Create a temporary directory for the tar file
+		const tmpDir = path.join(DB_CACHE_DIR, "tmp");
+		if (!fs.existsSync(tmpDir)) {
+			fs.mkdirSync(tmpDir, { recursive: true });
 		}
-	);
+
+		// Create tar archive of the SQLite file
+		const tarPath = await createTarArchive(localPath, tmpDir);
+		console.log(`Created tar archive at ${tarPath}`);
+
+		const form = new FormData();
+		form.append("file", fs.createReadStream(tarPath));
+
+		// Extract the directory part of the containerPath
+		const containerDir = path.dirname(containerPath);
+
+		const response = await portainerFetch(
+			`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+				containerDir
+			)}`,
+			{
+				method: "PUT",
+				data: form,
+				headers: {
+					...form.getHeaders(),
+					"Content-Type": "multipart/form-data",
+				},
+				maxContentLength: Infinity,
+				maxBodyLength: Infinity,
+			}
+		);
+
+		console.log("Upload response status:", response.status);
+
+		// Clean up the tar file
+		fs.unlinkSync(tarPath);
+
+		return response;
+	} catch (error: any) {
+		console.error("Error uploading to container:", error.message);
+		throw error;
+	}
 }
 
 async function getAgent(agentId: string) {
@@ -141,6 +187,11 @@ export async function startService(agentId: string, message: string, signature: 
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 		console.log("localDbPath", localDbPath);
 
+		// Create DB_CACHE_DIR if it doesn't exist
+		if (!fs.existsSync(DB_CACHE_DIR)) {
+			fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
+		}
+
 		if (!fs.existsSync(localDbPath) && agent.latestBlobHash) {
 			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
 			fs.writeFileSync(localDbPath, fileBuffer);
@@ -151,12 +202,18 @@ export async function startService(agentId: string, message: string, signature: 
 			where: { id: agentId },
 			data: { status: "ACTIVE" },
 		});
-		await new Promise((r) => setTimeout(r, 2000));
+
+		// Wait for container to start
+		await new Promise((r) => setTimeout(r, 5000));
 
 		const containerId = await getContainerId(containerName);
 
 		if (fs.existsSync(localDbPath)) {
 			await uploadDbToContainer(containerId, containerDbPath, localDbPath);
+
+			// Wait a moment before executing the command
+			await new Promise((r) => setTimeout(r, 2000));
+
 			await exec(
 				`docker exec -d ${containerId} sh -c "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"`
 			);
