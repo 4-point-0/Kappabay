@@ -77,7 +77,7 @@ async function uploadDbToContainer(containerId: string, containerPath: string, l
 
 	await portainerFetch(
 		`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
-			containerPath.replace(/\/[^/]+$/, "")
+			containerPath
 		)}`,
 		{
 			method: "PUT",
@@ -104,68 +104,72 @@ async function getAgent(agentId: string) {
 }
 
 export async function stopService(agentId: string, message: string, signature: string, address: string) {
-  try {
-    await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
-    const agent = await getAgent(agentId);
+	try {
+		await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
+		const agent = await getAgent(agentId);
 
-    const containerName = `agent-${agent.id}`;
-    const containerId = await getContainerId(containerName);
-    const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
-    const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
+		const containerName = `agent-${agent.id}`;
+		const containerId = await getContainerId(containerName);
+		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
+		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-    await downloadDbFromContainer(containerId, containerDbPath, localDbPath);
+		await downloadDbFromContainer(containerId, containerDbPath, localDbPath);
 
-    if (fs.existsSync(localDbPath)) {
-      const fileBuffer = fs.readFileSync(localDbPath);
-      const blobHash = await uploadBlob(fileBuffer);
-      await prisma.agent.update({ where: { id: agentId }, data: { latestBlobHash: blobHash } });
-    }
+		if (fs.existsSync(localDbPath)) {
+			const fileBuffer = fs.readFileSync(localDbPath);
+			const blobHash = await uploadBlob(fileBuffer);
+			await prisma.agent.update({ where: { id: agentId }, data: { latestBlobHash: blobHash } });
+		}
 
-    await exec(`docker service update --replicas 0 ${agent.dockerServiceId}`);
-    await prisma.agent.update({ where: { id: agentId }, data: { status: "INACTIVE", publicAgentUrl: null } });
-  } catch (error) {
-    console.error(`🚨 stopService failed for agent ${agentId}:`, error);
-    throw error;
-  }
+		await exec(`docker service update --replicas 0 ${agent.dockerServiceId}`);
+		await prisma.agent.update({ where: { id: agentId }, data: { status: "INACTIVE", publicAgentUrl: null } });
+	} catch (error) {
+		console.error(`🚨 stopService failed for agent ${agentId}:`, error);
+		throw error;
+	}
 }
 
 export async function startService(agentId: string, message: string, signature: string, address: string) {
-  try {
-    await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
-    const agent = await getAgent(agentId);
+	try {
+		await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
+		const agent = await getAgent(agentId);
 
-    const containerName = `agent-${agent.id}`;
-    const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
-    const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
+		const containerName = `agent-${agent.id}`;
+		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
+		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-    if (!fs.existsSync(localDbPath) && agent.latestBlobHash) {
-      const fileBuffer = await retrieveBlob(agent.latestBlobHash);
-      fs.writeFileSync(localDbPath, fileBuffer);
-    }
+		if (!fs.existsSync(localDbPath) && agent.latestBlobHash) {
+			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
+			fs.writeFileSync(localDbPath, fileBuffer);
+		}
 
-    await exec(`docker service update --replicas 1 ${agent.dockerServiceId}`);
-    await new Promise((r) => setTimeout(r, 2000));
+		await exec(`docker service update --replicas 1 ${agent.dockerServiceId}`);
+		await prisma.agent.update({
+			where: { id: agentId },
+			data: { status: "ACTIVE" },
+		});
+		await new Promise((r) => setTimeout(r, 2000));
 
-    const containerId = await getContainerId(containerName);
+		const containerId = await getContainerId(containerName);
 
-    if (fs.existsSync(localDbPath)) {
-      await uploadDbToContainer(containerId, containerDbPath, localDbPath);
-      await exec(
-        `docker exec -d ${containerId} sh -c "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"`
-      );
-    }
+		if (fs.existsSync(localDbPath)) {
+			await uploadDbToContainer(containerId, containerDbPath, localDbPath);
+			await exec(
+				`docker exec -d ${containerId} sh -c "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"`
+			);
+		}
 
-    await new Promise((r) => setTimeout(r, 5000));
-    const logs = await exec(`docker service logs agent-${agentId}`);
-    const match = logs.stdout.match(/https:\/\/[\w.-]+\.trycloudflare\.com/);
-    const url = match?.[0] ?? null;
+		await new Promise((r) => setTimeout(r, 5000));
+		const logs = await exec(`docker service logs agent-${agentId}`);
+		const match = logs.stdout.match(/https:\/\/[\w.-]+\.trycloudflare\.com/);
+		const url = match?.[0] ?? null;
 
-    await prisma.agent.update({
-      where: { id: agentId },
-      data: { status: "ACTIVE", publicAgentUrl: url },
-    });
-  } catch (error) {
-    console.error(`🚨 startService failed for agent ${agentId}:`, error);
-    throw error;
-  }
+		await prisma.agent.update({
+			where: { id: agentId },
+			data: { status: "ACTIVE", publicAgentUrl: url },
+		});
+	} catch (error) {
+		console.error(`🚨 startService failed for agent ${agentId}:`, error);
+		throw error;
+	}
 }
