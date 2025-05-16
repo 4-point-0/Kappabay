@@ -257,15 +257,12 @@ export const handlePromptWithMultiCallbacks = async (
     };
 
     try {
-      // Get agent response
-      // const response = await apiClient.sendMessage(
-      //   CONFIG.AGENT_ID,
-      //   data?.prompt_text,
-      //   data?.sender,
-      //   null
-      // );
-      //TODO REMOVE
-      const response = [{ text: "dummy reposnse" }];
+      const response = await apiClient.sendMessage(
+        CONFIG.AGENT_ID,
+        data?.prompt_text,
+        data?.sender,
+        null
+      );
       // Parse the callbacks from the JSON string
       let callbacks: Callback[] = [];
       try {
