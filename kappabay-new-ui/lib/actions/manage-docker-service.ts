@@ -76,12 +76,12 @@ async function uploadDbToContainer(containerId: string, containerPath: string, l
 	form.append("file", fs.createReadStream(tarPath));
 
 	await portainerFetch(
-		`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+		`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
 			containerPath.replace(/\/[^/]+$/, "")
 		)}`,
 		{
 			method: "PUT",
-			body: form as any,
+			data: form as any,
 			headers: form.getHeaders(),
 		}
 	);
