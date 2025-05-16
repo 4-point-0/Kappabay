@@ -7,7 +7,7 @@ module nft_template::agent_marketplace {
     use sui::package::Publisher;
     use sui::transfer_policy::{Self, TransferPolicy};
     use std::string::String;
-    use nft_template::agent::{Self, Agent, AgentCap, AdminCap};
+    use nft_template::agent::{Self, Agent, AgentCap};
     use nft_template::agent_royalty;
 
     // Error constants
@@ -21,7 +21,6 @@ module nft_template::agent_marketplace {
     // Events
     public struct AgentListed has copy, drop {
         agent_cap_id: ID,
-        admin_cap_id: ID,
         agent_id: ID,
         price: u64,
         seller: address,
@@ -30,7 +29,6 @@ module nft_template::agent_marketplace {
 
     public struct AgentPurchased has copy, drop {
         agent_cap_id: ID,
-        admin_cap_id: ID,
         agent_id: ID,
         price: u64,
         seller: address,
@@ -40,7 +38,6 @@ module nft_template::agent_marketplace {
 
     public struct AgentDelisted has copy, drop {
         agent_cap_id: ID,
-        admin_cap_id: ID,
         agent_id: ID,
         seller: address
     }
@@ -55,7 +52,6 @@ module nft_template::agent_marketplace {
     public struct Marketplace has key, store {
         id: UID,
         listings: Table<ID, ListingInfo>, // Map agent_cap_id to listing info
-        admin_caps: Table<ID, AdminCap>, // Store admin caps by agent_cap_id
         agent_ids: Table<ID, ID>, // Map agent_cap_id to agent_id
         // Store purchase caps for exclusive listings
         purchase_caps: Table<ID, PurchaseCap<AgentCap>>,
@@ -89,7 +85,6 @@ module nft_template::agent_marketplace {
         let marketplace = Marketplace {
             id: object::new(ctx),
             listings: table::new(ctx),
-            admin_caps: table::new(ctx),
             agent_ids: table::new(ctx),
             purchase_caps: table::new(ctx),
             royalty_percentage: royalty_percentage,
@@ -131,11 +126,10 @@ module nft_template::agent_marketplace {
 
     // === Listing and Trading ===
 
-    // List an agent in the user's kiosk
+    // List an agent cap in the user's kiosk
     public entry fun list_agent(
         marketplace: &mut Marketplace,
         agent_cap: AgentCap,
-        admin_cap: AdminCap,
         agent: &Agent,
         kiosk: &mut Kiosk, // User's kiosk
         kiosk_cap: &KioskOwnerCap, // User's kiosk cap
@@ -151,19 +145,14 @@ module nft_template::agent_marketplace {
         // Verify both caps belong to this Agent
         let agent_id = object::id(agent);
         assert!(agent::get_agent_id(&agent_cap) == agent_id, EWrongCapForAgent);
-        assert!(agent::get_agent_id_from_admin(&admin_cap) == agent_id, EWrongCapForAgent);
         
         // Verify this is the user's kiosk
         assert!(kiosk::has_access(kiosk, kiosk_cap), ENotAuthorized);
         
         // Get IDs and seller
         let agent_cap_id = object::id(&agent_cap);
-        let admin_cap_id = object::id(&admin_cap);
         let seller = tx_context::sender(ctx);
         let kiosk_id = object::id(kiosk);
-        
-        // Store admin cap in marketplace
-        table::add(&mut marketplace.admin_caps, agent_cap_id, admin_cap);
         
         // Store agent_id mapping
         table::add(&mut marketplace.agent_ids, agent_cap_id, agent_id);
@@ -199,7 +188,6 @@ module nft_template::agent_marketplace {
         // Emit event
         event::emit(AgentListed {
             agent_cap_id,
-            admin_cap_id,
             agent_id,
             price,
             seller,
@@ -214,7 +202,7 @@ module nft_template::agent_marketplace {
         agent_cap_id: ID,
         policy: &mut TransferPolicy<AgentCap>,
         mut payment: Coin<SUI>,
-        ctx: &mut tx_context::TxContext
+        ctx: &mut TxContext
     ) {
         // Verify the agent is listed
         assert!(table::contains(&marketplace.listings, agent_cap_id), EAgentNotForSale);
@@ -259,14 +247,12 @@ module nft_template::agent_marketplace {
         agent_royalty::add_receipt<AgentCap>(&mut request);
         transfer_policy::confirm_request(policy, request);
         
-        // Get admin cap and agent ID
-        let admin_cap = table::remove(&mut marketplace.admin_caps, agent_cap_id);
+        // Get agent ID
         let agent_id = *table::borrow(&marketplace.agent_ids, agent_cap_id);
         
         // Emit purchase event
         event::emit(AgentPurchased {
             agent_cap_id,
-            admin_cap_id: object::id(&admin_cap),
             agent_id,
             price, // Total price
             seller,
@@ -278,12 +264,11 @@ module nft_template::agent_marketplace {
         let _listing_info = table::remove(&mut marketplace.listings, agent_cap_id);
         table::remove(&mut marketplace.agent_ids, agent_cap_id);
         
-        // Transfer the agent cap and admin cap to the buyer
+        // Transfer only the agent cap to the buyer
         transfer::public_transfer(agent_cap, tx_context::sender(ctx));
-        transfer::public_transfer(admin_cap, tx_context::sender(ctx));
     }
 
-    // Delist an agent from the marketplace
+    // Delist an agent cap from the marketplace
     public entry fun delist_agent(
         marketplace: &mut Marketplace,
         kiosk: &mut Kiosk, // User's kiosk
@@ -299,6 +284,7 @@ module nft_template::agent_marketplace {
         let listing_info = table::borrow(&marketplace.listings, agent_cap_id);
         let seller = listing_info.seller;
         let kiosk_id = listing_info.kiosk_id;
+        let agent_id = listing_info.agent_id;
         
         // Verify this is the correct kiosk
         assert!(object::id(kiosk) == kiosk_id, EInvalidKiosk);
@@ -315,14 +301,9 @@ module nft_template::agent_marketplace {
         // Return the purchase cap to the kiosk (removes listing)
         kiosk::return_purchase_cap(kiosk, purchase_cap);
         
-        // Get admin cap and agent ID
-        let admin_cap = table::remove(&mut marketplace.admin_caps, agent_cap_id);
-        let agent_id = *table::borrow(&marketplace.agent_ids, agent_cap_id);
-        
         // Emit delisted event
         event::emit(AgentDelisted {
             agent_cap_id,
-            admin_cap_id: object::id(&admin_cap),
             agent_id,
             seller
         });
@@ -334,14 +315,13 @@ module nft_template::agent_marketplace {
         let _listing_info = table::remove(&mut marketplace.listings, agent_cap_id); 
         table::remove(&mut marketplace.agent_ids, agent_cap_id);
         
-        // Return the caps to the seller
+        // Return only the agent cap to the seller
         transfer::public_transfer(agent_cap, seller);
-        transfer::public_transfer(admin_cap, seller);
     }
 
     // === Query Functions ===
     
-    // Simplified - listing discovery done via RPC, not contract
+    // Check if an agent is listed
     public fun is_agent_listed(
         marketplace: &Marketplace,
         agent_cap_id: ID
@@ -349,6 +329,7 @@ module nft_template::agent_marketplace {
         table::contains(&marketplace.listings, agent_cap_id)
     }
 
+    // Get listing info
     public fun get_listing_info(
         marketplace: &Marketplace, 
         agent_cap_id: ID
@@ -366,6 +347,7 @@ module nft_template::agent_marketplace {
         )
     }
 
+    // Get royalty percentage
     public fun get_royalty_percentage(marketplace: &Marketplace): u64 {
         marketplace.royalty_percentage
     }
