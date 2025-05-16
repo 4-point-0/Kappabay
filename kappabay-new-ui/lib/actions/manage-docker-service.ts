@@ -139,6 +139,7 @@ export async function startService(agentId: string, message: string, signature: 
 		const containerName = `agent-${agent.id}`;
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
+		console.log("localDbPath", localDbPath);
 
 		if (!fs.existsSync(localDbPath) && agent.latestBlobHash) {
 			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
