@@ -23,6 +23,8 @@ const PORTAINER_ENDPOINT_ID = process.env.PORTAINER_ENDPOINT_ID!; // e.g., '1'
 async function portainerFetch(path: string, options: RequestInit = {}) {
 	const res = await fetch(`${PORTAINER_URL}${path}`, {
 		...options,
+		// @ts-ignore: agent is not in RequestInit but works with Node.js fetch
+		agent: new Agent({ rejectUnauthorized: false }),
 		headers: {
 			"X-API-Key": PORTAINER_API_KEY,
 			...(options.headers || {}),
