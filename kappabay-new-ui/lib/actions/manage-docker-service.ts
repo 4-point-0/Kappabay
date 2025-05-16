@@ -4,7 +4,6 @@
 import fs from "fs";
 import path from "path";
 import util from "util";
-import FormData from "form-data";
 import { pipeline } from "stream";
 import { promisify } from "util";
 import { prisma } from "../db";
@@ -30,18 +29,40 @@ if (!fs.existsSync(DB_CACHE_DIR)) {
 async function portainerFetch(path: string, options: any = {}) {
 	console.log("path", path);
 
-	try {
-		const response = await axios({
-			method: options.method || "GET",
-			url: `${PORTAINER_URL}${path}`,
-			headers: {
-				"X-API-Key": PORTAINER_API_KEY,
-				...(options.headers || {}),
-			},
-			httpsAgent: new Agent({ rejectUnauthorized: false }), // Bypass self-signed certificate
-			...options,
-		});
+	// Create a clean config to prevent option overrides
+	const config = {
+		method: options.method || "GET",
+		url: `${PORTAINER_URL}${path}`,
+		headers: {
+			"X-API-Key": PORTAINER_API_KEY,
+		},
+		httpsAgent: new Agent({ rejectUnauthorized: false }),
+	};
 
+	// Carefully merge headers, ensuring API key isn't overwritten
+	if (options.headers) {
+		config.headers = {
+			...config.headers,
+			...options.headers,
+		};
+	}
+
+	// Add any other options, but don't let them override critical properties
+	delete options.headers;
+	delete options.method;
+	delete options.url;
+
+	const finalConfig = {
+		...config,
+		...options,
+	};
+
+	try {
+		console.log("Request URL:", finalConfig.url);
+		console.log("Request method:", finalConfig.method);
+		console.log("Content-Type:", finalConfig.headers["Content-Type"] || "not set");
+
+		const response = await axios(finalConfig);
 		return response;
 	} catch (error: any) {
 		console.error(`Portainer API error: ${error.message}`);
@@ -80,13 +101,38 @@ async function downloadDbFromContainer(containerId: string, containerPath: strin
 }
 
 async function createTarArchive(sourcePath: string, targetDir: string): Promise<string> {
-	const tarFilename = `${path.basename(sourcePath)}.tar`;
-	const tarPath = path.join(targetDir, tarFilename);
+	try {
+		const tarFilename = `${path.basename(sourcePath)}.tar`;
+		const tarPath = path.join(targetDir, tarFilename);
 
-	// Create a tar file with the SQLite DB
-	await exec(`tar -cf ${tarPath} -C ${path.dirname(sourcePath)} ${path.basename(sourcePath)}`);
+		console.log(`Creating tar archive from ${sourcePath} to ${tarPath}`);
 
-	return tarPath;
+		// Get the base filename without path
+		const baseFilename = path.basename(sourcePath);
+		// Get the directory where the source file is located
+		const sourceDir = path.dirname(sourcePath);
+
+		// Run tar command to create the archive
+		await exec(`tar -cvf "${tarPath}" -C "${sourceDir}" "${baseFilename}"`);
+
+		// Verify the tar file was created
+		if (!fs.existsSync(tarPath)) {
+			throw new Error(`Failed to create tar archive at ${tarPath}`);
+		}
+
+		// Log tar file info
+		const stats = fs.statSync(tarPath);
+		console.log(`Tar file created: ${tarPath} (${stats.size} bytes)`);
+
+		// Verify the tar file contents (debug purpose)
+		const { stdout } = await exec(`tar -tvf "${tarPath}"`);
+		console.log(`Tar contents: ${stdout}`);
+
+		return tarPath;
+	} catch (error: any) {
+		console.error(`Error creating tar archive: ${error.message}`);
+		throw error;
+	}
 }
 
 async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
@@ -101,36 +147,44 @@ async function uploadDbToContainer(containerId: string, containerPath: string, l
 		const tarPath = await createTarArchive(localPath, tmpDir);
 		console.log(`Created tar archive at ${tarPath}`);
 
-		const form = new FormData();
-		form.append("file", fs.createReadStream(tarPath));
+		// Read the tar file into a buffer
+		const fileBuffer = fs.readFileSync(tarPath);
 
 		// Extract the directory part of the containerPath
 		const containerDir = path.dirname(containerPath);
 
-		const response = await portainerFetch(
-			`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
-				containerDir
-			)}`,
-			{
-				method: "PUT",
-				data: form,
-				headers: {
-					...form.getHeaders(),
-					"Content-Type": "multipart/form-data",
-				},
-				maxContentLength: Infinity,
-				maxBodyLength: Infinity,
-			}
-		);
+		console.log("Attempting to upload to container:", containerId);
+		console.log("Container path:", containerDir);
+		console.log("Tar file size:", fileBuffer.length, "bytes");
 
-		console.log("Upload response status:", response.status);
+		// Use the Docker Engine API directly instead of Portainer's API wrapper
+		// Docker Engine expects application/x-tar for this endpoint
+		const uploadPath = `/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+			containerDir
+		)}`;
+
+		const response = await portainerFetch(uploadPath, {
+			method: "PUT",
+			data: fileBuffer,
+			headers: {
+				"Content-Type": "application/x-tar",
+			},
+			// Disable any transformations of the data
+			transformRequest: [(data: any) => data],
+		});
+
+		console.log("Upload response:", response.status);
 
 		// Clean up the tar file
 		fs.unlinkSync(tarPath);
 
-		return response;
+		return true;
 	} catch (error: any) {
 		console.error("Error uploading to container:", error.message);
+		if (error.response) {
+			console.error("Response status:", error.response.status);
+			console.error("Response data:", error.response.data);
+		}
 		throw error;
 	}
 }
