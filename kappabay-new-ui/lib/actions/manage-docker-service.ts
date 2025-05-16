@@ -65,7 +65,7 @@ async function downloadDbFromContainer(containerId: string, containerPath: strin
 
 	if (!response.data) throw new Error("No response body from Portainer");
 
-	const fileStream = fs.createWriteStream(`${localPath}.tar`);
+	const fileStream = fs.createWriteStream(`${localPath}`);
 	await pipeline(response.data, fileStream);
 }
 
