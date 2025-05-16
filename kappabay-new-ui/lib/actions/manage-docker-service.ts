@@ -286,13 +286,14 @@ export async function startService(agentId: string, message: string, signature: 
 				Tty: false,
 			};
 			const killRes = await portainerFetch(
-				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
 				{ method: "POST", headers: { "Content-Type": "application/json" }, data: killCmd }
 			);
-			await portainerFetch(
-				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${killRes.data.Id}/start`,
-				{ method: "POST", headers: { "Content-Type": "application/json" }, data: { Detach: true, Tty: false } }
-			);
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${killRes.data.Id}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
 
 			// 2) remove any old DB file via Portainer API
 			const rmCmd = {
@@ -302,13 +303,14 @@ export async function startService(agentId: string, message: string, signature: 
 				Tty: false,
 			};
 			const rmRes = await portainerFetch(
-				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
 				{ method: "POST", headers: { "Content-Type": "application/json" }, data: rmCmd }
 			);
-			await portainerFetch(
-				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${rmRes.data.Id}/start`,
-				{ method: "POST", headers: { "Content-Type": "application/json" }, data: { Detach: true, Tty: false } }
-			);
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${rmRes.data.Id}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
 
 			// 3) now create an Exec instance for pnpm start
 			const execConfig = {
@@ -319,7 +321,7 @@ export async function startService(agentId: string, message: string, signature: 
 			};
 			// 1) create an Exec instance
 			const createRes = await portainerFetch(
-				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
 				{
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -328,7 +330,7 @@ export async function startService(agentId: string, message: string, signature: 
 			);
 			const execId = createRes.data.Id;
 			// 2) start it detached
-			await portainerFetch(`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${execId}/start`, {
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${execId}/start`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				data: { Detach: true, Tty: false },
