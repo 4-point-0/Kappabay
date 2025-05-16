@@ -10,6 +10,7 @@ import { promisify } from "util";
 import { prisma } from "../db";
 import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
 import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
+import { Agent } from "https";
 
 const exec = util.promisify(require("child_process").exec);
 const DB_CACHE_DIR = path.join(process.cwd(), "db-cache");
