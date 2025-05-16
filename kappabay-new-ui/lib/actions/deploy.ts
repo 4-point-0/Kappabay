@@ -9,8 +9,7 @@ import { prisma } from "@/lib/db";
 import * as net from "net";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { DeploymentData } from "../types";
-import { encrypt, ngrokAbsolutePath } from "../utils";
-import ngrok from "ngrok";
+import { encrypt } from "../utils";
 
 /**
  * Creates a Docker secret from the .env content.
