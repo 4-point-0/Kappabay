@@ -278,8 +278,39 @@ export async function startService(agentId: string, message: string, signature: 
 			// Wait a moment before executing the command
 			await new Promise((r) => setTimeout(r, 2000));
 
-			// run the agent start command inside the container via Portainer API,
-			// so it’s scheduled on the correct swarm node:
+			// 1) kill any existing agent process via Portainer API
+			const killCmd = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", "pkill -f 'node --loader ts-node/esm src/index.ts'"],
+				Tty: false,
+			};
+			const killRes = await portainerFetch(
+				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: killCmd }
+			);
+			await portainerFetch(
+				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${killRes.data.Id}/start`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: { Detach: true, Tty: false } }
+			);
+
+			// 2) remove any old DB file via Portainer API
+			const rmCmd = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", `rm -f ${containerDbPath}`],
+				Tty: false,
+			};
+			const rmRes = await portainerFetch(
+				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: rmCmd }
+			);
+			await portainerFetch(
+				`/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${rmRes.data.Id}/start`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: { Detach: true, Tty: false } }
+			);
+
+			// 3) now create an Exec instance for pnpm start
 			const execConfig = {
 				AttachStdout: false,
 				AttachStderr: false,
