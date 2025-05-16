@@ -70,7 +70,7 @@ async function downloadDbFromContainer(containerId: string, containerPath: strin
 }
 
 async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
-	const tarPath = localPath + ".tar";
+	const tarPath = localPath;
 	// Assumes you created a tar archive containing the file at the right containerPath
 	const form = new FormData();
 	form.append("file", fs.createReadStream(tarPath));
