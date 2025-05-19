@@ -4,7 +4,7 @@ module nft_template::agent {
     use sui::coin::{Self, Coin};
     use sui::bag::{Self, Bag};
     use sui::event;
-    use std::string::{Self, String, utf8};
+    use std::string::{Self, String};
 
     // Error constants
     const ENotAdmin: u64 = 1;
@@ -25,21 +25,6 @@ module nft_template::agent {
     public struct ObjectStored has copy, drop {
         agent_id: ID,
         object_id: ID
-    }
-
-    public struct PromptInferred has copy, drop {
-        id: ID,
-        question: String,
-        sender: address,
-        callback: String,
-        objectId: ID,
-        walletAddress: address
-    }
-
-    public struct ResponsePopulated has copy, drop {
-        id: ID,
-        question: String,
-        sender: address
     }
 
     // Agent capability
@@ -67,12 +52,6 @@ module nft_template::agent {
         image: String
     }
 
-    public struct Prompt has key, store {
-        id: UID,
-        question: String,
-        response: Option<String>,
-        sender: address
-    }
 
     // === Initialization ===
 
@@ -124,86 +103,6 @@ module nft_template::agent {
         transfer::share_object(agent);
         transfer::public_transfer(admin_cap, sender);
         transfer::public_transfer(agent_cap, sender);
-    }
-
-    public entry fun infer_prompt(
-        question: String,
-        agent_wallet: address,
-        ctx: &mut TxContext
-    ) {
-        let sender = tx_context::sender(ctx);
-        
-        // Create the prompt object
-        let prompt = Prompt {
-            id: object::new(ctx),
-            question,
-            response: option::none(),
-            sender
-        };
-        
-        // Emit event for backend to catch
-        event::emit(PromptInferred {
-            id: object::id(&prompt),
-            question,
-            sender,
-            callback: utf8(b""),
-            objectId: object::id(&prompt),
-            walletAddress: agent_wallet
-        });
-        
-        // Transfer prompt to agent address for processing
-        // This keeps it in a known location for the backend to find
-        transfer::public_transfer(prompt, agent_wallet);
-    }
-
-    public entry fun infer_prompt_with_callback(
-        question: String,
-        agent_wallet: address,
-        callback: String,
-        ctx: &mut TxContext
-    ) {
-        let sender = tx_context::sender(ctx);
-        
-        // Create the prompt object
-        let prompt = Prompt {
-            id: object::new(ctx),
-            question,
-            response: option::none(),
-            sender
-        };
-        
-        // Emit event for backend to catch
-        event::emit(PromptInferred {
-            id: object::id(&prompt),
-            question,
-            sender,
-            callback,
-            objectId: object::id(&prompt),
-            walletAddress: agent_wallet
-        });
-        
-        // Transfer prompt to agent address for processing
-        // This keeps it in a known location for the backend to find
-        transfer::public_transfer(prompt, agent_wallet);
-    }
-
-    public entry fun populate_prompt(
-        mut prompt: Prompt,
-        response: String,
-        receiver: address
-    ) { 
-        // Update prompt with response
-        prompt.response = option::some(response);
-        
-        // Emit populated event
-        event::emit(ResponsePopulated {
-            id: object::id(&prompt),
-            question: prompt.question,
-            sender: prompt.sender
-        });
-        
-        // Send to user's address
-        transfer::public_transfer(prompt, receiver);
     }
 
     // === Administrative Functions ===
@@ -368,11 +267,13 @@ module nft_template::agent {
     public fun get_agent_id(cap: &AgentCap): ID {
         cap.agent_id
     }
+    
+    // Same function for AdminCap
+    public fun get_agent_id_from_admin(cap: &AdminCap): ID {
+        cap.agent_id
+    }
 
     // === Helper functions for off-chain agent ===
-    
-    // These functions don't directly execute sponsored transactions,
-    // but they provide the mechanisms for the off-chain agent to do so
     
     public fun extract_gas_for_transaction(
         agent: &mut Agent,

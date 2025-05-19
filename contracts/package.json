@@ -1,8 +1,0 @@
-{
-  "devDependencies": {
-    "@types/node": "^22.14.0"
-  },
-  "dependencies": {
-    "@mysten/sui.js": "^0.54.1"
-  }
-}

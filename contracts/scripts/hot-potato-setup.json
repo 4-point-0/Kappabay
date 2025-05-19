@@ -1,0 +1,28 @@
+{
+  "packageId": "0x57092cbe1ff5627ba3c3e198b759c4318d93867185efdba6bbb49ff4ff162584",
+  "agent": {
+    "id": "0xf3057b3d643eea06a1d2e97c7e6bdbb8329127ee7b0e09feb6aaaab8775d0caf",
+    "adminCapId": "0x309a003bdaf2bd456a30b639511df461297ec84c931a14801a943f4ac6d8cea6",
+    "agentCapId": "0xd47124f711dc15cf198942637e569703f635f48493ba25ceb4b75f98914fdb09",
+    "txDigest": "J9JEiW1XGGGkkEskGpX81pnoSHd94mae1xY6ja8ngwag",
+    "imageUrl": "https://placehold.co/600x400/FF5733/FFFFFF?text=HOT+POTATO+AGENT"
+  },
+  "oven": {
+    "id": "0xf0aa99a9767f9a1994bb48cee04d8adde8ecd2cd679c7c141eaed04db8fa22a1",
+    "ovenCapId": "0xdc9393a2c51a49d87722234313488caaf437f6a5b60d0eee1f05b646b282779d",
+    "txDigest": "93DLTQ5sikbmxwPy4mQHiovYviQbywW5R5XtNrb26dUB"
+  },
+  "gameManager": {
+    "id": "0xce9237788a61ecdd9874e18bdec268a9896620a04424cbb8cd204c8a195ddb96",
+    "gameManagerCapId": "0x9ec33c0ccbf5edb64fcf37c807af71adf8d3372e9a7ab30c90d74318b2a3d53a",
+    "txDigest": "F99KxsABTQdQJf7rMLjRh6ETYEcda3PM2ZrGtmyBWuRs"
+  },
+  "game": {
+    "txDigest": "BjCkCb4Xsor23kmX6TjgnSpg2uJaR3ZigkQFZ6araPTa",
+    "durationHours": 48
+  },
+  "constants": {
+    "clockId": "0x6",
+    "randomId": "0x8"
+  }
+}
