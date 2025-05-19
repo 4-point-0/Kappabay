@@ -44,7 +44,7 @@ export default function Header({ textColor }: { textColor?: string }) {
 					</Link>
 
 					{/* Desktop Navigation */}
-					<nav className={`hidden md:flex items-center gap-8 ${textColor} hover:text-gray-800`}>
+					<nav className={`hidden md:flex items-center gap-8 ${textColor}`}>
 						<LinkUnderlined text="Home" href="/" />
 						<LinkUnderlined text="Deploy" href="/deploy" />
 						<LinkUnderlined text="Marketplace" href="/marketplace" />
