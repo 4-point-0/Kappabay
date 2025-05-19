@@ -6,10 +6,11 @@ import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { useState } from "react";
 import { useEffect } from "react";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
 import { withdrawGas } from "@/lib/actions/withdraw-gas";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 interface ManageGasDialogProps {
 	open: boolean;
@@ -31,7 +32,7 @@ export default function ManageGasDialog({
 	setWithdrawAmount,
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
-	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
 
 	// ── New state to hold on‐chain gas balance ───────────────────────────────
 	const [gasBalance, setGasBalance] = useState<string>();
@@ -46,23 +47,18 @@ export default function ManageGasDialog({
 			arguments: [tx.object(agent.objectId)],
 		});
 
-		signAndExecuteTransaction(
-			{ transaction: tx },
-			{
-				onSuccess: (result) => {
-					// find the GasBalanceChecked event in effects
-					const events = result.effects?.events || [];
-					const evt = events.find((e: any) => e.type?.endsWith("::agent::GasBalanceChecked"));
-					if (evt && "parsedJson" in evt) {
-						// parsedJson.balance is the raw u64
-						setGasBalance(evt.parsedJson.balance);
-					}
-				},
-				onError: (e) => {
-					console.error("check_gas_balance failed", e);
-				},
-			}
-		);
+		signAndExecuteTransaction(tx)
+			.then((result) => {
+				const evt = (result.effects?.events || []).find((e: any) =>
+					e.type?.endsWith("::agent::GasBalanceChecked")
+				);
+				if (evt && "parsedJson" in evt) {
+					setGasBalance(evt.parsedJson.balance);
+				}
+			})
+			.catch((e) => {
+				console.error("check_gas_balance failed", e);
+			});
 	}, [agent.objectId, wallet?.address, signAndExecuteTransaction]);
 
 	const handleDeposit = async () => {
@@ -81,27 +77,22 @@ export default function ManageGasDialog({
 				arguments: [txn.object(agent.objectId), payment],
 			});
 
-			signAndExecuteTransaction(
-				{ transaction: txn },
-				{
-					onSuccess: async (result) => {
-						console.log("Deposit transaction:", result);
-						toast({
-							title: "Deposit Successful",
-							description: "Deposit transaction executed successfully.",
-						});
-						// Optionally trigger a refresh here if needed.
-					},
-					onError: (error) => {
-						console.error("Deposit move call failed:", error);
-						toast({
-							title: "Deposit Failed",
-							description: "Deposit transaction failed.",
-							variant: "destructive",
-						});
-					},
-				}
-			);
+			signAndExecuteTransaction(txn)
+				.then((result) => {
+					toast({
+						title: "Deposit Successful",
+						description: "Deposit executed.",
+					});
+					// Optionally trigger a refresh here if needed.
+				})
+				.catch((error) => {
+					console.error("Deposit move call failed:", error);
+					toast({
+						title: "Deposit Failed",
+						description: "Deposit transaction failed.",
+						variant: "destructive",
+					});
+				});
 		} catch (error) {
 			console.error("Error in handleDeposit:", error);
 			toast({
