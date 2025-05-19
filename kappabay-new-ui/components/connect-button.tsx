@@ -97,12 +97,12 @@ const ConnectButton = () => {
 			{/* dapp-kit Login (default Connect Modal) */}
 			<div className="relative">
 				<motion.button
-					className="bg-primary text-white py-1 px-2 rounded h-full"
+					className="bg-success-600 hover:bg-success-600/90 text-black font-medium w-full py-2 px-4 rounded-full"
 					whileHover={{ scale: 1.05 }}
 					whileTap={{ scale: 0.95 }}
 					onClick={() => setShowConnectOptions(true)}
 				>
-					<ConnectModal trigger={<span className={buttonVariants({ variant: "default" })}>Connect</span>} />
+					<ConnectModal trigger={<span>Wallet Connect</span>} />
 				</motion.button>
 			</div>
 		</div>

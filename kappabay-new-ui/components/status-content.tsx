@@ -37,7 +37,6 @@ export function StatusContent({
 	const wallet = useCurrentAccount();
 	const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
 	const { caps } = useOwnedCaps();
-	const signAndExec = useSignExecuteAndWaitForTransaction();
 
 	const [agents, setAgents] = useState<any[]>([]);
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -88,10 +87,7 @@ export function StatusContent({
 	}
 
 	useEffect(() => {
-		if (!wallet?.address) {
-			setAgents([]);
-			return;
-		}
+		if (!wallet?.address) return;
 		refreshAgents();
 	}, [wallet?.address, caps]);
 
