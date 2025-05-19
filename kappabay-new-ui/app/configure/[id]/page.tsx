@@ -35,6 +35,8 @@ const fetchAgentConfig = async (id: string): Promise<AgentConfig> => {
 	const flat = raw.flat();
 	// decode into a UTF-8 string
 	const jsonText = new TextDecoder().decode(Uint8Array.from(flat));
+	console.log("JSON.parse(jsonText)", JSON.parse(jsonText));
+
 	// parse into your AgentConfig
 	return JSON.parse(jsonText) as AgentConfig;
 };

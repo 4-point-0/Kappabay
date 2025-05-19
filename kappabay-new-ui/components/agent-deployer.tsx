@@ -59,8 +59,10 @@ export default function AgentDeployer({
 	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
-		agentConfig.image = imageUrl;
-	}, [imageUrl]);
+		if (initialConfig.image) {
+			setImageUrl(initialConfig.image);
+		}
+	}, []);
 
 	const handleChange = (field: string, value: any) => {
 		setAgentConfig((prev) => ({
@@ -171,6 +173,9 @@ export default function AgentDeployer({
 
 	const handleUpdate = async () => {
 		if (!agentId || !account?.address) return toast({ title: "Missing parameters", variant: "destructive" });
+		if (imageUrl) {
+			agentConfig.image = imageUrl;
+		}
 
 		setIsDeploying(true);
 		try {
