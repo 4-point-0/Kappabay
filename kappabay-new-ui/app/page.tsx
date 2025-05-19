@@ -28,7 +28,7 @@ const itemVariants = {
 
 export default function Home() {
 	return (
-		<main className="min-h-screen bg-background text-foreground">
+		<main className="min-h-screen bg-main-gradient text-foreground">
 			<Header />
 			<PageTransition>
 				{/* Hero Section */}
