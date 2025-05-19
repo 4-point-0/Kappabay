@@ -33,19 +33,28 @@ export default function Home() {
 			<PageTransition>
 				{/* Hero Section */}
 				<section className="bg-main-gradient relative h-[100vh]">
-					<Header />
+					<Header textColor="dark:text-gray-950" />
 					<div className="container mx-auto px-4 text-center pt-20 pb-40 relative z-10">
 						<motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-							<motion.h1 variants={itemVariants} className="text-5xl md:text-6xl font-bold mb-6">
+							<motion.h1
+								variants={itemVariants}
+								className="text-5xl md:text-6xl font-bold mb-6 dark:gray-950 text-background"
+							>
 								Modular Onchain AI Agents
 							</motion.h1>
-							<motion.p variants={itemVariants} className="text-xl text-foreground mb-10 max-w-3xl mx-auto">
+							<motion.p
+								variants={itemVariants}
+								className="text-xl dark:gray-950 text-background mb-10 max-w-3xl mx-auto"
+							>
 								Kappabay brings intelligent AI agents to life as objects on the SUI network, powered by the Move
 								language for secure, modular, and composable agent capabilities.
 							</motion.p>
 							<motion.div variants={itemVariants} className="flex flex-wrap justify-center gap-4">
 								<Link href="/deploy">
-									<Button size="lg" className="bg-success-600 hover:bg-success-600/90 font-medium rounded-full px-8">
+									<Button
+										size="lg"
+										className="bg-success-600 hover:bg-success-600/90 font-medium rounded-full px-8 text-black"
+									>
 										Deploy Your Agent
 									</Button>
 								</Link>
@@ -53,7 +62,7 @@ export default function Home() {
 									<Button
 										variant="outline"
 										size="lg"
-										className="bg-transparent border-black  hover:bg-white/10 rounded-full px-8"
+										className="bg-transparent text-foreground dark:text-gray-950 hover:bg-white/10 rounded-full px-8"
 									>
 										Explore Marketplace
 									</Button>
@@ -64,19 +73,19 @@ export default function Home() {
 
 					{/* Decorative elements */}
 					<div className="absolute left-1/2 top-[83%] transform -translate-x-1/2 -translate-y-1/2 z-[1]">
-						<Image src="green-moon-group.png" alt="Green Moon" width={500} height={500} priority />
+						<Image src="/green-moon-group.png" alt="Green Moon" width={500} height={500} priority />
 					</div>
 					<div className="absolute right-[55%] top-[54%] z-0 rotate-[30deg]">
-						<Image src="ellipse-3.png" alt="Purple Sphere" width={80} height={80} className="opacity-80" />
+						<Image src="/ellipse-3.png" alt="Purple Sphere" width={80} height={80} className="opacity-80" />
 					</div>
 
 					{/* Purple spheres */}
 					<div className="absolute left-[5%] top-[63%] z-0">
-						<Image src="ellipse-1.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
+						<Image src="/ellipse-1.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
 					</div>
 
 					<div className="absolute right-[0%] top-[75%] z-0">
-						<Image src="ellipse-3.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
+						<Image src="/ellipse-3.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
 					</div>
 				</section>
 
@@ -108,14 +117,13 @@ export default function Home() {
 								whileInView={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.5 }}
 								viewport={{ once: true }}
-								className="pt-10"
 							>
-								<h2 className="text-4xl font-bold mb-6 dark:text-white">Integrated AI Oracle</h2>
-								<p className="text-lg dark:text-white mb-6">
+								<h2 className="text-4xl font-bold mb-6 dark:text-white text-background">Integrated AI Oracle</h2>
+								<p className="text-lg dark:text-white text-background mb-6">
 									Our agents feature an integrated AI oracle on SUI that enables users and smart contracts to prompt
 									agent objects onchain, receiving prompt objects in return.
 								</p>
-								<p className="text-lg text-white mb-8">
+								<p className="text-lg dark:text-white text-background mb-8">
 									With Move callback functions, developers can create unique use cases for intelligent decision-making
 									directly in smart contracts, enabling branching logic based on AI responses.
 								</p>
@@ -145,7 +153,7 @@ export default function Home() {
 						<div className="mb-2">
 							<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
 						</div>
-						<p className="text-white text-sm">Powered by 4pto Labs</p>
+						<p className="dark:text-white text-background text-sm">Powered by 4pto Labs</p>
 					</div>
 				</section>
 			</PageTransition>

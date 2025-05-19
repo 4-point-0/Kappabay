@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import ConnectButton from "./connect-button";
 
-export default function Header() {
+export default function Header({ textColor }: { textColor?: string }) {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const { theme, setTheme } = useTheme();
 
@@ -31,11 +31,11 @@ export default function Header() {
 								className="object-contain"
 							/>
 						</div>
-						<span className="text-xl font-display font-bold">KappaBay</span>
+						<span className={`text-xl font-display font-bold ${textColor}`}>KappaBay</span>
 					</Link>
 
 					{/* Desktop Navigation */}
-					<nav className="hidden md:flex items-center gap-8">
+					<nav className={`hidden md:flex items-center gap-8 ${textColor}`}>
 						<Link href="/" className="text-sm font-medium hover:text-white/80">
 							Home
 						</Link>
@@ -61,7 +61,9 @@ export default function Header() {
 							className="rounded-full"
 						>
 							<Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-							<Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+							<Moon
+								className={`absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 ${textColor} dark:hover-bg-transparent`}
+							/>
 							<span className="sr-only">Toggle theme</span>
 						</Button>
 						<ConnectButton />
@@ -75,8 +77,8 @@ export default function Header() {
 							onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
 							className="rounded-full"
 						>
-							<Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-							<Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+							<Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0 " />
+							<Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 dark:bg-" />
 							<span className="sr-only">Toggle theme</span>
 						</Button>
 						<Button variant="ghost" size="icon" onClick={toggleMenu}>
