@@ -9,12 +9,7 @@ import { motion } from "framer-motion";
 import ConnectButton from "./connect-button";
 
 export default function Header() {
-	const [connected, setConnected] = useState(false);
 	const pathname = usePathname();
-
-	const handleConnect = () => {
-		setConnected(!connected);
-	};
 
 	const isActive = (path: string) => {
 		return pathname === path;
@@ -22,7 +17,7 @@ export default function Header() {
 
 	return (
 		<motion.header
-			className="bg-background border-b border-border"
+			className="border-border"
 			initial={{ y: -20, opacity: 0 }}
 			animate={{ y: 0, opacity: 1 }}
 			transition={{ duration: 0.3 }}

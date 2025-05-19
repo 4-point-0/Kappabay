@@ -28,12 +28,12 @@ const itemVariants = {
 
 export default function Home() {
 	return (
-		<main className="min-h-screen bg-main-gradient text-foreground">
-			<Header />
+		<main className="min-h-screen  text-foreground">
 			<PageTransition>
 				{/* Hero Section */}
-				<section className="py-20 bg-gradient-to-b from-background to-background/50">
-					<div className="container mx-auto px-4 text-center">
+				<section className="bg-main-gradient">
+					<Header />
+					<div className="py-20 container mx-auto px-4 text-center">
 						<motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
 							<motion.h1 variants={itemVariants} className="text-5xl font-bold mb-6">
 								Modular Onchain AI Agents
