@@ -9,6 +9,15 @@ import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 import ConnectButton from "./connect-button";
 
+const LinkUnderlined = ({ text, href }: { text: string; href: string }) => {
+	return (
+		<Link href={href} className="text-sm font-medium relative group py-1">
+			{text}
+			<span className="absolute bottom-0 left-0 w-0 h-0.5 bg-success-600 transition-all duration-300 group-hover:w-full"></span>
+		</Link>
+	);
+};
+
 export default function Header({ textColor }: { textColor?: string }) {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const { theme, setTheme } = useTheme();
@@ -35,22 +44,12 @@ export default function Header({ textColor }: { textColor?: string }) {
 					</Link>
 
 					{/* Desktop Navigation */}
-					<nav className={`hidden md:flex items-center gap-8 ${textColor}`}>
-						<Link href="/" className="text-sm font-medium hover:text-white/80">
-							Home
-						</Link>
-						<Link href="/deploy" className="text-sm font-medium hover:text-white/80">
-							Deploy
-						</Link>
-						<Link href="/marketplace" className="text-sm font-medium hover:text-white/80">
-							Marketplace
-						</Link>
-						<Link href="/status" className="text-sm font-medium hover:text-white/80">
-							My Agents
-						</Link>
-						<Link href="/kappabae" className="text-sm font-medium hover:text-white/80">
-							Kappabae
-						</Link>
+					<nav className={`hidden md:flex items-center gap-8 ${textColor} hover:text-gray-800`}>
+						<LinkUnderlined text="Home" href="/" />
+						<LinkUnderlined text="Deploy" href="/deploy" />
+						<LinkUnderlined text="Marketplace" href="/marketplace" />
+						<LinkUnderlined text="My Agents" href="/status" />
+						<LinkUnderlined text="Kappabae" href="/kappabae" />
 					</nav>
 
 					<div className="hidden md:flex items-center gap-4">

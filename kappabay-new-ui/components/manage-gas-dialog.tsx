@@ -49,9 +49,8 @@ export default function ManageGasDialog({
 
 		signAndExecuteTransaction(tx)
 			.then((result) => {
-				const evt = (result.effects?.events || []).find((e: any) =>
-					e.type?.endsWith("::agent::GasBalanceChecked")
-				);
+				const evt: any = (result.events || []).find((e: any) => e.type?.endsWith("::agent::GasBalanceChecked"));
+
 				if (evt && "parsedJson" in evt) {
 					setGasBalance(evt.parsedJson.balance);
 				}
