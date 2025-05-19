@@ -1,5 +1,4 @@
-/* ----------------– Import custom fonts ------------------ */
-@import url("https://fonts.googleapis.com/css2?family=Funnel+Display:wght@400;700&family=Inter:wght@400;500;700&display=swap");
+/* you no longer need to pull Funnel Display here – it will be loaded via next/font/google */
 
 @tailwind base;
 @tailwind components;
