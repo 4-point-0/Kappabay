@@ -32,7 +32,6 @@ export default function ManageGasDialog({
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
-	const suiClient = useSuiClient();
 
 	// ── New state to hold on‐chain gas balance ───────────────────────────────
 	const [gasBalance, setGasBalance] = useState<string>();
@@ -53,9 +52,7 @@ export default function ManageGasDialog({
 				onSuccess: (result) => {
 					// find the GasBalanceChecked event in effects
 					const events = result.effects?.events || [];
-					const evt = events.find((e: any) =>
-						e.type?.endsWith("::agent::GasBalanceChecked")
-					);
+					const evt = events.find((e: any) => e.type?.endsWith("::agent::GasBalanceChecked"));
 					if (evt && "parsedJson" in evt) {
 						// parsedJson.balance is the raw u64
 						setGasBalance(evt.parsedJson.balance);
@@ -212,9 +209,7 @@ export default function ManageGasDialog({
 				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
 					<span>Current Gas Balance:</span>
 					<span className="font-medium">
-						{gasBalance
-							? `${(Number(gasBalance) / 1e9).toFixed(3)} SUI`
-							: "Loading..."}
+						{gasBalance ? `${(Number(gasBalance) / 1e9).toFixed(3)} SUI` : "Loading..."}
 					</span>
 				</div>
 
