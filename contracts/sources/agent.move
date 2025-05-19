@@ -27,6 +27,12 @@ module nft_template::agent {
         object_id: ID
     }
 
+    public struct GasBalanceChecked has copy, drop {
+        agent_id: ID,
+        balance: u64,
+        requester: address
+    }
+
     // Agent capability
     public struct AdminCap has key, store {
         id: UID,
@@ -254,6 +260,19 @@ module nft_template::agent {
 
     public fun get_gas_balance(agent: &Agent): u64 {
         balance::value(&agent.gas_tank)
+    }
+
+    public entry fun check_gas_balance(
+        agent: &Agent,
+        ctx: &mut TxContext
+    ) {
+        let balance = balance::value(&agent.gas_tank);
+        
+        event::emit(GasBalanceChecked {
+            agent_id: object::id(agent),
+            balance,
+            requester: tx_context::sender(ctx)
+        });
     }
 
     public fun get_private_funds_balance(agent: &Agent): u64 {
