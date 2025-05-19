@@ -13,6 +13,9 @@ import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
+import { Transaction } from "@mysten/sui/transactions";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 interface StatusContentProps {
 	/** href for the “Create” button */
@@ -34,6 +37,7 @@ export function StatusContent({
 	const wallet = useCurrentAccount();
 	const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
 	const { caps } = useOwnedCaps();
+	const signAndExec = useSignExecuteAndWaitForTransaction();
 
 	const [agents, setAgents] = useState<any[]>([]);
 	const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -58,6 +62,25 @@ export function StatusContent({
 			if (filterByAgentType) {
 				list = list.filter((a) => a.agentType === filterByAgentType);
 			}
+			// ─── look up on‐chain gas for each ──────────────────────────────────────────
+			// const pkgId = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
+			// const withGas = await Promise.all(
+			// 	list.map(async (agent) => {
+			// 		// -- build a dummy Transaction so we can use the same "target" format
+			// 		const tx = new Transaction();
+			// 		tx.moveCall({
+			// 			target: `${pkgId}::agent::get_gas_balance`,
+			// 			arguments: [tx.object(agent.objectId)],
+			// 		});
+			// 		const result = await signAndExec(tx);
+			// 		console.log("result", result);
+
+			// 		return {
+			// 			...agent,
+			// 			gasBalance: "0",
+			// 		};
+			// 	})
+			// );
 			setAgents(list);
 		} catch (err) {
 			console.error("Error fetching agents:", err);
