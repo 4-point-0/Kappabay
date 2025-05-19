@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { useState } from "react";
+import { useEffect } from "react";
 import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
@@ -31,6 +32,41 @@ export default function ManageGasDialog({
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
 	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const suiClient = useSuiClient();
+
+	// ── New state to hold on‐chain gas balance ───────────────────────────────
+	const [gasBalance, setGasBalance] = useState<string>();
+
+	// ── On mount / agent change: call the Move entry fun check_gas_balance ────
+	useEffect(() => {
+		if (!wallet?.address || !agent?.objectId) return;
+
+		const tx = new Transaction();
+		tx.moveCall({
+			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::check_gas_balance`,
+			arguments: [tx.object(agent.objectId)],
+		});
+
+		signAndExecuteTransaction(
+			{ transaction: tx },
+			{
+				onSuccess: (result) => {
+					// find the GasBalanceChecked event in effects
+					const events = result.effects?.events || [];
+					const evt = events.find((e: any) =>
+						e.type?.endsWith("::agent::GasBalanceChecked")
+					);
+					if (evt && "parsedJson" in evt) {
+						// parsedJson.balance is the raw u64
+						setGasBalance(evt.parsedJson.balance);
+					}
+				},
+				onError: (e) => {
+					console.error("check_gas_balance failed", e);
+				},
+			}
+		);
+	}, [agent.objectId, wallet?.address, signAndExecuteTransaction]);
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -171,6 +207,17 @@ export default function ManageGasDialog({
 					<DialogTitle>Manage Gas Bag</DialogTitle>
 					<DialogDescription>Add or withdraw SUI from this agent's gas bag.</DialogDescription>
 				</DialogHeader>
+
+				{/* ── NEW: display current on-chain gas balance ─────────────────────── */}
+				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
+					<span>Current Gas Balance:</span>
+					<span className="font-medium">
+						{gasBalance
+							? `${(Number(gasBalance) / 1e9).toFixed(3)} SUI`
+							: "Loading..."}
+					</span>
+				</div>
+
 				<div className="grid gap-4 py-4">
 					<div className="space-y-2">
 						<Label htmlFor="deposit">Deposit SUI</Label>
