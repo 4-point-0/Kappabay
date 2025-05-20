@@ -141,11 +141,11 @@ export default function MarketplacePage() {
 			//   - kioskId, kioskCapId: your user kiosk + its capability
 			// For now we assume newListingAgent holds both agentCapId & agentId,
 			// and that you have fetched your kiosk IDs into variables:
-			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_ID!;
-			const agentCapId   = newListingAgent;
-			const agentId      = newListingAgent;
-			const kioskId      = YOUR_KIOSK_ID;
-			const kioskCapId   = YOUR_KIOSK_CAP_ID;
+			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
+			const agentCapId = newListingAgent;
+			const agentId = newListingAgent;
+			const kioskId = YOUR_KIOSK_ID;
+			const kioskCapId = YOUR_KIOSK_CAP_ID;
 
 			const tx = listAgent(
 				MARKETPLACE_ID,
