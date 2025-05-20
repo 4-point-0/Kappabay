@@ -91,7 +91,7 @@ export default function MarketplacePage() {
 				}}
 			/>
 			<ListingsGrid agents={filtered} onDetails={openDetails} onPurchase={handlePurchase} />
-			<CreateListingDialog open={open} setOpen={setOpen} />
+			<CreateListingDialog open={open} setOpen={setOpen} allCategories={allCategories} />
 			<AgentDetailsDialog
 				agent={detailsAgent}
 				open={detailsOpen}
