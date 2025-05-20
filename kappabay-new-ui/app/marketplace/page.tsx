@@ -1,63 +1,13 @@
 "use client";
 
 import Header from "@/components/header";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FilterBar } from "@/components/marketplace/FilterBar";
 import { ListingsGrid } from "@/components/marketplace/ListingsGrid";
 import { CreateListingDialog } from "@/components/marketplace/CreateListingDialog";
 import { AgentDetailsDialog } from "@/components/marketplace/AgentDetailsDialog";
 import { readDynamicFields } from "@/lib/marketplace-utils";
 
-const marketplaceAgents = [
-	{
-		id: "1",
-		name: "Financial Advisor",
-		description: "AI agent specialized in financial analysis and investment advice",
-		price: "0.5 SUI",
-		creator: "0x123...abc",
-		category: "Finance",
-		image: "/placeholder.svg?height=200&width=200",
-		creationDate: "2023-04-15",
-		listingDate: "2023-04-20",
-		creatorReputation: 4.8,
-	},
-	{
-		id: "2",
-		name: "Crypto Market Analyst",
-		description: "Real-time crypto market analysis and trend predictions",
-		price: "0.8 SUI",
-		creator: "0x456...def",
-		category: "Crypto",
-		image: "/placeholder.svg?height=200&width=200",
-		creationDate: "2023-03-10",
-		listingDate: "2023-03-25",
-		creatorReputation: 4.2,
-	},
-	{
-		id: "3",
-		name: "News Aggregator",
-		description: "Collects and summarizes news from various sources",
-		price: "0.3 SUI",
-		creator: "0x789...ghi",
-		category: "News",
-		image: "/placeholder.svg?height=200&width=200",
-		creationDate: "2023-02-05",
-		listingDate: "2023-02-15",
-		creatorReputation: 4.5,
-	},
-	{
-		id: "4",
-		name: "Social Media Manager",
-		description: "Manages social media accounts and generates content",
-		price: "0.6 SUI",
-		creator: "0xabc...123",
-		category: "Social",
-		image: "/placeholder.svg?height=200&width=200",
-		creationDate: "2023-01-20",
-		listingDate: "2023-02-01",
-		creatorReputation: 4.0,
-	},
-];
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -71,22 +21,30 @@ export default function MarketplacePage() {
 	// live listings from on‐chain marketplace
 	const [listings, setListings] = useState<any[]>([]);
 
-	const fetchListings = () => {
-		readDynamicFields()
-			.then((data) => {
-				setListings(data);
-			})
-			.catch((err) => console.error("Failed to load marketplace listings:", err));
-	};
-
-	// fetch all listings once
-	useEffect(() => {
-		setInterval(fetchListings, 10_000);
-		fetchListings();
+	const fetchListings = useCallback(async () => {
+		try {
+			const data = await readDynamicFields();
+			setListings(data);
+		} catch (err) {
+			console.error("Failed to load marketplace listings:", err);
+		}
 	}, []);
 
-	// apply category filter to live data
-	const filtered = category === "All" ? listings : listings.filter((agent) => agent.category === category);
+	// initial load + poll every 10s (cleanup on unmount)
+	useEffect(() => {
+		fetchListings();
+		const id = setInterval(fetchListings, 10_000);
+		return () => clearInterval(id);
+	}, [fetchListings]);
+
+	// apply category filter to live data (default missing categories to "All")
+	const filtered = useMemo(() => {
+		return category === "All"
+			? listings
+			: listings.filter(
+					(l) => (l.fields.category ?? "All") === category
+			  );
+	}, [listings, category]);
 
 	const openDetails = (a: any) => {
 		setDetailsAgent(a);
@@ -114,7 +72,7 @@ export default function MarketplacePage() {
 					setOpen={setOpen}
 					allCategories={allCategories}
 					onCreate={() => {
-						setTimeout(fetchListings, 1000);
+						fetchListings();
 					}}
 				/>
 				<AgentDetailsDialog
