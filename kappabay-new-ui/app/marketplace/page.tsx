@@ -75,7 +75,7 @@ export default function MarketplacePage() {
 			// your own KioskOwnerCap → needed for transfer policy
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
 			if (!kioskCap) throw new Error("No KioskOwnerCap found for your account");
-			const policyId = kioskCap.data.objectId;
+			const policyId = dbAgent.objectId;
 
 			const tx = purchaseAgent(MARKET, sellerKioskId, agentCapId, policyId, policyId);
 
