@@ -11,7 +11,7 @@ import { readDynamicFields } from "@/lib/marketplace-utils";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
-import { purchaseAgent } from "@/lib/marketplace-utils";
+import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
 
 // All available categories
@@ -77,8 +77,30 @@ export default function MarketplacePage() {
 			if (!kioskCap) throw new Error("No KioskOwnerCap found for your account");
 			const policyId = dbAgent.objectId;
 
-			const tx = purchaseAgent(MARKET, sellerKioskId, agentCapId, policyId, policyId);
+			// build tx manually so we can split off exactly the payment coin
+			const tx = new Transaction();
 
+			// amount in mist is stored on the listing
+			const priceMist = BigInt(agent.fields.price);
+			// split gas coin for the exact payment amount
+			const [paymentCoin] = tx.splitCoins(tx.gas, [
+				tx.pure.u64(priceMist.toString()),
+			]);
+
+			// call the Move entry function purchase_agent
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::purchase_agent`,
+				arguments: [
+					tx.object(MARKET),
+					tx.object(sellerKioskId),
+					tx.pure.id(agentCapId),
+					tx.object(policyId),
+					// pass the split-out payment coin here
+					paymentCoin,
+				],
+			});
+
+			// sign & execute
 			await signAndExecute(tx);
 			toast({ title: "Purchase successful", description: "Agent acquired!" });
 			fetchListings();
