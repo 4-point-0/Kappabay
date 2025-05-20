@@ -17,25 +17,36 @@ export function AgentDetailsDialog({ agent, open, onOpenChange, onPurchase }: De
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{agent.name}</DialogTitle>
-          <DialogDescription>{agent.description}</DialogDescription>
+          <DialogTitle>{agent.fields.name}</DialogTitle>
+          <DialogDescription>{agent.fields.description}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="flex items-center gap-4">
-            <img src={agent.image || "/placeholder.svg"} alt={agent.name} className="w-20 h-20 object-cover rounded-md" />
+            <img
+              src={agent.fields.image_url || "/placeholder.svg"}
+              alt={agent.fields.name}
+              className="w-20 h-20 object-cover rounded-md"
+            />
             <div>
-              <Badge variant="outline">{agent.category}</Badge>
-              <p className="font-medium text-lg mt-1">{agent.price}</p>
+              <Badge variant="outline">
+                {agent.fields.category || "All"}
+              </Badge>
+              <p className="font-medium text-lg mt-1">
+                {(Number(agent.fields.price) / 1e9).toFixed(3)} SUI
+              </p>
             </div>
           </div>
           <div className="space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Creator:</span><span>{agent.creator}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Creation Date:</span><span>{agent.creationDate}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-muted-foreground">Listing Date:</span><span>{agent.listingDate}</span></div>
-            <div className="flex justify-between text-sm items-center">
-              <span className="text-muted-foreground">Creator Reputation:</span>
-              <span className="flex items-center">
-                {agent.creatorReputation}<Star className="h-3 w-3 text-yellow-500 ml-1 fill-yellow-500"/>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Seller:</span>
+              <span>{agent.fields.seller}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Listed:</span>
+              <span>
+                {new Date(
+                  Number(agent.fields.creation_time)
+                ).toLocaleDateString()}
               </span>
             </div>
           </div>
