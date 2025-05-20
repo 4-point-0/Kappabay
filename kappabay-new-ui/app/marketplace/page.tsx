@@ -63,11 +63,13 @@ export default function MarketplacePage() {
 		toast({ title: "Purchasing agent...", description: "Confirm in wallet…" });
 		try {
 			// ── fetch DB record to get the on‐chain AgentCap ID ───────────────
-			const dbAgent = await getAgentInfo(agent.fields.agent_id);
+			const dbAgent = await getAgentInfo(undefined, agent.fields.agent_id);
 			if (!dbAgent) throw new Error("Agent not found in database");
 			const agentCapId = dbAgent.capId;
 
 			const MARKET = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
+			const POLICY = process.env.NEXT_PUBLIC_MP_POLICY_ID!;
+			console.log("poicy", POLICY);
 
 			// seller’s kiosk that holds the listing
 			const sellerKioskId = agent.fields.kiosk_id;
@@ -75,7 +77,6 @@ export default function MarketplacePage() {
 			// your own KioskOwnerCap → needed for transfer policy
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
 			if (!kioskCap) throw new Error("No KioskOwnerCap found for your account");
-			const policyId = dbAgent.objectId;
 
 			// build tx manually so we can split off exactly the payment coin
 			const tx = new Transaction();
@@ -83,9 +84,7 @@ export default function MarketplacePage() {
 			// amount in mist is stored on the listing
 			const priceMist = BigInt(agent.fields.price);
 			// split gas coin for the exact payment amount
-			const [paymentCoin] = tx.splitCoins(tx.gas, [
-				tx.pure.u64(priceMist.toString()),
-			]);
+			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(priceMist.toString())]);
 
 			// call the Move entry function purchase_agent
 			tx.moveCall({
@@ -94,12 +93,12 @@ export default function MarketplacePage() {
 					tx.object(MARKET),
 					tx.object(sellerKioskId),
 					tx.pure.id(agentCapId),
-					tx.object(policyId),
+					tx.object(POLICY),
 					// pass the split-out payment coin here
 					paymentCoin,
 				],
 			});
-
+			tx.setGasBudget(priceMist);
 			// sign & execute
 			await signAndExecute(tx);
 			toast({ title: "Purchase successful", description: "Agent acquired!" });
