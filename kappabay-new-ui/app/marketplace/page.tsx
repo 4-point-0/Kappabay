@@ -24,6 +24,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { listAgent } from "@/lib/marketplace-utils";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
+import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";    // ← new
 
 // Mock data for marketplace agents
 const marketplaceAgents = [
@@ -77,27 +78,6 @@ const marketplaceAgents = [
 	},
 ];
 
-// Mock data for user's owned agents
-const ownedAgents = [
-	{
-		id: "owned-1",
-		name: "Personal Assistant",
-		description: "Helps with scheduling and daily tasks",
-		category: "Productivity",
-	},
-	{
-		id: "owned-2",
-		name: "Code Reviewer",
-		description: "Reviews code and suggests improvements",
-		category: "Development",
-	},
-	{
-		id: "owned-3",
-		name: "Data Analyzer",
-		description: "Analyzes data and generates insights",
-		category: "Analytics",
-	},
-];
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -106,6 +86,7 @@ export default function MarketplacePage() {
 	const [selectedCategory, setSelectedCategory] = useState("All");
 	const [selectedAgent, setSelectedAgent] = useState<any>(null);
 	const [newListingAgent, setNewListingAgent] = useState("");
+	const [ownedAgents, setOwnedAgents] = useState<any[]>([]);  // ← real list
 	const [newListingPrice, setNewListingPrice] = useState("");
 	const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 	const [isCreateListingOpen, setIsCreateListingOpen] = useState(false);
@@ -115,6 +96,18 @@ export default function MarketplacePage() {
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
 	const { caps } = useOwnedCaps();
+
+	// ── load full agent info for each AgentCap we own ─────────────────
+	useEffect(() => {
+		const capIds = caps
+			.filter((c) => c.data?.type.includes("::agent::AgentCap"))
+			.map((c) => c.data.objectId);
+		if (capIds.length === 0) {
+			setOwnedAgents([]);
+			return;
+		}
+		getAgentsByCapIds(capIds).then(setOwnedAgents).catch(console.error);
+	}, [caps]);
 
 	// Filter agents based on selected category
 	const filteredAgents =
@@ -233,16 +226,23 @@ export default function MarketplacePage() {
 									</DialogHeader>
 
 									<div className="grid gap-4 py-4">
+										{/* ── OWNED AGENTS ─────────────────────────────────── */}
 										<div className="space-y-2">
-											<Label htmlFor="agent">Select Agent</Label>
-											<Select value={newListingAgent} onValueChange={setNewListingAgent}>
-												<SelectTrigger id="agent">
-													<SelectValue placeholder="Select an agent" />
+											<Label htmlFor="owned-agent">Owned Agents</Label>
+											<Select
+												value={newListingAgent}
+												onValueChange={setNewListingAgent}
+											>
+												<SelectTrigger id="owned-agent">
+													<SelectValue placeholder="Select an owned agent" />
 												</SelectTrigger>
 												<SelectContent>
 													{ownedAgents.map((agent) => (
-														<SelectItem key={agent.id} value={agent.id}>
-															{agent.name} ({agent.category})
+														<SelectItem
+															key={agent.objectId}
+															value={agent.objectId}
+														>
+															{agent.name}
 														</SelectItem>
 													))}
 												</SelectContent>
