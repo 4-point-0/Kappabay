@@ -58,7 +58,7 @@ export default function ManageGasDialog({
 			.catch((e) => {
 				console.error("check_gas_balance failed", e);
 			});
-	}, [agent.objectId, wallet?.address, signAndExecuteTransaction]);
+	}, []);
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
