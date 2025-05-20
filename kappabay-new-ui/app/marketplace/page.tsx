@@ -1,3 +1,5 @@
+"use client";
+
 import Header from "@/components/header";
 import { useState } from "react";
 import { FilterBar } from "@/components/marketplace/FilterBar";
@@ -64,11 +66,10 @@ export default function MarketplacePage() {
 	const [category, setCategory] = useState("All");
 	const [detailsAgent, setDetailsAgent] = useState<any>(null);
 	const [detailsOpen, setDetailsOpen] = useState(false);
+	const [open, setOpen] = useState(false);
 
 	const filtered =
-		category === "All"
-			? marketplaceAgents
-			: marketplaceAgents.filter((agent) => agent.category === category);
+		category === "All" ? marketplaceAgents : marketplaceAgents.filter((agent) => agent.category === category);
 
 	const openDetails = (a: any) => {
 		setDetailsAgent(a);
@@ -85,14 +86,12 @@ export default function MarketplacePage() {
 				categories={allCategories}
 				selected={category}
 				onSelect={setCategory}
-				onCreateClick={() => {/* open your CreateListingDialog via context or ref */}}
+				onCreateClick={() => {
+					setOpen(true);
+				}}
 			/>
-			<ListingsGrid
-				agents={filtered}
-				onDetails={openDetails}
-				onPurchase={handlePurchase}
-			/>
-			<CreateListingDialog />
+			<ListingsGrid agents={filtered} onDetails={openDetails} onPurchase={handlePurchase} />
+			<CreateListingDialog open={open} setOpen={setOpen} />
 			<AgentDetailsDialog
 				agent={detailsAgent}
 				open={detailsOpen}

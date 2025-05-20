@@ -29,7 +29,7 @@ export function useOwnedCaps() {
 				const response = await suiClient.getOwnedObjects({
 					owner: account.address,
 					cursor,
-					options: { showType: true },
+					options: { showType: true, showDisplay: true, showContent: true },
 				});
 
 				allObjects.push(...response.data);
@@ -37,12 +37,12 @@ export function useOwnedCaps() {
 
 				if (!response.hasNextPage) break;
 			} while (true);
-
+			const filtered = allObjects.filter((obj) => obj.data?.type && CAP_TYPES.includes(obj.data.type));
 			if (process.env.NODE_ENV === "development") {
-				console.log("allObjects", allObjects);
+				console.log("filtered", filtered);
 			}
 
-			return allObjects.filter((obj) => obj.data?.type && CAP_TYPES.includes(obj.data.type));
+			return filtered;
 		},
 		enabled: !!account?.address,
 		staleTime: 30_000, // 30 seconds

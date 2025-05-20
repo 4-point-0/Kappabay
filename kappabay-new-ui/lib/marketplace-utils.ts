@@ -1,9 +1,10 @@
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 
-const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID;
+const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
+const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 
-const readDynamicFields = async () => {
+export const readDynamicFields = async () => {
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 	const result: any = [];
 	let hasNextPage = true;
@@ -14,7 +15,7 @@ const readDynamicFields = async () => {
 			nextCursor,
 			hasNextPage: nextPage,
 		} = await client.getDynamicFields({
-			parentId: "0x9801afde129050adb0573fadfd798fa9733104d4521bb8936991e59a2ad706f0",
+			parentId: MARKETPLACE_ID,
 			cursor: cursor,
 		});
 		cursor = nextCursor;
@@ -26,7 +27,7 @@ const readDynamicFields = async () => {
 
 	for (let entry of result) {
 		let field: any = await client.getDynamicFieldObject({
-			parentId: "0x9801afde129050adb0573fadfd798fa9733104d4521bb8936991e59a2ad706f0",
+			parentId: MARKETPLACE_ID,
 			name: entry.name,
 		});
 		// console.dir(field, {depth: 7});
