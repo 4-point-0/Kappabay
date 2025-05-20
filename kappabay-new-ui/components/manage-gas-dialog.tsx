@@ -76,6 +76,11 @@ export default function ManageGasDialog({
 		})()
 		: undefined;
 
+	// ── raw hours remaining (for coloring logic) ─────────────────────────
+	const hoursRemaining: number | undefined = gasBalance
+		? Number(gasBalance) / 1_000_000
+		: undefined;
+
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
 		if (!wallet?.address) return;
@@ -222,9 +227,51 @@ export default function ManageGasDialog({
 				{/* ── TIME REMAINING AT 1_000_000 mist/hour ──────────────────────── */}
 				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
 					<span>Time Remaining:</span>
-					<span className="font-medium">
-						{timeRemaining ?? "Loading..."}
-					</span>
+					{hoursRemaining != null ? (
+						hoursRemaining < 4 ? (
+							<div className="flex items-center text-red-500 group">
+								<span>{timeRemaining}</span>
+								<div className="relative ml-2">
+									{/* warning icon */}
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+										viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+										strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+										<line x1="12" y1="9" x2="12" y2="13"/>
+										<line x1="12" y1="17" x2="12.01" y2="17"/>
+									</svg>
+									<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+										Critical: Less than 4 hours uptime remaining
+									</div>
+								</div>
+							</div>
+						) : hoursRemaining < 24 ? (
+							<div className="flex items-center text-yellow-500 group">
+								<span>{timeRemaining}</span>
+								<div className="relative ml-2">
+									{/* warning icon */}
+									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+										viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+										strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500">
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+										<line x1="12" y1="9" x2="12" y2="13"/>
+										<line x1="12" y1="17" x2="12.01" y2="17"/>
+									</svg>
+									<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+										Less than a day remaining
+									</div>
+								</div>
+							</div>
+						) : (
+							<span className="font-medium">{timeRemaining}</span>
+						)
+					) : (
+						<span className="font-medium">Loading…</span>
+					)}
 				</div>
 
 				<div className="grid gap-4 py-4">
