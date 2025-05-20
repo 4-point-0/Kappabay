@@ -98,11 +98,12 @@ export default function MarketplacePage() {
 
 	// ── load full agent info for each AgentCap we own ─────────────────
 	useEffect(() => {
-		const capIds = caps.filter((c) => c.data?.type.includes("::agent::AgentCap")).map((c) => c.data.objectId);
-		if (capIds.length === 0) {
-			setOwnedAgents([]);
-			return;
-		}
+		const capIds = caps
+			.filter((c) => c.data?.type.includes("::agent::AgentCap"))
+			.map((c) => c.data.objectId);
+		// if user owns none, bail out (initial state is already [])
+		if (capIds.length === 0) return;
+
 		getAgentsByCapIds(capIds).then(setOwnedAgents).catch(console.error);
 	}, [caps]);
 
