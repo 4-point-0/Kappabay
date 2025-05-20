@@ -1,31 +1,9 @@
-"use client";
-
 import Header from "@/components/header";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { PageTransition } from "@/components/page-transition";
-import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Filter, Info, Plus, Star } from "lucide-react";
-import { useCurrentAccount } from "@mysten/dapp-kit";
-import { toast } from "@/hooks/use-toast";
-import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
-import { listAgent } from "@/lib/marketplace-utils";
-import { useOwnedCaps } from "@/hooks/use-owned-caps";
-import { getAgentsByCapIds } from "@/lib/actions/get-agents-info"; // ← new
+import { useState } from "react";
+import { FilterBar } from "@/components/marketplace/FilterBar";
+import { ListingsGrid } from "@/components/marketplace/ListingsGrid";
+import { CreateListingDialog } from "@/components/marketplace/CreateListingDialog";
+import { AgentDetailsDialog } from "@/components/marketplace/AgentDetailsDialog";
 
 // Mock data for marketplace agents
 const marketplaceAgents = [
@@ -83,333 +61,44 @@ const marketplaceAgents = [
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
 
 export default function MarketplacePage() {
-	const [selectedCategory, setSelectedCategory] = useState("All");
-	const [selectedAgent, setSelectedAgent] = useState<any>(null);
-	const [newListingAgent, setNewListingAgent] = useState("");
-	const [ownedAgents, setOwnedAgents] = useState<any[]>([]); // ← real list
-	const [newListingPrice, setNewListingPrice] = useState("");
-	const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-	const [isCreateListingOpen, setIsCreateListingOpen] = useState(false);
-	const [newListingCategory, setNewListingCategory] = useState("");
+	const [category, setCategory] = useState("All");
+	const [detailsAgent, setDetailsAgent] = useState<any>(null);
+	const [detailsOpen, setDetailsOpen] = useState(false);
 
-	// ── on‐chain helpers ───────────────────────────────────────────────────
-	const wallet = useCurrentAccount();
-	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
-	const { caps } = useOwnedCaps();
-
-	// ── load full agent info for each AgentCap we own ─────────────────
-	useEffect(() => {
-		const capIds = caps.filter((c) => c.data?.type.includes("::agent::AgentCap")).map((c) => c.data.objectId);
-
-		// if user owns none, bail out (initial state is already [])
-		if (capIds.length === 0) return;
-
-		getAgentsByCapIds(capIds).then(setOwnedAgents).catch(console.error);
-	}, [caps]);
-
-	// Filter agents based on selected category
-	const filteredAgents =
-		selectedCategory === "All"
+	const filtered =
+		category === "All"
 			? marketplaceAgents
-			: marketplaceAgents.filter((agent) => agent.category === selectedCategory);
+			: marketplaceAgents.filter((agent) => agent.category === category);
 
-	const handlePurchase = (agent: any) => {
-		alert(`Purchasing agent: ${agent.name} for ${agent.price}`);
+	const openDetails = (a: any) => {
+		setDetailsAgent(a);
+		setDetailsOpen(true);
 	};
-
-	const handleCreateListing = async () => {
-		if (!wallet?.address || !newListingAgent || !newListingPrice || !newListingCategory) {
-			toast({
-				title: "Missing information",
-				description: "Connect your wallet and fill out all fields before listing.",
-				variant: "destructive",
-			});
-			return;
-		}
-
-		try {
-			// show pending toast
-			toast({
-				title: "Submitting listing",
-				description: "Please confirm in your wallet…",
-			});
-
-			// convert SUI → mist
-			const priceMist = BigInt(Math.round(Number(newListingPrice) * 1e9)).toString();
-
-			// ── derive all on-chain IDs from our owned caps ─────────────────────
-			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
-			console.log("newListingAgent", newListingAgent);
-
-			// find the AgentCap matching the agent we picked
-			const selectedAgentCap = caps.find(
-				(c) =>
-					c.data.type.endsWith("::AgentCap") &&
-					// 'for' field equals the agent objectId
-					c.data.content.fields.agent_id === newListingAgent
-			);
-			if (!selectedAgentCap) {
-				throw new Error("No AgentCap found for selected agent");
-			}
-			const agentCapId = selectedAgentCap.data.objectId;
-			const agentId = selectedAgentCap.data.content.fields.agent_id;
-
-			// find our kiosk owner cap
-			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-			if (!kioskCap) {
-				throw new Error("No KioskOwnerCap found for your account");
-			}
-			const kioskCapId = kioskCap.data.objectId;
-			const kioskId = kioskCap.data.content.fields.for;
-
-			const tx = listAgent(
-				MARKETPLACE_ID,
-				agentCapId,
-				agentId,
-				kioskId,
-				kioskCapId,
-				priceMist,
-				/* optional: name */ "",
-				/* optional: description */ "",
-				/* optional: imageUrl */ ""
-			);
-
-			await signAndExecuteTransaction(tx);
-			toast({
-				title: "Listing successful",
-				description: "Your agent is now live on the marketplace.",
-			});
-
-			// reset form
-			setNewListingAgent("");
-			setNewListingPrice("");
-			setNewListingCategory("");
-			setIsCreateListingOpen(false);
-		} catch (err) {
-			console.error("Listing failed", err);
-			toast({
-				title: "Listing failed",
-				description: "Transaction did not succeed. Check console for details.",
-				variant: "destructive",
-			});
-		}
-	};
-
-	const openDetails = (agent: any) => {
-		setSelectedAgent(agent);
-		setIsDetailsOpen(true);
+	const handlePurchase = (a: any) => {
+		alert(`Purchasing agent: ${a.name} for ${a.price}`);
 	};
 
 	return (
 		<main className="min-h-screen bg-background text-foreground">
 			<Header />
-			<PageTransition>
-				<div className="container mx-auto px-4 py-8">
-					{/* Header with filtering */}
-					<div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-8">
-						<div>
-							<h1 className="text-3xl font-bold">Agent Marketplace</h1>
-							<p className="text-muted-foreground mt-2">Discover and acquire AI agents for your needs</p>
-						</div>
-
-						<div className="flex flex-col sm:flex-row gap-3">
-							<div className="flex items-center gap-2">
-								<Filter className="h-4 w-4 text-muted-foreground" />
-								<Select value={selectedCategory} onValueChange={setSelectedCategory}>
-									<SelectTrigger className="w-[180px]">
-										<SelectValue placeholder="Filter by category" />
-									</SelectTrigger>
-									<SelectContent>
-										{allCategories.map((category) => (
-											<SelectItem key={category} value={category}>
-												{category}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-
-							<Dialog open={isCreateListingOpen} onOpenChange={setIsCreateListingOpen}>
-								<DialogTrigger asChild>
-									<Button className="gap-2">
-										<Plus className="h-4 w-4" /> Create New Listing
-									</Button>
-								</DialogTrigger>
-								<DialogContent>
-									<DialogHeader>
-										<DialogTitle>Create New Listing</DialogTitle>
-										<DialogDescription>Select one of your agents to list on the marketplace</DialogDescription>
-									</DialogHeader>
-
-									<div className="grid gap-4 py-4">
-										{/* ── OWNED AGENTS ─────────────────────────────────── */}
-										<div className="space-y-2">
-											<Label htmlFor="owned-agent">Owned Agents</Label>
-											<Select value={newListingAgent} onValueChange={setNewListingAgent}>
-												<SelectTrigger id="owned-agent">
-													<SelectValue placeholder="Select an owned agent" />
-												</SelectTrigger>
-												<SelectContent>
-													{ownedAgents.map((agent) => (
-														<SelectItem key={agent.objectId} value={agent.objectId}>
-															{agent.name}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor="category">Category</Label>
-											<Select
-												value={newListingCategory}
-												onValueChange={setNewListingCategory}
-												defaultValue={selectedCategory !== "All" ? selectedCategory : allCategories[1]}
-											>
-												<SelectTrigger id="category">
-													<SelectValue placeholder="Select a category" />
-												</SelectTrigger>
-												<SelectContent>
-													{allCategories.slice(1).map((category) => (
-														<SelectItem key={category} value={category}>
-															{category}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<p className="text-xs text-muted-foreground">
-												Select the category that best describes this agent
-											</p>
-										</div>
-
-										<div className="space-y-2">
-											<Label htmlFor="price">Price (SUI)</Label>
-											<Input
-												id="price"
-												type="number"
-												step="0.1"
-												min="0.1"
-												placeholder="0.5"
-												value={newListingPrice}
-												onChange={(e) => setNewListingPrice(e.target.value)}
-											/>
-										</div>
-									</div>
-
-									<DialogFooter>
-										<Button variant="outline" onClick={() => setIsCreateListingOpen(false)}>
-											Cancel
-										</Button>
-										<Button onClick={handleCreateListing}>Create Listing</Button>
-									</DialogFooter>
-								</DialogContent>
-							</Dialog>
-						</div>
-					</div>
-
-					{/* Agent listings */}
-					<motion.div
-						className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						transition={{ duration: 0.5 }}
-					>
-						{filteredAgents.map((agent, index) => (
-							<motion.div
-								key={agent.id}
-								initial={{ opacity: 0, y: 20 }}
-								animate={{ opacity: 1, y: 0 }}
-								transition={{ duration: 0.3, delay: index * 0.1 }}
-								whileHover={{ y: -5, transition: { duration: 0.2 } }}
-							>
-								<Card className="overflow-hidden h-full flex flex-col">
-									<div className="h-48 bg-muted flex items-center justify-center">
-										<img
-											src={agent.image || "/placeholder.svg"}
-											alt={agent.name}
-											className="w-full h-full object-cover"
-										/>
-									</div>
-									<CardContent className="p-4 flex-grow">
-										<div className="flex justify-between items-start mb-2">
-											<h3 className="font-bold text-lg">{agent.name}</h3>
-											<Badge variant="outline">{agent.category}</Badge>
-										</div>
-										<p className="text-sm text-muted-foreground mb-4">{agent.description}</p>
-										<div className="text-sm text-muted-foreground">
-											<p>Creator: {agent.creator}</p>
-											<p className="font-medium text-foreground mt-2">{agent.price}</p>
-										</div>
-									</CardContent>
-									<CardFooter className="p-4 pt-0 flex justify-between">
-										<Button variant="outline" size="sm" className="gap-1" onClick={() => openDetails(agent)}>
-											<Info className="h-4 w-4" /> Details
-										</Button>
-										<Button size="sm" onClick={() => handlePurchase(agent)}>
-											Purchase
-										</Button>
-									</CardFooter>
-								</Card>
-							</motion.div>
-						))}
-					</motion.div>
-
-					{/* Details Modal */}
-					<Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-						<DialogContent className="sm:max-w-md">
-							<DialogHeader>
-								<DialogTitle>{selectedAgent?.name}</DialogTitle>
-								<DialogDescription>{selectedAgent?.description}</DialogDescription>
-							</DialogHeader>
-
-							{selectedAgent && (
-								<div className="grid gap-4 py-4">
-									<div className="flex items-center gap-4">
-										<img
-											src={selectedAgent.image || "/placeholder.svg"}
-											alt={selectedAgent.name}
-											className="w-20 h-20 object-cover rounded-md"
-										/>
-										<div>
-											<Badge variant="outline">{selectedAgent.category}</Badge>
-											<p className="font-medium text-lg mt-1">{selectedAgent.price}</p>
-										</div>
-									</div>
-
-									<div className="space-y-2">
-										<div className="flex justify-between text-sm">
-											<span className="text-muted-foreground">Creator:</span>
-											<span>{selectedAgent.creator}</span>
-										</div>
-										<div className="flex justify-between text-sm">
-											<span className="text-muted-foreground">Creation Date:</span>
-											<span>{selectedAgent.creationDate}</span>
-										</div>
-										<div className="flex justify-between text-sm">
-											<span className="text-muted-foreground">Listing Date:</span>
-											<span>{selectedAgent.listingDate}</span>
-										</div>
-										<div className="flex justify-between text-sm items-center">
-											<span className="text-muted-foreground">Creator Reputation:</span>
-											<span className="flex items-center">
-												{selectedAgent.creatorReputation}
-												<Star className="h-3 w-3 text-yellow-500 ml-1 fill-yellow-500" />
-											</span>
-										</div>
-									</div>
-								</div>
-							)}
-
-							<DialogFooter className="sm:justify-between">
-								<Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-									Close
-								</Button>
-								<Button onClick={() => handlePurchase(selectedAgent)}>Purchase for {selectedAgent?.price}</Button>
-							</DialogFooter>
-						</DialogContent>
-					</Dialog>
-				</div>
-			</PageTransition>
+			<FilterBar
+				categories={allCategories}
+				selected={category}
+				onSelect={setCategory}
+				onCreateClick={() => {/* open your CreateListingDialog via context or ref */}}
+			/>
+			<ListingsGrid
+				agents={filtered}
+				onDetails={openDetails}
+				onPurchase={handlePurchase}
+			/>
+			<CreateListingDialog />
+			<AgentDetailsDialog
+				agent={detailsAgent}
+				open={detailsOpen}
+				onOpenChange={setDetailsOpen}
+				onPurchase={handlePurchase}
+			/>
 		</main>
 	);
 }

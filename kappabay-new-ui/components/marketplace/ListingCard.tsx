@@ -1,0 +1,38 @@
+"use client";
+import { Card, CardContent, CardFooter } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Info, Star } from "lucide-react";
+
+interface ListingCardProps {
+  agent: any;
+  onDetails: (a: any) => void;
+  onPurchase: (a: any) => void;
+}
+
+export function ListingCard({ agent, onDetails, onPurchase }: ListingCardProps) {
+  return (
+    <Card className="overflow-hidden h-full flex flex-col">
+      <div className="h-48 bg-muted flex items-center justify-center">
+        <img src={agent.image || "/placeholder.svg"} alt={agent.name} className="w-full h-full object-cover" />
+      </div>
+      <CardContent className="p-4 flex-grow">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="font-bold text-lg">{agent.name}</h3>
+          <Badge variant="outline">{agent.category}</Badge>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">{agent.description}</p>
+        <div className="text-sm text-muted-foreground">
+          <p>Creator: {agent.creator}</p>
+          <p className="font-medium text-foreground mt-2">{agent.price}</p>
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-0 flex justify-between">
+        <Button variant="outline" size="sm" className="gap-1" onClick={() => onDetails(agent)}>
+          <Info className="h-4 w-4" /> Details
+        </Button>
+        <Button size="sm" onClick={() => onPurchase(agent)}>Purchase</Button>
+      </CardFooter>
+    </Card>
+  );
+}
