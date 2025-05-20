@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -24,7 +24,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { listAgent } from "@/lib/marketplace-utils";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
-import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";    // ← new
+import { getAgentsByCapIds } from "@/lib/actions/get-agents-info"; // ← new
 
 // Mock data for marketplace agents
 const marketplaceAgents = [
@@ -78,7 +78,6 @@ const marketplaceAgents = [
 	},
 ];
 
-
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
 
@@ -86,7 +85,7 @@ export default function MarketplacePage() {
 	const [selectedCategory, setSelectedCategory] = useState("All");
 	const [selectedAgent, setSelectedAgent] = useState<any>(null);
 	const [newListingAgent, setNewListingAgent] = useState("");
-	const [ownedAgents, setOwnedAgents] = useState<any[]>([]);  // ← real list
+	const [ownedAgents, setOwnedAgents] = useState<any[]>([]); // ← real list
 	const [newListingPrice, setNewListingPrice] = useState("");
 	const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 	const [isCreateListingOpen, setIsCreateListingOpen] = useState(false);
@@ -99,9 +98,7 @@ export default function MarketplacePage() {
 
 	// ── load full agent info for each AgentCap we own ─────────────────
 	useEffect(() => {
-		const capIds = caps
-			.filter((c) => c.data?.type.includes("::agent::AgentCap"))
-			.map((c) => c.data.objectId);
+		const capIds = caps.filter((c) => c.data?.type.includes("::agent::AgentCap")).map((c) => c.data.objectId);
 		if (capIds.length === 0) {
 			setOwnedAgents([]);
 			return;
@@ -143,7 +140,7 @@ export default function MarketplacePage() {
 				throw new Error("No AgentCap found for selected agent");
 			}
 			const agentCapId = selectedAgentCap.data.objectId;
-			const agentId    = selectedAgentCap.data.content.fields.for;
+			const agentId = selectedAgentCap.data.content.fields.for;
 
 			// find our kiosk owner cap
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
@@ -151,7 +148,7 @@ export default function MarketplacePage() {
 				throw new Error("No KioskOwnerCap found for your account");
 			}
 			const kioskCapId = kioskCap.data.objectId;
-			const kioskId    = kioskCap.data.content.fields.for;
+			const kioskId = kioskCap.data.content.fields.for;
 
 			const tx = listAgent(
 				MARKETPLACE_ID,
@@ -229,19 +226,13 @@ export default function MarketplacePage() {
 										{/* ── OWNED AGENTS ─────────────────────────────────── */}
 										<div className="space-y-2">
 											<Label htmlFor="owned-agent">Owned Agents</Label>
-											<Select
-												value={newListingAgent}
-												onValueChange={setNewListingAgent}
-											>
+											<Select value={newListingAgent} onValueChange={setNewListingAgent}>
 												<SelectTrigger id="owned-agent">
 													<SelectValue placeholder="Select an owned agent" />
 												</SelectTrigger>
 												<SelectContent>
 													{ownedAgents.map((agent) => (
-														<SelectItem
-															key={agent.objectId}
-															value={agent.objectId}
-														>
+														<SelectItem key={agent.objectId} value={agent.objectId}>
 															{agent.name}
 														</SelectItem>
 													))}
