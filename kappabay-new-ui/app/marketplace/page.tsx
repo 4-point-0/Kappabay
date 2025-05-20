@@ -98,7 +98,11 @@ export default function MarketplacePage() {
 					paymentCoin,
 				],
 			});
-			tx.setGasBudget(priceMist);
+
+			// set gas budget = payment amount + a small extra buffer for gas fees
+			const EXTRA_GAS_MIST = BigInt(2_000_000);  // ~0.002 SUI extra
+			const gasBudget = priceMist + EXTRA_GAS_MIST;
+			tx.setGasBudget(Number(gasBudget));
 			// sign & execute
 			await signAndExecute(tx);
 			toast({ title: "Purchase successful", description: "Agent acquired!" });
