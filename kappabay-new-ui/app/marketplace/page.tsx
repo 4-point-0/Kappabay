@@ -13,7 +13,6 @@ import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { purchaseAgent } from "@/lib/marketplace-utils";
 import { toast } from "@/hooks/use-toast";
 
-
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
 
@@ -48,11 +47,7 @@ export default function MarketplacePage() {
 
 	// apply category filter to live data (default missing categories to "All")
 	const filtered = useMemo(() => {
-		return category === "All"
-			? listings
-			: listings.filter(
-					(l) => (l.fields.category ?? "All") === category
-			  );
+		return category === "All" ? listings : listings.filter((l) => (l.fields.category ?? "All") === category);
 	}, [listings, category]);
 
 	const openDetails = (a: any) => {
@@ -66,12 +61,14 @@ export default function MarketplacePage() {
 		}
 		toast({ title: "Purchasing agent...", description: "Confirm in wallet…" });
 		try {
+			console.log("agent", agent);
+
 			const MARKET = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 
 			// seller’s kiosk that holds the listing
 			const sellerKioskId = agent.fields.kiosk_id;
 			// the agent cap id to purchase
-			const agentCapId     = agent.fields.agent_id;
+			const agentCapId = agent.fields.agent_id;
 
 			// your own KioskOwnerCap → needed for transfer policy
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
@@ -80,15 +77,9 @@ export default function MarketplacePage() {
 
 			// NOTE: purchaseAgent expects:
 			//   (marketplaceObj, sellerKioskObj, agentCapId, policyObj, paymentCoinObj)
-			// Here we re-use the same cap object as the “paymentCoinObj”  
+			// Here we re-use the same cap object as the “paymentCoinObj”
 			// (you can swap in a specific coin if needed)
-			const tx = purchaseAgent(
-				MARKET,
-				sellerKioskId,
-				agentCapId,
-				policyId,
-				policyId
-			);
+			const tx = purchaseAgent(MARKET, sellerKioskId, agentCapId, policyId, policyId);
 
 			await signAndExecute(tx);
 			toast({ title: "Purchase successful", description: "Agent acquired!" });
