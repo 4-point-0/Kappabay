@@ -60,6 +60,22 @@ export default function ManageGasDialog({
 			});
 	}, []);
 
+	// ── compute time until gasBalance drains at 1_000_000 mist per hour ──
+	const timeRemaining: string | undefined = gasBalance
+		? (() => {
+			const feePerHour = 1_000_000;                  // mist drawn per hour
+			const totalSeconds = (Number(gasBalance) / feePerHour) * 3600;
+			const days    = Math.floor(totalSeconds / 86400);
+			const hours   = Math.floor((totalSeconds % 86400) / 3600);
+			const minutes = Math.floor((totalSeconds % 3600) / 60);
+			let result = "";
+			if (days)    result += `${days}d `;
+			if (hours)   result += `${hours}h `;
+			result += `${minutes}m`;
+			return result;
+		})()
+		: undefined;
+
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
 		if (!wallet?.address) return;
@@ -195,11 +211,19 @@ export default function ManageGasDialog({
 					<DialogDescription>Add or withdraw SUI from this agent's gas bag.</DialogDescription>
 				</DialogHeader>
 
-				{/* ── NEW: display current on-chain gas balance ─────────────────────── */}
+				{/* ── CURRENT GAS BALANCE ──────────────────────────────────────────── */}
 				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
 					<span>Current Gas Balance:</span>
 					<span className="font-medium">
 						{gasBalance ? `${(Number(gasBalance) / 1e9).toFixed(3)} SUI` : "Loading..."}
+					</span>
+				</div>
+
+				{/* ── TIME REMAINING AT 1_000_000 mist/hour ──────────────────────── */}
+				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
+					<span>Time Remaining:</span>
+					<span className="font-medium">
+						{timeRemaining ?? "Loading..."}
 					</span>
 				</div>
 
