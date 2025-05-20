@@ -20,6 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, Info, Plus, Star } from "lucide-react";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import { listAgent } from "@/lib/marketplace-utils";
 
 // Mock data for marketplace agents
 const marketplaceAgents = [
@@ -107,6 +110,10 @@ export default function MarketplacePage() {
 	const [isCreateListingOpen, setIsCreateListingOpen] = useState(false);
 	const [newListingCategory, setNewListingCategory] = useState("");
 
+	// ── on‐chain helpers ───────────────────────────────────────────────────
+	const wallet = useCurrentAccount();
+	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
+
 	// Filter agents based on selected category
 	const filteredAgents =
 		selectedCategory === "All"
@@ -117,19 +124,53 @@ export default function MarketplacePage() {
 		alert(`Purchasing agent: ${agent.name} for ${agent.price}`);
 	};
 
-	const handleCreateListing = () => {
-		if (!newListingAgent || !newListingPrice || !newListingCategory) {
-			alert("Please select an agent, category, and set a price");
+	const handleCreateListing = async () => {
+		if (!wallet?.address || !newListingAgent || !newListingPrice || !newListingCategory) {
+			alert("Please connect your wallet and fill out all fields");
 			return;
 		}
 
-		alert(
-			`Creating new listing for agent: ${newListingAgent} in category: ${newListingCategory} with price: ${newListingPrice} SUI`
-		);
-		setNewListingAgent("");
-		setNewListingPrice("");
-		setNewListingCategory("");
-		setIsCreateListingOpen(false);
+		try {
+			// convert SUI → mist
+			const priceMist = BigInt(Math.round(Number(newListingPrice) * 1e9)).toString();
+
+			// You must supply real IDs here:
+			//   - MARKETPLACE_ID: the on-chain marketplace object
+			//   - agentCapId: the capability object ID for your agent
+			//   - agentId: the agent object ID
+			//   - kioskId, kioskCapId: your user kiosk + its capability
+			// For now we assume newListingAgent holds both agentCapId & agentId,
+			// and that you have fetched your kiosk IDs into variables:
+			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_ID!;
+			const agentCapId   = newListingAgent;
+			const agentId      = newListingAgent;
+			const kioskId      = YOUR_KIOSK_ID;
+			const kioskCapId   = YOUR_KIOSK_CAP_ID;
+
+			const tx = listAgent(
+				MARKETPLACE_ID,
+				agentCapId,
+				agentId,
+				kioskId,
+				kioskCapId,
+				priceMist,
+				/* optional: name */ "",
+				/* optional: description */ "",
+				/* optional: imageUrl */ ""
+			);
+
+			await signAndExecuteTransaction(tx);
+			alert("Listing created on-chain!");
+
+			// reset form
+			setNewListingAgent("");
+			setNewListingPrice("");
+			setNewListingCategory("");
+			setIsCreateListingOpen(false);
+		} catch (err) {
+			console.error("Listing failed", err);
+			alert("Failed to create listing. See console for details.");
+		}
 	};
 
 	const openDetails = (agent: any) => {
