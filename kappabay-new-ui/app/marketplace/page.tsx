@@ -23,6 +23,7 @@ import { Filter, Info, Plus, Star } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { listAgent } from "@/lib/marketplace-utils";
+import { useOwnedCaps } from "@/hooks/use-owned-caps";
 
 // Mock data for marketplace agents
 const marketplaceAgents = [
@@ -113,6 +114,7 @@ export default function MarketplacePage() {
 	// ── on‐chain helpers ───────────────────────────────────────────────────
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
+	const { caps } = useOwnedCaps();
 
 	// Filter agents based on selected category
 	const filteredAgents =
@@ -134,18 +136,29 @@ export default function MarketplacePage() {
 			// convert SUI → mist
 			const priceMist = BigInt(Math.round(Number(newListingPrice) * 1e9)).toString();
 
-			// You must supply real IDs here:
-			//   - MARKETPLACE_ID: the on-chain marketplace object
-			//   - agentCapId: the capability object ID for your agent
-			//   - agentId: the agent object ID
-			//   - kioskId, kioskCapId: your user kiosk + its capability
-			// For now we assume newListingAgent holds both agentCapId & agentId,
-			// and that you have fetched your kiosk IDs into variables:
+			// ── derive all on-chain IDs from our owned caps ─────────────────────
 			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
-			const agentCapId = newListingAgent;
-			const agentId = newListingAgent;
-			const kioskId = YOUR_KIOSK_ID;
-			const kioskCapId = YOUR_KIOSK_CAP_ID;
+
+			// find the AgentCap matching the agent we picked
+			const selectedAgentCap = caps.find(
+				(c) =>
+					c.data.type.endsWith("::AgentCap") &&
+					// 'for' field equals the agent objectId
+					c.data.content.fields.for === newListingAgent
+			);
+			if (!selectedAgentCap) {
+				throw new Error("No AgentCap found for selected agent");
+			}
+			const agentCapId = selectedAgentCap.data.objectId;
+			const agentId    = selectedAgentCap.data.content.fields.for;
+
+			// find our kiosk owner cap
+			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+			if (!kioskCap) {
+				throw new Error("No KioskOwnerCap found for your account");
+			}
+			const kioskCapId = kioskCap.data.objectId;
+			const kioskId    = kioskCap.data.content.fields.for;
 
 			const tx = listAgent(
 				MARKETPLACE_ID,
