@@ -244,7 +244,6 @@ export const handlePromptWithMultiCallbacks = async (
 
   for (const event of events) {
     if (!event.type.startsWith(type)) throw new Error("Invalid event type");
-    console.log("Processing multi-callback event:", event);
     const data = event.parsedJson as PromptWithMultiCallbacksEvent;
     const timestamp = event?.timestampMs;
 
@@ -304,21 +303,21 @@ export const handlePromptWithMultiCallbacks = async (
         }
 
         // For callbacks that require user wallet, emit an event instead of storing
-        if (userCallbacks.length > 0) {
-          console.log(
-            `User callbacks detected for address ${data.sender}. In a production system, we would emit an event here with the following data:`
-          );
-          console.log({
-            type: "USER_CALLBACK_REQUIRED",
-            promptId: data.id,
-            userAddress: data.sender,
-            prompt: data.prompt_text,
-            response: response?.[0]?.text || "",
-            callbacks: userCallbacks,
-          });
+        // if (userCallbacks.length > 0) {
+        //   console.log(
+        //     `User callbacks detected for address ${data.sender}. In a production system, we would emit an event here with the following data:`
+        //   );
+        //   console.log({
+        //     type: "USER_CALLBACK_REQUIRED",
+        //     promptId: data.id,
+        //     userAddress: data.sender,
+        //     prompt: data.prompt_text,
+        //     response: response?.[0]?.text || "",
+        //     callbacks: userCallbacks,
+        //   });
 
-          // COMMENT: Here we would emit an event to a WebSocket, SSE, or other real-time notification system
-        }
+        //   // COMMENT: Here we would emit an event to a WebSocket, SSE, or other real-time notification system
+        // }
       }
 
       // Always populate the response to the original object

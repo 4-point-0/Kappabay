@@ -26,7 +26,7 @@ module nft_template::agent {
         agent_id: ID,
         object_id: ID
     }
-
+    
     public struct GasBalanceChecked has copy, drop {
         agent_id: ID,
         balance: u64,
@@ -50,6 +50,7 @@ module nft_template::agent {
         id: UID,
         configuration: vector<u8>, // Agent configuration data
         memories: vector<u8>,      // Agent memory storage
+        knowledgebank: vector<u8>, // Agent knowledge storage
         gas_tank: Balance<SUI>,    // For transaction fees
         private_funds: Balance<SUI>, // For agent-only use
         public_funds: Balance<SUI>,  // For public distribution
@@ -79,6 +80,7 @@ module nft_template::agent {
             id: object::new(ctx),
             configuration,
             memories: vector::empty(),
+            knowledgebank: vector::empty(),
             gas_tank: coin::into_balance(initial_gas),
             private_funds: balance::zero<SUI>(),
             public_funds: balance::zero<SUI>(),
@@ -129,6 +131,15 @@ module nft_template::agent {
     ) {
         assert!(object::id(agent) == cap.agent_id, ENotAdmin);
         agent.memories = new_memories;
+    }
+
+    public entry fun update_knowledgebank(
+        agent: &mut Agent,
+        cap: &AdminCap,
+        new_knowledgebank: vector<u8>
+    ) {
+        assert!(object::id(agent) == cap.agent_id, ENotAdmin);
+        agent.knowledgebank = new_knowledgebank;
     }
 
     // === Fund Management ===
@@ -256,6 +267,10 @@ module nft_template::agent {
 
     public fun get_memories(agent: &Agent): vector<u8> {
         agent.memories
+    }
+
+    public fun get_knowledgebank(agent: &Agent): vector<u8> {
+        agent.knowledgebank
     }
 
     public fun get_gas_balance(agent: &Agent): u64 {
