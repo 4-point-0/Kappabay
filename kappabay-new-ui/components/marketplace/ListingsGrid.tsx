@@ -18,7 +18,7 @@ export function ListingsGrid({ agents, onDetails, onPurchase }: ListingsGridProp
     >
       {agents.map((agent, i) => (
         <motion.div
-          key={agent.id}
+          key={agent.fields.agent_id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: i * 0.1 }}

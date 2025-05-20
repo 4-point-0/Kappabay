@@ -11,20 +11,25 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ agent, onDetails, onPurchase }: ListingCardProps) {
+  // unpack the listing info
+  const { name, description, image_url, price, seller, category } = agent.fields;
+  const displayPrice   = (Number(price) / 1e9).toFixed(3) + " SUI";
+  const displayCategory = category || "All";
+
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <div className="h-48 bg-muted flex items-center justify-center">
-        <img src={agent.image || "/placeholder.svg"} alt={agent.name} className="w-full h-full object-cover" />
+        <img src={image_url || "/placeholder.svg"} alt={name} className="w-full h-full object-cover" />
       </div>
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-bold text-lg">{agent.name}</h3>
-          <Badge variant="outline">{agent.category}</Badge>
+          <h3 className="font-bold text-lg">{name}</h3>
+          <Badge variant="outline">{displayCategory}</Badge>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">{agent.description}</p>
+        <p className="text-sm text-muted-foreground mb-4">{description}</p>
         <div className="text-sm text-muted-foreground">
-          <p>Creator: {agent.creator}</p>
-          <p className="font-medium text-foreground mt-2">{agent.price}</p>
+          <p>Creator: {seller}</p>
+          <p className="font-medium text-foreground mt-2">{displayPrice}</p>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex justify-between">
