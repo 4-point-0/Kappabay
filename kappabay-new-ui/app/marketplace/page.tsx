@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, Info, Plus, Star } from "lucide-react";
 import { useCurrentAccount } from "@mysten/dapp-kit";
+import { toast } from "@/hooks/use-toast";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { listAgent } from "@/lib/marketplace-utils";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
@@ -118,11 +119,21 @@ export default function MarketplacePage() {
 
 	const handleCreateListing = async () => {
 		if (!wallet?.address || !newListingAgent || !newListingPrice || !newListingCategory) {
-			alert("Please connect your wallet and fill out all fields");
+			toast({
+				title: "Missing information",
+				description: "Connect your wallet and fill out all fields before listing.",
+				variant: "destructive",
+			});
 			return;
 		}
 
 		try {
+			// show pending toast
+			toast({
+				title: "Submitting listing",
+				description: "Please confirm in your wallet…",
+			});
+
 			// convert SUI → mist
 			const priceMist = BigInt(Math.round(Number(newListingPrice) * 1e9)).toString();
 
@@ -164,7 +175,10 @@ export default function MarketplacePage() {
 			);
 
 			await signAndExecuteTransaction(tx);
-			alert("Listing created on-chain!");
+			toast({
+				title: "Listing successful",
+				description: "Your agent is now live on the marketplace.",
+			});
 
 			// reset form
 			setNewListingAgent("");
@@ -173,7 +187,11 @@ export default function MarketplacePage() {
 			setIsCreateListingOpen(false);
 		} catch (err) {
 			console.error("Listing failed", err);
-			alert("Failed to create listing. See console for details.");
+			toast({
+				title: "Listing failed",
+				description: "Transaction did not succeed. Check console for details.",
+				variant: "destructive",
+			});
 		}
 	};
 
