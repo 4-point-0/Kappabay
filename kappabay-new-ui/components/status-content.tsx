@@ -13,8 +13,8 @@ import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
+import { getGasBalance } from "@/lib/agent-utils";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 interface StatusContentProps {
@@ -48,10 +48,13 @@ export function StatusContent({
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
 	const [selectedCap, setSelectedCap] = useState("");
 	const [transferAddress, setTransferAddress] = useState("");
+	const signAndExec = useSignExecuteAndWaitForTransaction();
 
 	// Fetch & optionally filter agents:
 	async function refreshAgents() {
-		const capIds = caps.filter((c: any) => c.data).map((c: any) => c.data.objectId);
+		const capIds = caps
+			.filter((c: any) => c.data && c.data.type.includes("::agent::AgentCap"))
+			.map((c: any) => c.data.objectId);
 		if (capIds.length === 0) {
 			setAgents([]);
 			return;
@@ -61,25 +64,6 @@ export function StatusContent({
 			if (filterByAgentType) {
 				list = list.filter((a) => a.agentType === filterByAgentType);
 			}
-			// ─── look up on‐chain gas for each ──────────────────────────────────────────
-			// const pkgId = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
-			// const withGas = await Promise.all(
-			// 	list.map(async (agent) => {
-			// 		// -- build a dummy Transaction so we can use the same "target" format
-			// 		const tx = new Transaction();
-			// 		tx.moveCall({
-			// 			target: `${pkgId}::agent::get_gas_balance`,
-			// 			arguments: [tx.object(agent.objectId)],
-			// 		});
-			// 		const result = await signAndExec(tx);
-			// 		console.log("result", result);
-
-			// 		return {
-			// 			...agent,
-			// 			gasBalance: "0",
-			// 		};
-			// 	})
-			// );
 			setAgents(list);
 		} catch (err) {
 			console.error("Error fetching agents:", err);

@@ -33,13 +33,15 @@ export default function ManageGasDialog({
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
+	const [isExecuting, setIsExecuting] = useState(false);
 
 	// ── New state to hold on‐chain gas balance ───────────────────────────────
 	const [gasBalance, setGasBalance] = useState<string>();
 
 	// ── On mount / agent change: call the Move entry fun check_gas_balance ────
 	useEffect(() => {
-		if (!wallet?.address || !agent?.objectId) return;
+		if (!wallet?.address || !agent?.objectId || isExecuting) return;
+		setIsExecuting(true);
 
 		const tx = new Transaction();
 		tx.moveCall({
@@ -50,36 +52,36 @@ export default function ManageGasDialog({
 		signAndExecuteTransaction(tx)
 			.then((result) => {
 				const evt: any = (result.events || []).find((e: any) => e.type?.endsWith("::agent::GasBalanceChecked"));
-
 				if (evt && "parsedJson" in evt) {
 					setGasBalance(evt.parsedJson.balance);
 				}
 			})
 			.catch((e) => {
 				console.error("check_gas_balance failed", e);
+			})
+			.finally(() => {
+				setIsExecuting(false);
 			});
-	}, []);
+	}, [wallet?.address, agent?.objectId]);
 
 	// ── compute time until gasBalance drains at 1_000_000 mist per hour ──
 	const timeRemaining: string | undefined = gasBalance
 		? (() => {
-			const feePerHour = 1_000_000;                  // mist drawn per hour
-			const totalSeconds = (Number(gasBalance) / feePerHour) * 3600;
-			const days    = Math.floor(totalSeconds / 86400);
-			const hours   = Math.floor((totalSeconds % 86400) / 3600);
-			const minutes = Math.floor((totalSeconds % 3600) / 60);
-			let result = "";
-			if (days)    result += `${days}d `;
-			if (hours)   result += `${hours}h `;
-			result += `${minutes}m`;
-			return result;
-		})()
+				const feePerHour = 1_000_000; // mist drawn per hour
+				const totalSeconds = (Number(gasBalance) / feePerHour) * 3600;
+				const days = Math.floor(totalSeconds / 86400);
+				const hours = Math.floor((totalSeconds % 86400) / 3600);
+				const minutes = Math.floor((totalSeconds % 3600) / 60);
+				let result = "";
+				if (days) result += `${days}d `;
+				if (hours) result += `${hours}h `;
+				result += `${minutes}m`;
+				return result;
+		  })()
 		: undefined;
 
 	// ── raw hours remaining (for coloring logic) ─────────────────────────
-	const hoursRemaining: number | undefined = gasBalance
-		? Number(gasBalance) / 1_000_000
-		: undefined;
+	const hoursRemaining: number | undefined = gasBalance ? Number(gasBalance) / 1_000_000 : undefined;
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -233,16 +235,27 @@ export default function ManageGasDialog({
 								<span>{timeRemaining}</span>
 								<div className="relative ml-2">
 									{/* warning icon */}
-									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-										viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-										strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
-										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-										<line x1="12" y1="9" x2="12" y2="13"/>
-										<line x1="12" y1="17" x2="12.01" y2="17"/>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										className="text-red-500"
+									>
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+										<line x1="12" y1="9" x2="12" y2="13" />
+										<line x1="12" y1="17" x2="12.01" y2="17" />
 									</svg>
-									<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+									<div
+										className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
 										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
-										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+									>
 										Critical: Less than 4 hours uptime remaining
 									</div>
 								</div>
@@ -252,16 +265,27 @@ export default function ManageGasDialog({
 								<span>{timeRemaining}</span>
 								<div className="relative ml-2">
 									{/* warning icon */}
-									<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-										viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-										strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500">
-										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-										<line x1="12" y1="9" x2="12" y2="13"/>
-										<line x1="12" y1="17" x2="12.01" y2="17"/>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										className="text-yellow-500"
+									>
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+										<line x1="12" y1="9" x2="12" y2="13" />
+										<line x1="12" y1="17" x2="12.01" y2="17" />
 									</svg>
-									<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+									<div
+										className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
 										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
-										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+									>
 										Less than a day remaining
 									</div>
 								</div>

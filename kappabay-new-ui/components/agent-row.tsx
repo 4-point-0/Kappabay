@@ -37,24 +37,6 @@ function generateLastActive(createdAt: any) {
 		.replace(/\//g, "-");
 }
 
-function generateRandomTimeRemaining() {
-	const random = Math.random();
-
-	if (random < 0.33) {
-		// Generate hours (1-23)
-		const hours = Math.floor(Math.random() * 23) + 1;
-		return `${hours} hour${hours !== 1 ? "s" : ""}`;
-	} else if (random < 0.66) {
-		// Generate days (1-30)
-		const days = Math.floor(Math.random() * 30) + 1;
-		return `${days} day${days !== 1 ? "s" : ""}`;
-	} else {
-		// Generate minutes (1-59) - for cases that don't show warning
-		const minutes = Math.floor(Math.random() * 59) + 1;
-		return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-	}
-}
-
 const copyToClipboard = (text: string) => {
 	navigator.clipboard
 		.writeText(text)
@@ -125,9 +107,8 @@ export default function AgentRow({
 					</Button>
 				</div>
 			</TableCell>
-			<TableCell>
-				{generateRandomTimeRemaining()}
-				{/* {agent.timeRemaining?.includes("hours") ? (
+			{/* <TableCell>
+				{agent.timeRemaining?.includes("hours") ? (
 					Number.parseInt(agent.timeRemaining) < 4 ? (
 						<div className="flex items-center text-red-500">
 							<span>{agent.timeRemaining}</span>
@@ -181,8 +162,8 @@ export default function AgentRow({
 					)
 				) : (
 					<span>{agent.timeRemaining}</span>
-				)} */}
-			</TableCell>
+				)}
+			</TableCell> */}
 			<TableCell>
 				{new Date(agent.createdAt)
 					.toLocaleDateString("en-GB", {
