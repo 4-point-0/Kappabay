@@ -98,9 +98,8 @@ export default function MarketplacePage() {
 
 	// ── load full agent info for each AgentCap we own ─────────────────
 	useEffect(() => {
-		const capIds = caps
-			.filter((c) => c.data?.type.includes("::agent::AgentCap"))
-			.map((c) => c.data.objectId);
+		const capIds = caps.filter((c) => c.data?.type.includes("::agent::AgentCap")).map((c) => c.data.objectId);
+
 		// if user owns none, bail out (initial state is already [])
 		if (capIds.length === 0) return;
 
@@ -129,19 +128,20 @@ export default function MarketplacePage() {
 
 			// ── derive all on-chain IDs from our owned caps ─────────────────────
 			const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
+			console.log("newListingAgent", newListingAgent);
 
 			// find the AgentCap matching the agent we picked
 			const selectedAgentCap = caps.find(
 				(c) =>
 					c.data.type.endsWith("::AgentCap") &&
 					// 'for' field equals the agent objectId
-					c.data.content.fields.for === newListingAgent
+					c.data.content.fields.agent_id === newListingAgent
 			);
 			if (!selectedAgentCap) {
 				throw new Error("No AgentCap found for selected agent");
 			}
 			const agentCapId = selectedAgentCap.data.objectId;
-			const agentId = selectedAgentCap.data.content.fields.for;
+			const agentId = selectedAgentCap.data.content.fields.agent_id;
 
 			// find our kiosk owner cap
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
