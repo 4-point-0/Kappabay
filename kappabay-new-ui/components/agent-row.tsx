@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Terminal, Loader2, Pause, Play, RefreshCw, Settings, Send, Wallet } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { AddressShort } from "./address-short";
 
 interface AgentRowProps {
 	agent: any;
@@ -37,17 +38,6 @@ function generateLastActive(createdAt: any) {
 		.replace(/\//g, "-");
 }
 
-const copyToClipboard = (text: string) => {
-	navigator.clipboard
-		.writeText(text)
-		.then(() => {
-			alert("ID copied to clipboard!");
-		})
-		.catch((err) => {
-			console.error("Failed to copy: ", err);
-		});
-};
-
 export default function AgentRow({
 	agent,
 	index,
@@ -68,31 +58,7 @@ export default function AgentRow({
 		>
 			<TableCell className="font-medium">{agent.name}</TableCell>
 			<TableCell className="font-mono text-xs">
-				<div className="flex items-center space-x-2">
-					<span>{agent.id.substring(0, 5)}...</span>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-6 w-6"
-						onClick={() => copyToClipboard(agent.id)}
-						title="Copy full ID"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg>
-					</Button>
-				</div>
+				<AddressShort address={agent.id} />
 			</TableCell>
 			<TableCell>
 				<Badge variant={isActive ? "default" : "outline"}>{isActive ? "Active" : "Inactive"}</Badge>

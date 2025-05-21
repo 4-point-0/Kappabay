@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { Transaction } from "@mysten/sui/transactions";
 import { getGasBalance } from "@/lib/agent-utils";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import Image from "next/image";
 
 interface StatusContentProps {
 	/** href for the “Create” button */

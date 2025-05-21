@@ -2,7 +2,7 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 
 const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
-const MARKETPLACE_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
+const PARENT_ID = process.env.NEXT_PUBLIC_MP_TABLE_PARENT_ID!;
 
 export const readDynamicFields = async () => {
 	const client = new SuiClient({ url: getFullnodeUrl("testnet") });
@@ -15,7 +15,7 @@ export const readDynamicFields = async () => {
 			nextCursor,
 			hasNextPage: nextPage,
 		} = await client.getDynamicFields({
-			parentId: MARKETPLACE_ID,
+			parentId: PARENT_ID,
 			cursor: cursor,
 		});
 		cursor = nextCursor;
@@ -27,15 +27,12 @@ export const readDynamicFields = async () => {
 
 	for (let entry of result) {
 		let field: any = await client.getDynamicFieldObject({
-			parentId: MARKETPLACE_ID,
+			parentId: PARENT_ID,
 			name: entry.name,
 		});
 		// console.dir(field, {depth: 7});
 		values.push(field.data?.content.fields.value);
 	}
-	// console.log(result);
-
-	// console.dir(values, { depth: 4 });
 	return values;
 };
 

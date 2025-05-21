@@ -13,6 +13,7 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -69,7 +70,6 @@ export default function MarketplacePage() {
 
 			const MARKET = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 			const POLICY = process.env.NEXT_PUBLIC_MP_POLICY_ID!;
-			console.log("poicy", POLICY);
 
 			// seller’s kiosk that holds the listing
 			const sellerKioskId = agent.fields.kiosk_id;
@@ -85,8 +85,8 @@ export default function MarketplacePage() {
 			const priceMist = BigInt(agent.fields.price);
 			// split gas coin for the exact payment amount
 			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(priceMist.toString())]);
+			console.log({ sellerKioskId, agentCapId, POLICY });
 
-			// call the Move entry function purchase_agent
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::purchase_agent`,
 				arguments: [
@@ -94,13 +94,11 @@ export default function MarketplacePage() {
 					tx.object(sellerKioskId),
 					tx.pure.id(agentCapId),
 					tx.object(POLICY),
-					// pass the split-out payment coin here
 					paymentCoin,
 				],
 			});
 
-			// set gas budget = payment amount + a small extra buffer for gas fees
-			const EXTRA_GAS_MIST = BigInt(2_000_000);  // ~0.002 SUI extra
+			const EXTRA_GAS_MIST = BigInt(10_000_000);
 			const gasBudget = priceMist + EXTRA_GAS_MIST;
 			tx.setGasBudget(Number(gasBudget));
 			// sign & execute
@@ -120,7 +118,7 @@ export default function MarketplacePage() {
 	return (
 		<main className="min-h-screen bg-background text-foreground">
 			<Header />
-			<section className="mx-4 my-8">
+			<section className="container mx-auto px-4 py-8">
 				<FilterBar
 					categories={allCategories}
 					selected={category}

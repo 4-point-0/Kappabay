@@ -106,7 +106,7 @@ const config = {
 			/* custom color palette from Figma */
 			borderRadius: {
 				lg: "var(--radius)",
-				md: "calc(var(--radius) - 2px)",
+				md: "1.5rem",
 				sm: "calc(var(--radius) - 4px)",
 			},
 			keyframes: {

@@ -53,7 +53,7 @@ export default function Header({ textColor }: { textColor?: string }) {
 					</nav>
 
 					<div className="hidden md:flex items-center gap-4">
-						<Button
+						{/* <Button
 							variant="ghost"
 							size="icon"
 							onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -64,7 +64,7 @@ export default function Header({ textColor }: { textColor?: string }) {
 								className={`absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100 ${textColor} dark:hover-bg-transparent`}
 							/>
 							<span className="sr-only">Toggle theme</span>
-						</Button>
+						</Button> */}
 						<ConnectButton />
 					</div>
 

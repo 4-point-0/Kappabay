@@ -20,7 +20,17 @@ import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { listAgent } from "@/lib/marketplace-utils";
 
-export function CreateListingDialog({ open, setOpen }: { open: boolean; setOpen: (val: boolean) => void }) {
+export function CreateListingDialog({
+	open,
+	setOpen,
+	allCategories,
+	onCreate,
+}: {
+	open: boolean;
+	setOpen: (val: boolean) => void;
+	allCategories: string[];
+	onCreate: () => void;
+}) {
 	// dialog open + form state
 
 	const [ownedAgents, setOwnedAgents] = useState<any[]>([]);
@@ -47,7 +57,7 @@ export function CreateListingDialog({ open, setOpen }: { open: boolean; setOpen:
 		try {
 			// derive on-chain IDs
 			const MARKET = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
-			const selCap = caps.find((c) => c.data.content.fields.for === agentId);
+			const selCap = caps.find((c) => c.data.content.fields.agent_id === agentId);
 			if (!selCap) throw new Error("AgentCap missing");
 			const agentCapId = selCap.data.objectId;
 			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
@@ -111,11 +121,28 @@ export function CreateListingDialog({ open, setOpen }: { open: boolean; setOpen:
 					</div>
 					<div className="space-y-2">
 						<Label>Category</Label>
-						<Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Finance" />
+						<Select value={category} onValueChange={setCategory}>
+							<SelectTrigger>
+								<SelectValue placeholder="Pick an agent category" />
+							</SelectTrigger>
+							<SelectContent>
+								{allCategories.map((category: string) => (
+									<SelectItem key={category} value={category}>
+										{category}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					</div>
 					<div className="space-y-2">
 						<Label>Price (SUI)</Label>
-						<Input type="number" step="0.1" value={price} onChange={(e) => setPrice(e.target.value)} />
+						<Input
+							placeholder="0.5"
+							type="number"
+							step="0.1"
+							value={price}
+							onChange={(e) => setPrice(e.target.value)}
+						/>
 					</div>
 				</div>
 				<DialogFooter>
