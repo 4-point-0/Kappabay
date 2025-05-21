@@ -33,7 +33,7 @@ export default function KappabayPage() {
 		<main className="min-h-screen bg-background text-foreground">
 			<PageTransition>
 				{/* Hero Section */}
-				<section className="bg-main-gradient relative h-[100vh]">
+				<section className="bg-main-gradient relative h-[120vh]">
 					<Header textColor="dark:text-gray-950" />
 					<div className="container mx-auto px-4 text-center pt-20">
 						<motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
@@ -66,7 +66,7 @@ export default function KappabayPage() {
 					<div className="absolute left-1/2 top-[83%] transform -translate-x-1/2 -translate-y-1/2 z-[1]">
 						<Image src="/green-moon-group.png" alt="Green Moon" width={500} height={500} priority />
 					</div>
-					<div className="absolute right-[55%] top-[54%] z-0 rotate-[30deg]">
+					<div className="absolute right-[55%] top-[59%] z-0 rotate-[30deg]">
 						<Image src="/ellipse-3.png" alt="Purple Sphere" width={80} height={80} className="opacity-80" />
 					</div>
 
@@ -77,6 +77,9 @@ export default function KappabayPage() {
 
 					<div className="absolute right-[0%] top-[75%] z-0">
 						<Image src="/ellipse-3.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
+					</div>
+					<div className="absolute right-[44%] top-[48%] z-[2] rotate-[-7deg] scale-125">
+						<Image src="/kappabae-image.png" alt="Kappabae" width={140} height={140} />
 					</div>
 				</section>
 
@@ -117,10 +120,9 @@ export default function KappabayPage() {
 									whileInView={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.5, delay: index * 0.1 }}
 									viewport={{ once: true }}
-									className="rounded-lg p-6 text-center"
+									className="rounded-md p-6 text-center"
 									style={{
-										background:
-											"radial-gradient(113.77% 100% at 50% 100%, #380C41 0%, #030D06 100%)",
+										background: "radial-gradient(113.77% 100% at 50% 100%, #380C41 0%, #030D06 100%)",
 									}}
 								>
 									<div className="text-4xl mb-4">{feature.icon}</div>
@@ -163,7 +165,7 @@ export default function KappabayPage() {
 									whileInView={{ opacity: 1, x: 0 }}
 									transition={{ duration: 0.5 }}
 									viewport={{ once: true }}
-									className="bg-card rounded-lg p-6"
+									className="bg-card rounded-md p-6"
 								>
 									<p className="italic mb-4">"{testimonial.quote}"</p>
 									<div className="flex items-center">
@@ -181,7 +183,7 @@ export default function KappabayPage() {
 				</section>
 
 				{/* CTA Section */}
-				<section className="py-20">
+				<section className="py-20 relative">
 					<div className="container mx-auto px-4 text-center">
 						<motion.div
 							initial={{ opacity: 0, scale: 0.9 }}
@@ -201,7 +203,13 @@ export default function KappabayPage() {
 							</Link>
 						</motion.div>
 					</div>
-					<div className="absolute left-1/2 bottom-[-7rem] -translate-x-1/2 text-center z-20">
+					<div className="absolute right-[75%] top-[3%] z-0 scale-75">
+						<Image src="/kappabae-chibi-image.png" alt="Chibi" width={140} height={140} className="w-full h-auto" />
+					</div>
+					<div className="absolute right-[3%] top-[8%] z-0 scale-75">
+						<Image src="/kappatux-image.png" alt="Tux" width={140} height={140} className="w-full h-auto" />
+					</div>
+					<div className="absolute left-1/2 bottom-[-12rem] -translate-x-1/2 text-center z-20">
 						<div className="mb-2">
 							<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
 						</div>

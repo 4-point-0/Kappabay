@@ -107,7 +107,8 @@
 		--background: 138 62% 3%;
 		--card: 138 62% 3%;
 		--popover: 138 62% 3%;
-		--primary: 138, 57%, 53%;
+
+		--primary: 289, 69%, 75%;
 		--secondary: 217.2 32.6% 17.5%;
 		--muted: 217.2 32.6% 17.5%;
 		--accent: 217.2 32.6% 17.5%;
@@ -115,12 +116,6 @@
 		--border: 217.2 32.6% 17.5%;
 		--input: 217.2 32.6% 17.5%;
 		--ring: 224.3 76.3% 48%;
-	}
-
-	/* all buttons inside a .kappabae container */
-	.kappabae button {
-		/* override their text color to your HSLA */
-		color: hsla(289, 69%, 75%, 1);
 	}
 }
 

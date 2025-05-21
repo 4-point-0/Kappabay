@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Funnel_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
-import BackgroundMountains from "@/components/BackgroundMountains";
+import BackgroundMountains from "@/components/background-nountains";
 
 const inter = Inter({ subsets: ["latin"] });
 const funnel = Funnel_Display({ subsets: ["latin"], weight: ["400", "700"] });

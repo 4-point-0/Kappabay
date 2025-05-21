@@ -7,10 +7,10 @@ export default function BackgroundMountains() {
 	const path = usePathname() || "";
 	const baseClass = "absolute left-0 right-0 z-0 w-full h-auto";
 
-	// on /kappabae/* use a different style
-	if (path.startsWith("/kappabae")) {
+	// on /kappabae use a different style
+	if (path === "/kappabae") {
 		return (
-			<div className={`${baseClass} top-[146vh]`}>
+			<div className={`${baseClass} top-[275vh]`}>
 				<Image
 					src="/mountains-background.png"
 					alt="Mountain Landscape"
