@@ -77,6 +77,51 @@
 		--input: 217.2 32.6% 17.5%;
 		--ring: 224.3 76.3% 48%;
 	}
+
+	/* ----------------------------------------------------------------------
+	   KAPPABAE THEME:
+	   reuse the dark‐mode CSS variables, so that any .kappabae container
+	   gets the exact same color system as “.dark”
+	---------------------------------------------------------------------- */
+	.kappabae {
+		--success: 107.5 93% 83%;
+		--success-600: 138 56.8% 52.8%;
+		--green-800: 109 15% 27.7%;
+		--green-900: 139 62% 3.15%;
+		--pink: 296 100% 90%;
+		--purple: 290 68.6% 75.1%;
+		--purple-800: 290 56% 22.4%;
+		--offwhite: 120 100% 98%;
+		--grey: 0 0% 66.7%;
+		--grey-800: 0 0% 26.7%;
+
+		--foreground: 210 40% 98%;
+		--card-foreground: 210 40% 98%;
+		--popover-foreground: 210 40% 98%;
+		--primary-foreground: 222.2 47.4% 11.2%;
+		--secondary-foreground: 210 40% 98%;
+		--muted-foreground: 215 20.2% 65.1%;
+		--accent-foreground: 210 40% 98%;
+		--destructive-foreground: 210 40% 98%;
+
+		--background: 138 62% 3%;
+		--card: 138 62% 3%;
+		--popover: 138 62% 3%;
+		--primary: 138, 57%, 53%;
+		--secondary: 217.2 32.6% 17.5%;
+		--muted: 217.2 32.6% 17.5%;
+		--accent: 217.2 32.6% 17.5%;
+		--destructive: 0 62.8% 30.6%;
+		--border: 217.2 32.6% 17.5%;
+		--input: 217.2 32.6% 17.5%;
+		--ring: 224.3 76.3% 48%;
+	}
+
+	/* all buttons inside a .kappabae container */
+	.kappabae button {
+		/* override their text color to your HSLA */
+		color: hsla(289, 69%, 75%, 1);
+	}
 }
 
 @layer base {
