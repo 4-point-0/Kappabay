@@ -14,6 +14,7 @@ import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
 import Image from "next/image";
+import { PageTransition } from "@/components/page-transition";
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -117,32 +118,34 @@ export default function MarketplacePage() {
 
 	return (
 		<main className="min-h-screen bg-background text-foreground">
-			<Header />
-			<section className="container mx-auto px-4 py-8">
-				<FilterBar
-					categories={allCategories}
-					selected={category}
-					onSelect={setCategory}
-					onCreateClick={() => {
-						setOpen(true);
-					}}
-				/>
-				<ListingsGrid agents={filtered} onDetails={openDetails} onPurchase={handlePurchase} />
-				<CreateListingDialog
-					open={open}
-					setOpen={setOpen}
-					allCategories={allCategories}
-					onCreate={() => {
-						fetchListings();
-					}}
-				/>
-				<AgentDetailsDialog
-					agent={detailsAgent}
-					open={detailsOpen}
-					onOpenChange={setDetailsOpen}
-					onPurchase={handlePurchase}
-				/>
-			</section>
+			<PageTransition>
+				<Header />
+				<section className="container mx-auto px-4 py-8">
+					<FilterBar
+						categories={allCategories}
+						selected={category}
+						onSelect={setCategory}
+						onCreateClick={() => {
+							setOpen(true);
+						}}
+					/>
+					<ListingsGrid agents={filtered} onDetails={openDetails} onPurchase={handlePurchase} />
+					<CreateListingDialog
+						open={open}
+						setOpen={setOpen}
+						allCategories={allCategories}
+						onCreate={() => {
+							fetchListings();
+						}}
+					/>
+					<AgentDetailsDialog
+						agent={detailsAgent}
+						open={detailsOpen}
+						onOpenChange={setDetailsOpen}
+						onPurchase={handlePurchase}
+					/>
+				</section>
+			</PageTransition>
 		</main>
 	);
 }
