@@ -13,6 +13,7 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
+import { useMarketplaceObject } from "@/hooks/use-marketplace-object";
 import Image from "next/image";
 import { PageTransition } from "@/components/page-transition";
 
@@ -31,6 +32,9 @@ export default function MarketplacePage() {
 	const wallet = useCurrentAccount();
 	const signAndExecute = useSignExecuteAndWaitForTransaction();
 	const { caps } = useOwnedCaps();
+
+	const MARKET_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
+	const { fields: marketFields } = useMarketplaceObject(MARKET_ID);
 
 	const fetchListings = useCallback(async () => {
 		try {
@@ -84,7 +88,9 @@ export default function MarketplacePage() {
 
 			// amount in mist is stored on the listing
 			const priceMist = BigInt(agent.fields.price);
-			const marketFee = (priceMist * BigInt(5)) / BigInt(100);
+			// ── read royalty pct from on-chain marketplace object ───────────
+			const pct = Number(marketFields?.royalty ?? 5);
+			const marketFee = (priceMist * BigInt(pct)) / BigInt(100);
 			// split gas coin for the exact payment amount
 			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64((priceMist + marketFee).toString())]);
 			console.log({ sellerKioskId, agentCapId, POLICY });
