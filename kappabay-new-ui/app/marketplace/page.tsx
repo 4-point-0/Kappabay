@@ -84,8 +84,9 @@ export default function MarketplacePage() {
 
 			// amount in mist is stored on the listing
 			const priceMist = BigInt(agent.fields.price);
+			const marketFee = (priceMist * BigInt(5)) / BigInt(100);
 			// split gas coin for the exact payment amount
-			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(priceMist.toString())]);
+			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64((priceMist + marketFee).toString())]);
 			console.log({ sellerKioskId, agentCapId, POLICY });
 
 			tx.moveCall({
@@ -99,9 +100,6 @@ export default function MarketplacePage() {
 				],
 			});
 
-			const EXTRA_GAS_MIST = BigInt(10_000_000);
-			const gasBudget = priceMist + EXTRA_GAS_MIST;
-			tx.setGasBudget(Number(gasBudget));
 			// sign & execute
 			await signAndExecute(tx);
 			toast({ title: "Purchase successful", description: "Agent acquired!" });
