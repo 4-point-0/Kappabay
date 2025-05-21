@@ -45,10 +45,10 @@ export default function MarketplacePage() {
 		}
 	}, []);
 
-	// initial load + poll every 10s (cleanup on unmount)
+	// initial load + poll every 20s (cleanup on unmount)
 	useEffect(() => {
 		fetchListings();
-		const id = setInterval(fetchListings, 10_000);
+		const id = setInterval(fetchListings, 20_000);
 		return () => clearInterval(id);
 	}, [fetchListings]);
 
@@ -89,8 +89,8 @@ export default function MarketplacePage() {
 			// amount in mist is stored on the listing
 			const priceMist = BigInt(agent.fields.price);
 			// ── read royalty pct from on-chain marketplace object ───────────
-			const pct = Number(marketFields?.royalty ?? 5);
-			const marketFee = (priceMist * BigInt(pct)) / BigInt(100);
+			const pct = BigInt(marketFields?.royalty_percentage ?? 500);
+			const marketFee = (priceMist * BigInt(pct)) / BigInt(10000);
 			// split gas coin for the exact payment amount
 			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64((priceMist + marketFee).toString())]);
 			console.log({ sellerKioskId, agentCapId, POLICY });
