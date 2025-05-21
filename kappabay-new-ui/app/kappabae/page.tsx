@@ -117,7 +117,11 @@ export default function KappabayPage() {
 									whileInView={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.5, delay: index * 0.1 }}
 									viewport={{ once: true }}
-									className="bg-card rounded-lg p-6 text-center"
+									className="rounded-lg p-6 text-center"
+									style={{
+										background:
+											"radial-gradient(113.77% 100% at 50% 100%, #380C41 0%, #030D06 100%)",
+									}}
 								>
 									<div className="text-4xl mb-4">{feature.icon}</div>
 									<h3 className="text-xl font-bold mb-2">{feature.title}</h3>
