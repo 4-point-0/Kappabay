@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Funnel_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
-import Image from "next/image";
+import BackgroundMountains from "@/components/BackgroundMountains";
 
 const inter = Inter({ subsets: ["latin"] });
 const funnel = Funnel_Display({ subsets: ["latin"], weight: ["400", "700"] });
@@ -23,16 +23,7 @@ export default function RootLayout({
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${inter.className} ${funnel.className}`}>
 				<Providers>{children}</Providers>
-				<div className="absolute top-[50vh] left-0 right-0 z-0">
-					<Image
-						src="/mountains-background.png"
-						alt="Mountain Landscape"
-						width={1920}
-						height={600}
-						className="w-full h-auto"
-						priority
-					/>
-				</div>
+				<BackgroundMountains />
 			</body>
 		</html>
 	);
