@@ -139,7 +139,7 @@ async function buildAndStartAgentDocker(
 	cloudflareUrl: string;
 }> {
 	// Assign available host ports for the container mappings.
-	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
+	// const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
 	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
@@ -175,9 +175,12 @@ async function buildAndStartAgentDocker(
 	console.log("Creating service command:");
 	const serviceCreateCmd =
 		`docker service create --name ${serviceName} ` +
-		`--publish published=${hostPortAPI},target=3000 ` +
-		`--publish published=${hostPortTerminal},target=7000 ` +
-		`--publish published=${hostOraclePort},target=3015 ` +
+		// `--publish published=${hostPortAPI},target=3000 ` +
+		// `--publish published=${hostPortTerminal},target=7000 ` +
+		// `--publish published=${hostOraclePort},target=3015 ` +
+		`--publish target=3000 ` +
+		`--publish target=7000 ` +
+		`--publish target=3015 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
 		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
@@ -216,8 +219,8 @@ async function buildAndStartAgentDocker(
 	});
 
 	return {
-		port: hostPortAPI,
-		portTerminal: hostPortTerminal,
+		port: 0,
+		portTerminal: 0,
 		serviceId,
 		cloudflareUrl,
 	};
@@ -247,12 +250,12 @@ export async function Deploy(deploymentData: DeploymentData) {
 		const encryptedWalletKey = encrypt(agentWalletKey);
 
 		// Find an available port for the Agent
-		const hostPortAPI = await findAvailablePort(3000, 5000, "port");
+		// const hostPortAPI = await findAvailablePort(3000, 5000, "port");
 		// Find an available port for the Oracle
-		const hostPortOracle = await findAvailablePort(5001, 7000, "oraclePort");
+		// const hostPortOracle = await findAvailablePort(5001, 7000, "oraclePort");
 
 		// Create Oracle .env content
-		const oracleEnvContent = `BASE_URL='http://localhost:${hostPortAPI}'
+		const oracleEnvContent = `BASE_URL='http://localhost:3000'
       INITIAL_TRANSACTION_DIGEST='${deploymentData.onChainData.txDigest}'
       PACKAGE_ID='${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}'
       NETWORK='testnet'
@@ -270,7 +273,7 @@ export async function Deploy(deploymentData: DeploymentData) {
 
 		const terminalEnvContent = `ENOKI_API_KEY=${process.env.NEXT_PUBLIC_ENOKI_API_KEY}
       GOOGLE_CLIENT_ID=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
-      AGENT_API=http://localhost:${hostPortAPI}
+      AGENT_API=http://localhost:3000
     `;
 
 		const terminalEnvSecretName = await createDockerSecretFromEnv(
@@ -287,8 +290,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 			configName,
 			oracleEnvSecretName,
 			terminalEnvSecretName,
-			hostPortOracle,
-			hostPortAPI,
+			0,
+			0,
 			agentObjectId,
 			agentAdminCapId
 		);
@@ -309,8 +312,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 				agentWalletKey: encryptedWalletKey, // Stored in encrypted form
 				port, // Host port mapped to the API
 				dockerServiceId: serviceId, // Storing the Docker service ID
-				oraclePort: hostPortOracle, // For now
-				hasOracle: hostPortOracle >= 5001,
+				oraclePort: 0, // For now
+				hasOracle: true,
 				terminalPort: portTerminal,
 				publicAgentUrl: cloudflareUrl,
 				agentType: deploymentData.agentType,
@@ -329,8 +332,8 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentUrl,
 			oracle: {
 				success: true,
-				hostPortOracle,
-				oracleUrl: `http://localhost:${hostPortOracle}`,
+				hostPortOracle: 0,
+				oracleUrl: `http://localhost:0`,
 			},
 		};
 	} catch (error) {
