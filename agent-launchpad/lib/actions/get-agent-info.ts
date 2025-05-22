@@ -1,28 +1,22 @@
-import { prisma } from "../db";
+"use server";
 
-export async function getAgentInfo(capId: string) {
-  try {
-    // Get agent details from database
-    const agent = await prisma.agent.findUnique({
-      where: { capId },
-    });
-    
-    if (!agent) {
-      return null;
-    }
-    
-    // Exclude oracle-related fields and agentWalletKey
-    const {
-      hasOracle,
-      oraclePort,
-      oraclePid,
-      agentWalletKey,
-      ...agentInfo
-    } = agent;
-    
-    return agentInfo;
-  } catch (error) {
-    console.error("Failed to get agent info:", error);
-    return null;
-  }
+import { prisma } from "@/lib/db";
+import type { Agent } from "@prisma/client";
+
+export async function getAgentInfo(agentId?: string, objectId?: string): Promise<Agent | null> {
+	try {
+		// Get agent details from database using the agent's id
+		const agent = await prisma.agent.findUnique({
+			where: { id: agentId, objectId: objectId },
+		});
+
+		if (!agent) {
+			return null;
+		}
+
+		return agent;
+	} catch (error) {
+		console.error("Failed to get agent info:", error);
+		return null;
+	}
 }

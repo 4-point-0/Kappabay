@@ -1,16 +1,15 @@
 "use server";
 
 import { exec } from "child_process";
-import fs from "fs/promises";
+import fs, { writeFile } from "fs/promises";
 import path from "path";
-import crypto from "crypto";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/db";
 import * as net from "net";
-// import { DeployOracle } from "./deploy-oracle";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { DeploymentData } from "../types";
+import { encrypt } from "../utils";
 
 /**
  * Creates a Docker secret from the .env content.
@@ -43,40 +42,6 @@ async function createDockerSecretFromEnv(agentId: string, envContent: string, se
 	});
 	await fs.unlink(envFilePath); // Clean up the temporary file
 	return _secretName;
-}
-
-// -----------------
-// Encryption Helpers
-// -----------------
-
-function encrypt(text: string): string {
-	const algorithm = "aes-256-cbc";
-
-	const keyHex = process.env.ENCRYPTION_KEY;
-	if (!keyHex) {
-		throw new Error("ENCRYPTION_KEY environment variable not set.");
-	}
-	const key = Buffer.from(keyHex, "hex"); // Must be 32 bytes (64 hex characters)
-	const iv = crypto.randomBytes(16); // Initialization vector (16 bytes)
-	const cipher = crypto.createCipheriv(algorithm, key, iv);
-	const encrypted = Buffer.concat([cipher.update(text, "utf8"), cipher.final()]);
-	// Combine the IV with the encrypted text (separated by a colon)
-	return iv.toString("hex") + ":" + encrypted.toString("hex");
-}
-
-function decrypt(text: string): string {
-	const algorithm = "aes-256-cbc";
-	const keyHex = process.env.ENCRYPTION_KEY;
-	if (!keyHex) {
-		throw new Error("ENCRYPTION_KEY environment variable not set.");
-	}
-	const key = Buffer.from(keyHex, "hex");
-	const [ivHex, encryptedHex] = text.split(":");
-	const iv = Buffer.from(ivHex, "hex");
-	const encryptedText = Buffer.from(encryptedHex, "hex");
-	const decipher = crypto.createDecipheriv(algorithm, key, iv);
-	const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-	return decrypted.toString("utf8");
 }
 
 // -----------------
@@ -164,14 +129,23 @@ async function buildAndStartAgentDocker(
 	envSecretNameOracle: string,
 	envSecretNameTerminal: string,
 	hostOraclePort: number,
-	hostPortAPI: number
-): Promise<{ port: number; portTerminal: number; serviceId: string }> {
+	hostPortAPI: number,
+	agentObjectId: string,
+	agentAdminCapId: string
+): Promise<{
+	port: number;
+	portTerminal: number;
+	serviceId: string;
+	cloudflareUrl: string;
+}> {
 	// Assign available host ports for the container mappings.
-	const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
+	// const hostPortTerminal = await findAvailablePort(7000, 9000, "terminalPort");
 
-	// Read env content from the backend filesystem and create Docker secret for agent's .env
+	// Read the base .env, append the agent private key, then create the Docker secret
 	const agentEnvFilePath = path.join(process.cwd(), "config-agent", ".env");
-	const envContentAgent = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
+	const baseEnv = await fs.readFile(agentEnvFilePath, { encoding: "utf8" });
+	// ensure no trailing blank lines, then append AGENT_PK
+	const envContentAgent = `${baseEnv.trimEnd()}\nSUI_AGENT_PK=${walletKey}\nSUI_AGENT_OBJECT_ID=${agentObjectId}\nSUI_ADMIN_CAP_ID=${agentAdminCapId}\n`;
 	const agentEnvSecretName = await createDockerSecretFromEnv(agentId, envContentAgent, `agent_env_secret_${agentId}`);
 	const AGENT_IMAGE = process.env.AGENT_IMAGE || "myregistry/agent:latest";
 
@@ -194,16 +168,19 @@ async function buildAndStartAgentDocker(
 	});
 	await fs.unlink(secretFilePath); // Remove temporary file
 	console.log("Created secret, deleted temp file.");
-
+	const serviceName = `agent-${agentId}`;
 	// ----- Create the Docker service with port mappings, secrets, and config -----
 	// The Docker config will be mounted at /characters/agent.json,
 	// and the Docker secret will be available at /run/secrets/WALLET_KEY.
 	console.log("Creating service command:");
 	const serviceCreateCmd =
-		`docker service create --name agent-${agentId} ` +
-		`--publish published=${hostPortAPI},target=3000 ` +
-		`--publish published=${hostPortTerminal},target=7000 ` +
-		`--publish published=${hostOraclePort},target=3015 ` +
+		`docker service create --name ${serviceName} ` +
+		// `--publish published=${hostPortAPI},target=3000 ` +
+		// `--publish published=${hostPortTerminal},target=7000 ` +
+		// `--publish published=${hostOraclePort},target=3015 ` +
+		`--publish target=3000 ` +
+		`--publish target=7000 ` +
+		`--publish target=3015 ` +
 		`--secret source=${secretName},target=WALLET_KEY ` +
 		`--secret source=${agentEnvSecretName},target=/app/eliza-kappabay-agent/.env ` +
 		`--secret source=${envSecretNameTerminal},target=/app/kappabay-terminal-next/.env ` +
@@ -223,8 +200,30 @@ async function buildAndStartAgentDocker(
 		});
 	});
 	console.log("Service created.");
+	// Optional delay to give the service time to initialize (adjust if needed)
+	await new Promise((r) => setTimeout(r, 5_000));
 
-	return { port: hostPortAPI, portTerminal: hostPortTerminal, serviceId };
+	// fetch the service logs and extract the Cloudflare URL
+	const cloudflareUrl = await new Promise<string>((resolve, reject) => {
+		exec(`docker service logs ${serviceName}`, (error, stdout, stderr) => {
+			if (error) {
+				return reject(error);
+			}
+			const m = stdout.match(/https:\/\/[^\s]+\.trycloudflare\.com/);
+			if (m) {
+				resolve(m[0]);
+			} else {
+				reject(new Error("Cloudflare URL not found in service logs"));
+			}
+		});
+	});
+
+	return {
+		port: 0,
+		portTerminal: 0,
+		serviceId,
+		cloudflareUrl,
+	};
 }
 
 // -----------------
@@ -244,19 +243,21 @@ export async function Deploy(deploymentData: DeploymentData) {
 		const agentKeypair = Ed25519Keypair.generate();
 		const agentWalletAddress = agentKeypair.getPublicKey().toSuiAddress();
 		const agentWalletKey = agentKeypair.getSecretKey();
+		const agentObjectId = deploymentData.onChainData.agentObjectId;
+		const agentAdminCapId = deploymentData.onChainData.adminCapId;
 
 		// Encrypt the wallet key for storage.
 		const encryptedWalletKey = encrypt(agentWalletKey);
 
 		// Find an available port for the Agent
-		const hostPortAPI = await findAvailablePort(3000, 5000, "port");
+		// const hostPortAPI = await findAvailablePort(3000, 5000, "port");
 		// Find an available port for the Oracle
-		const hostPortOracle = await findAvailablePort(5001, 7000, "oraclePort");
+		// const hostPortOracle = await findAvailablePort(5001, 7000, "oraclePort");
 
 		// Create Oracle .env content
-		const oracleEnvContent = `BASE_URL='http://localhost:${hostPortAPI}'
+		const oracleEnvContent = `BASE_URL='http://localhost:3000'
       INITIAL_TRANSACTION_DIGEST='${deploymentData.onChainData.txDigest}'
-      PACKAGE_ID='0xd40628bac089616b1120705e843491f1ec3382f47828fb12bdf035057d06163d'
+      PACKAGE_ID='${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}'
       NETWORK='testnet'
       AGENT_ID='${agentId}'
       PRIVATE_SEED='${agentWalletKey}'
@@ -270,9 +271,9 @@ export async function Deploy(deploymentData: DeploymentData) {
 			`oracle_env_secret_${agentId}`
 		);
 
-		const terminalEnvContent = `ENOKI_API_KEY=enoki_public_c23791490124930fcfb553615237ecc5
-      GOOGLE_CLIENT_ID=800626683888-hi6a3moj65nlqlsfqqrdtkvjujuo7f8f.apps.googleusercontent.com
-      AGENT_API=http://localhost:${hostPortAPI}
+		const terminalEnvContent = `ENOKI_API_KEY=${process.env.NEXT_PUBLIC_ENOKI_API_KEY}
+      GOOGLE_CLIENT_ID=${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      AGENT_API=http://localhost:3000
     `;
 
 		const terminalEnvSecretName = await createDockerSecretFromEnv(
@@ -283,14 +284,16 @@ export async function Deploy(deploymentData: DeploymentData) {
 
 		// Build and start the agent container via Docker using Docker secrets and configs.
 		console.log("Awaiting docker deployment.");
-		const { port, portTerminal, serviceId } = await buildAndStartAgentDocker(
+		const { port, portTerminal, serviceId, cloudflareUrl } = await buildAndStartAgentDocker(
 			agentId,
 			agentWalletKey,
 			configName,
 			oracleEnvSecretName,
 			terminalEnvSecretName,
-			hostPortOracle,
-			hostPortAPI
+			0,
+			0,
+			agentObjectId,
+			agentAdminCapId
 		);
 
 		// Create the database record with the deployment information.
@@ -309,9 +312,11 @@ export async function Deploy(deploymentData: DeploymentData) {
 				agentWalletKey: encryptedWalletKey, // Stored in encrypted form
 				port, // Host port mapped to the API
 				dockerServiceId: serviceId, // Storing the Docker service ID
-				oraclePort: hostPortOracle, // For now
-				hasOracle: hostPortOracle >= 5001,
+				oraclePort: 0, // For now
+				hasOracle: true,
 				terminalPort: portTerminal,
+				publicAgentUrl: cloudflareUrl,
+				agentType: deploymentData.agentType,
 			},
 		});
 
@@ -323,11 +328,12 @@ export async function Deploy(deploymentData: DeploymentData) {
 			agentId: agent.id,
 			agentWallet: agentWalletAddress,
 			port,
+			publicAgentUrl: cloudflareUrl,
 			agentUrl,
 			oracle: {
 				success: true,
-				hostPortOracle,
-				oracleUrl: `http://localhost:${hostPortOracle}`,
+				hostPortOracle: 0,
+				oracleUrl: `http://localhost:0`,
 			},
 		};
 	} catch (error) {

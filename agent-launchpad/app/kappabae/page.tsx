@@ -213,7 +213,7 @@ export default function KappabayPage() {
 						<div className="mb-2">
 							<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
 						</div>
-						<p className="dark:text-white text-background text-sm">Powered by 4pto Labs</p>
+						<p className="dark:text-white text-background text-sm">By 4pto Labs</p>
 					</div>
 				</section>
 			</PageTransition>

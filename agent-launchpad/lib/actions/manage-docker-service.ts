@@ -1,165 +1,353 @@
+// app/lib/actions/manage-docker-service.ts
 "use server";
 
-import { exec } from "child_process";
-import util from "util";
 import fs from "fs";
 import path from "path";
-import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
+import util from "util";
+import { pipeline } from "stream";
+import { promisify } from "util";
 import { prisma } from "../db";
+import { verifyPersonalMessageSignature } from "@mysten/sui/verify";
+import { uploadBlob, retrieveBlob } from "@/lib/walrus-api";
+import { Agent } from "https";
+import axios from "axios";
 
-const execAsync = util.promisify(exec);
-
+const exec = util.promisify(require("child_process").exec);
 const DB_CACHE_DIR = path.join(process.cwd(), "db-cache");
 
-// Ensure the db-cache directory exists
+const streamPipeline = promisify(pipeline);
+
+const PORTAINER_URL = process.env.PORTAINER_URL!; // e.g., http://localhost:9000/api
+const PORTAINER_API_KEY = process.env.PORTAINER_API_KEY!;
+const PORTAINER_ENDPOINT_ID = process.env.PORTAINER_ENDPOINT_ID!; // e.g., '1'
+
+// Ensure DB_CACHE_DIR exists
 if (!fs.existsSync(DB_CACHE_DIR)) {
 	fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
 }
 
-/**
- * Retrieves the agentId using the serviceId.
- * @param serviceId - The Docker service ID.
- * @returns The corresponding agentId.
- * @throws Will throw an error if the agent is not found.
- */
-type AgentRecord = { id: string; dockerServiceId: string; latestBlobHash: string };
+async function portainerFetch(path: string, options: any = {}) {
+	console.log("path", path);
 
-async function getAgent(agentId: string): Promise<AgentRecord> {
-	const agent = await prisma.agent.findFirst({
-		where: { id: agentId },
-		select: { id: true, dockerServiceId: true, latestBlobHash: true },
-	});
+	// Create a clean config to prevent option overrides
+	const config = {
+		method: options.method || "GET",
+		url: `${PORTAINER_URL}${path}`,
+		headers: {
+			"X-API-Key": PORTAINER_API_KEY,
+		},
+		httpsAgent: new Agent({ rejectUnauthorized: false }),
+	};
 
-	if (!agent) {
-		throw new Error(`Agent with id ${agentId} not found.`);
+	// Carefully merge headers, ensuring API key isn't overwritten
+	if (options.headers) {
+		config.headers = {
+			...config.headers,
+			...options.headers,
+		};
 	}
 
-	return { id: agent.id, dockerServiceId: agent.dockerServiceId ?? "", latestBlobHash: agent.latestBlobHash ?? "" };
-}
+	// Add any other options, but don't let them override critical properties
+	delete options.headers;
+	delete options.method;
+	delete options.url;
 
-/**
- * @param agentId - The id of the agent whose Docker service should be stopped.
- * @throws Will throw an error if the Docker command fails.
- */
-export async function stopService(agentId: string): Promise<void> {
+	const finalConfig = {
+		...config,
+		...options,
+	};
+
 	try {
-		const agent = await getAgent(agentId);
-		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
-		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
+		console.log("Request URL:", finalConfig.url);
+		console.log("Request method:", finalConfig.method);
+		console.log("Content-Type:", finalConfig.headers["Content-Type"] || "not set");
 
-		// Get the container ID from the service name using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}"`);
-		if (!containerId) {
-			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
-		}
-
-		// Export DB from container
-		const exportCommand = `docker cp ${containerId.trim()}:${containerDbPath} ${localDbPath}`;
-
-		await execAsync(exportCommand);
-		console.log(`Database exported to ${localDbPath}.`);
-
-		// If export file already exists, delete and overwrite
-		if (fs.existsSync(localDbPath)) {
-			fs.unlinkSync(localDbPath);
-			// Re-export after deletion
-			await execAsync(exportCommand);
-			console.log(`Existing database at ${localDbPath} replaced.`);
-		} else {
-			// First-time export
-			await execAsync(exportCommand);
-			console.log(`Database exported to ${localDbPath}.`);
-		}
-
-		// ---- Begin: Upload sqlite file using Walrus Publisher API ----
-		const fileBuffer = fs.readFileSync(localDbPath);
-		const blobHash = await uploadBlob(fileBuffer);
-		console.log(`SQLite file uploaded to Walrus publisher with blob id: ${blobHash}`);
-
-		// Update the agent with the latest blob hash so we can retrieve it later.
-		await prisma.agent.update({
-			where: { id: agentId },
-			data: { latestBlobHash: blobHash },
-		});
-		// ---- End: Upload section ----
-		const command = `docker service update --replicas 0 ${agent.dockerServiceId}`;
-		const { stdout, stderr } = await execAsync(command);
-
-		if (stderr) {
-			console.error(`Error stopping service ${agent.dockerServiceId}:`, stderr);
-			throw new Error(stderr);
-		}
-
-		console.log(`Service ${agent.dockerServiceId} stopped successfully.`);
-
-		// Update agent status to INACTIVE in the Prisma DB.
-		await prisma.agent.update({
-			where: { id: agentId },
-			data: { status: "INACTIVE" },
-		});
-	} catch (error) {
-		console.error(`Failed to stop service for agent id ${agentId}:`, error);
+		const response = await axios(finalConfig);
+		return response;
+	} catch (error: any) {
+		console.error(`Portainer API error: ${error.message}`);
+		console.error(`Status: ${error.response?.status}`);
+		console.error(`Response data:`, error.response?.data);
 		throw error;
 	}
 }
 
-/**
- * Starts a Docker Swarm service by setting its replicas to 1.
- * @param agentId - The id of the agent whose Docker service should be started.
- * @throws Will throw an error if the Docker command fails.
- */
-export async function startService(agentId: string): Promise<void> {
+async function getContainerId(name: string): Promise<string> {
+	const response = await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/json?all=1`);
+	const containers = response.data;
+	console.log("name", name);
+
+	const match = containers.find((c: any) => {
+		console.log("c.Names", c.Names);
+		return c.Names?.some((n: string) => n.includes(name));
+	});
+
+	if (!match) throw new Error(`Container with name ${name} not found.`);
+	return match.Id;
+}
+
+async function downloadDbFromContainer(containerId: string, containerPath: string, localPath: string) {
+	const response = await portainerFetch(
+		`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+			containerPath
+		)}`,
+		{ responseType: "stream" } // Enable streaming for binary data
+	);
+
+	if (!response.data) throw new Error("No response body from Portainer");
+
+	const fileStream = fs.createWriteStream(localPath);
+	await streamPipeline(response.data, fileStream);
+}
+
+async function createTarArchive(sourcePath: string, targetDir: string): Promise<string> {
 	try {
+		const tarFilename = `${path.basename(sourcePath)}.tar`;
+		const tarPath = path.join(targetDir, tarFilename);
+
+		console.log(`Creating tar archive from ${sourcePath} to ${tarPath}`);
+
+		// Get the base filename without path
+		const baseFilename = path.basename(sourcePath);
+		// Get the directory where the source file is located
+		const sourceDir = path.dirname(sourcePath);
+
+		// Create a temporary directory and copy the file with the desired name
+		const tempDir = await fs.promises.mkdtemp(path.join(process.cwd(), "tar-"));
+		const tempFilePath = path.join(tempDir, "db.sqlite");
+
+		// Copy the source file to the temporary location with the new name
+		await fs.promises.copyFile(sourcePath, tempFilePath);
+
+		// Run tar command to create the archive from the temporary file
+		await exec(`tar -cvf "${tarPath}" -C "${tempDir}" "db.sqlite"`);
+
+		// Clean up the temporary directory
+		await fs.promises.rm(tempDir, { recursive: true, force: true });
+
+		// Verify the tar file was created
+		if (!fs.existsSync(tarPath)) {
+			throw new Error(`Failed to create tar archive at ${tarPath}`);
+		}
+
+		// Log tar file info
+		const stats = fs.statSync(tarPath);
+		console.log(`Tar file created: ${tarPath} (${stats.size} bytes)`);
+
+		// Verify the tar file contents (debug purpose)
+		const { stdout } = await exec(`tar -tvf "${tarPath}"`);
+		console.log(`Tar contents: ${stdout}`);
+
+		return tarPath;
+	} catch (error: any) {
+		console.error(`Error creating tar archive: ${error.message}`);
+		throw error;
+	}
+}
+
+async function uploadDbToContainer(containerId: string, containerPath: string, localPath: string) {
+	try {
+		// Create a temporary directory for the tar file
+		const tmpDir = path.join(DB_CACHE_DIR, "tmp");
+		if (!fs.existsSync(tmpDir)) {
+			fs.mkdirSync(tmpDir, { recursive: true });
+		}
+
+		// Create tar archive of the SQLite file
+		const tarPath = await createTarArchive(localPath, tmpDir);
+		console.log(`Created tar archive at ${tarPath}`);
+
+		// Read the tar file into a buffer
+		const fileBuffer = fs.readFileSync(tarPath);
+
+		// Extract the directory part of the containerPath
+		const containerDir = path.dirname(containerPath);
+
+		console.log("Attempting to upload to container:", containerId);
+		console.log("Container path:", containerDir);
+		console.log("Tar file size:", fileBuffer.length, "bytes");
+
+		// Use the Docker Engine API directly instead of Portainer's API wrapper
+		// Docker Engine expects application/x-tar for this endpoint
+		const uploadPath = `/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/archive?path=${encodeURIComponent(
+			containerDir
+		)}`;
+
+		const response = await portainerFetch(uploadPath, {
+			method: "PUT",
+			data: fileBuffer,
+			headers: {
+				"Content-Type": "application/x-tar",
+			},
+			// Disable any transformations of the data
+			transformRequest: [(data: any) => data],
+		});
+
+		console.log("Upload response:", response.status);
+
+		// Clean up the tar file
+		fs.unlinkSync(tarPath);
+
+		return true;
+	} catch (error: any) {
+		console.error("Error uploading to container:", error.message);
+		if (error.response) {
+			console.error("Response status:", error.response.status);
+			console.error("Response data:", error.response.data);
+		}
+		throw error;
+	}
+}
+
+async function getAgent(agentId: string) {
+	const agent = await prisma.agent.findFirst({
+		where: { id: agentId },
+		select: {
+			id: true,
+			dockerServiceId: true,
+			latestBlobHash: true,
+			port: true,
+			terminalPort: true,
+			publicAgentUrl: true,
+		},
+	});
+	if (!agent) throw new Error(`Agent ${agentId} not found.`);
+	return agent;
+}
+
+export async function stopService(agentId: string, message: string, signature: string, address: string) {
+	try {
+		await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
 		const agent = await getAgent(agentId);
+
+		const containerName = `agent-${agent.id}`;
+		const containerId = await getContainerId(containerName);
 		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
 		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
 
-		// Ensure local DB file exists; if not, attempt to download it from Walrus Aggregator.
-		if (!fs.existsSync(localDbPath)) {
-			if (!agent.latestBlobHash) {
-				throw new Error(`Local DB file ${localDbPath} does not exist and no latest blob hash available.`);
-			}
+		await downloadDbFromContainer(containerId, containerDbPath, localDbPath);
+
+		if (fs.existsSync(localDbPath)) {
+			const fileBuffer = fs.readFileSync(localDbPath);
+			const blobHash = await uploadBlob(fileBuffer);
+			await prisma.agent.update({ where: { id: agentId }, data: { latestBlobHash: blobHash } });
+		}
+
+		await exec(`docker service update --replicas 0 ${agent.dockerServiceId}`);
+		await prisma.agent.update({ where: { id: agentId }, data: { status: "INACTIVE", publicAgentUrl: null } });
+	} catch (error) {
+		console.error(`🚨 stopService failed for agent ${agentId}:`, error);
+		throw error;
+	}
+}
+
+export async function startService(agentId: string, message: string, signature: string, address: string) {
+	try {
+		await verifyPersonalMessageSignature(Buffer.from(message, "utf8"), signature, { address });
+		const agent = await getAgent(agentId);
+
+		const containerName = `agent-${agent.id}`;
+		const localDbPath = path.join(DB_CACHE_DIR, `db-${agentId}.sqlite`);
+		const containerDbPath = "/app/eliza-kappabay-agent/agent/data/db.sqlite";
+		console.log("localDbPath", localDbPath);
+
+		// Create DB_CACHE_DIR if it doesn't exist
+		if (!fs.existsSync(DB_CACHE_DIR)) {
+			fs.mkdirSync(DB_CACHE_DIR, { recursive: true });
+		}
+
+		if (!fs.existsSync(localDbPath) && agent.latestBlobHash) {
 			const fileBuffer = await retrieveBlob(agent.latestBlobHash);
 			fs.writeFileSync(localDbPath, fileBuffer);
-			console.log(`Local DB file downloaded from Walrus aggregator using blob id: ${agent.latestBlobHash}`);
 		}
 
-		// Start the service using agent.dockerServiceId
-		const command = `docker service update --replicas 1 ${agent.dockerServiceId}`;
-		const { stdout, stderr } = await execAsync(command);
-
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-
-		// Get the container ID from the service using agent.dockerServiceId
-		const { stdout: containerId } = await execAsync(`docker ps --filter "name=agent-${agent.id}" --format "{{.ID}}`);
-		if (!containerId) {
-			throw new Error(`No container found for agent id ${agentId} (docker service ${agent.dockerServiceId})`);
-		}
-
-		// If a DB already exists in the container, remove it
-		const removeCommand = `docker exec ${containerId.trim()} rm -f ${containerDbPath}`;
-		await execAsync(removeCommand);
-		console.log(`Existing database in container ${containerId.trim()} removed.`);
-
-		// Import DB to container
-		const importCommand = `docker cp ${localDbPath} ${containerId.trim()}:${containerDbPath}`;
-		await execAsync(importCommand);
-		console.log(`Database imported to container ${containerId.trim()} from ${localDbPath}.`);
-
-		if (stderr) {
-			console.error(`Error starting service ${agent.dockerServiceId}:`, stderr);
-			throw new Error(stderr);
-		}
-
-		console.log(`Service ${agent.dockerServiceId} started successfully.`);
-
-		// Update agent status to ACTIVE in the Prisma DB.
+		await exec(`docker service update --replicas 1 ${agent.dockerServiceId}`);
 		await prisma.agent.update({
 			where: { id: agentId },
 			data: { status: "ACTIVE" },
 		});
+
+		// Wait for container to start
+		await new Promise((r) => setTimeout(r, 5000));
+
+		const containerId = await getContainerId(containerName);
+
+		if (fs.existsSync(localDbPath)) {
+			await uploadDbToContainer(containerId, containerDbPath, localDbPath);
+
+			// Wait a moment before executing the command
+			await new Promise((r) => setTimeout(r, 2000));
+
+			// 1) kill any existing agent process via Portainer API
+			const killCmd = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", "pkill -f 'node --loader ts-node/esm src/index.ts'"],
+				Tty: false,
+			};
+			const killRes = await portainerFetch(
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: killCmd }
+			);
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${killRes.data.Id}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
+
+			// 2) remove any old DB file via Portainer API
+			const rmCmd = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", `rm -f ${containerDbPath}`],
+				Tty: false,
+			};
+			const rmRes = await portainerFetch(
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{ method: "POST", headers: { "Content-Type": "application/json" }, data: rmCmd }
+			);
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${rmRes.data.Id}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
+
+			// 3) now create an Exec instance for pnpm start
+			const execConfig = {
+				AttachStdout: false,
+				AttachStderr: false,
+				Cmd: ["sh", "-c", "cd /app/eliza-kappabay-agent && exec pnpm start --characters=characters/agent.json"],
+				Tty: false,
+			};
+			// 1) create an Exec instance
+			const createRes = await portainerFetch(
+				`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/${containerId}/exec`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					data: execConfig,
+				}
+			);
+			const execId = createRes.data.Id;
+			// 2) start it detached
+			await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/exec/${execId}/start`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				data: { Detach: true, Tty: false },
+			});
+		}
+
+		await new Promise((r) => setTimeout(r, 5000));
+		const logs = await exec(`docker service logs agent-${agentId}`);
+		const match = logs.stdout.match(/https:\/\/[\w.-]+\.trycloudflare\.com/);
+		const url = match?.[0] ?? null;
+
+		await prisma.agent.update({
+			where: { id: agentId },
+			data: { status: "ACTIVE", publicAgentUrl: url },
+		});
 	} catch (error) {
-		console.error(`Failed to start service for agent id ${agentId}:`, error);
+		console.error(`🚨 startService failed for agent ${agentId}:`, error);
 		throw error;
 	}
 }
