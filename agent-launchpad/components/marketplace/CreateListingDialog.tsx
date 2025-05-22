@@ -40,7 +40,8 @@ export function CreateListingDialog({
 	const [price, setPrice] = useState("");
 
 	const wallet = useCurrentAccount();
-	const { caps } = useOwnedCaps();
+	// include the refetch function so we can reload caps after creating a kiosk
+	const { caps, refetch: refetchCaps } = useOwnedCaps();
 	const signer = useSignExecuteAndWaitForTransaction();
 
 	// load owned agents
@@ -78,21 +79,14 @@ export function CreateListingDialog({
 				await signer(txCreate);
 				toast({
 					title: "Kiosk created",
-					description: "Waiting for your new kiosk cap…",
+					description: "Fetching your new kiosk cap…",
 				});
 
-				// wait until useOwnedCaps updates
-				await new Promise<void>((resolve) => {
-					const iv = setInterval(() => {
-						const found = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-						if (found) {
-							clearInterval(iv);
-							resolve();
-						}
-					}, 1000);
-				});
-				// re-fetch the cap
-				kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap")!;
+				// refresh owned caps from chain
+				const { data: newCaps } = await refetchCaps();
+				if (!newCaps) throw new Error("Failed to refresh kiosk caps");
+				kioskCap = newCaps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+				if (!kioskCap) throw new Error("KioskOwnerCap still missing after creation");
 			}
 
 			const {
