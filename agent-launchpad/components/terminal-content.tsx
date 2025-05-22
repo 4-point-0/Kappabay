@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Header from "@/components/header";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
@@ -14,7 +14,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/page-transition";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiClient } from "@/lib/api";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface Message {
@@ -33,10 +33,14 @@ export function TerminalContent() {
 	const [input, setInput] = useState("");
 	const queryClient = useQueryClient();
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const suiClient = useSuiClient();
 
 	// agent info state
 	const [baseUrl, setBaseUrl] = useState("");
+
 	const [containerAgentId, setContainerAgentId] = useState("");
+	const [agentObjectId, setAgentObjectId] = useState("");
+	const [agentImage, setAgentImage] = useState<string | null>(null);
 
 	// bootstrap message list
 	useEffect(() => {
@@ -66,12 +70,41 @@ export function TerminalContent() {
 			try {
 				const resp = await apiClient.getAgents(_base);
 				const first = resp.agents?.[0];
+
 				if (first?.id) setContainerAgentId(first.id);
+				if (info?.objectId) setAgentObjectId(info.objectId);
 			} catch (e) {
 				console.error("getAgents failed", e);
 			}
 		})();
 	}, [id]);
+
+	// Fetch agent image
+	useEffect(() => {
+		const fetchAgentImage = async () => {
+			if (!containerAgentId) return;
+			console.log("agentObjectId", agentObjectId);
+
+			try {
+				const obj = await suiClient.getObject({
+					id: agentObjectId,
+					options: { showContent: true },
+				});
+
+				const fields = (obj.data?.content as any)?.fields;
+
+				if (fields?.image) {
+					setAgentImage(fields.image);
+				}
+			} catch (error) {
+				console.error("Failed to fetch agent image:", error);
+			}
+		};
+
+		if (containerAgentId) {
+			fetchAgentImage();
+		}
+	}, [containerAgentId]);
 
 	// mutation to send message
 	const sendMessage = useMutation({
@@ -155,6 +188,35 @@ export function TerminalContent() {
 						<CardHeader className="pb-2">
 							<CardTitle className="text-lg">Chat with your agent</CardTitle>
 						</CardHeader>
+						{agentImage && (
+							<motion.div
+								initial={{ opacity: 0, y: -20 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.5 }}
+								className="px-6 pb-2 flex items-center"
+							>
+								<div className="relative mr-3">
+									<div className="relative overflow-hidden rounded-lg h-16 w-16 border-2 border-primary/20 shadow-lg">
+										<img
+											src={agentImage || "/placeholder.svg"}
+											alt="Agent Profile"
+											className="h-full w-full object-cover transition-all duration-500 hover:scale-110"
+										/>
+										<div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+									</div>
+									<motion.div
+										initial={{ scale: 0 }}
+										animate={{ scale: 1 }}
+										transition={{ delay: 0.3 }}
+										className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-green-500 border-2 border-background"
+									/>
+								</div>
+								<div>
+									<h3 className="text-sm font-medium">Agent {containerAgentId.slice(0, 8)}</h3>
+									<p className="text-xs text-muted-foreground">Online and ready</p>
+								</div>
+							</motion.div>
+						)}
 						<CardContent className="flex-1 overflow-y-auto p-4">
 							<AnimatePresence>
 								<div className="space-y-4">
@@ -172,10 +234,34 @@ export function TerminalContent() {
 													m.role === "user" ? "flex-row-reverse" : "flex-row"
 												} items-start gap-2`}
 											>
-												<Avatar className={m.role === "user" ? "ml-2" : "mr-2"}>
-													<AvatarFallback>{m.role === "user" ? "U" : "A"}</AvatarFallback>
-													{m.role === "agent" && <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Agent" />}
-												</Avatar>
+												{m.role === "agent" && (
+													<div className="relative">
+														<Avatar
+															className={`mr-2 ${
+																agentImage ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""
+															}`}
+														>
+															<AvatarFallback>A</AvatarFallback>
+															<AvatarImage
+																src={agentImage || "/placeholder.svg?height=40&width=40"}
+																alt="Agent"
+																className="object-cover transition-all duration-300 hover:scale-105"
+															/>
+														</Avatar>
+														{agentImage && (
+															<motion.div
+																initial={{ opacity: 0, scale: 0 }}
+																animate={{ opacity: 1, scale: 1 }}
+																className="absolute -bottom-1 -right-1 h-3 w-3 rounded-full bg-green-500"
+															/>
+														)}
+													</div>
+												)}
+												{m.role === "user" && (
+													<Avatar className={m.role === "user" ? "ml-2" : "mr-2"}>
+														<AvatarFallback>{m.role === "user" ? "U" : "A"}</AvatarFallback>
+													</Avatar>
+												)}
 												<motion.div
 													initial={{ scale: 0.9 }}
 													animate={{ scale: 1 }}
