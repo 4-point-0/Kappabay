@@ -48,3 +48,14 @@ export function decrypt(text: string): string {
 	const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
 	return decrypted.toString("utf8");
 }
+
+export const copyToClipboard = (text: string) => {
+	navigator.clipboard
+		.writeText(text)
+		.then(() => {
+			alert("ID copied to clipboard!");
+		})
+		.catch((err) => {
+			console.error("Failed to copy: ", err);
+		});
+};

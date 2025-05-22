@@ -142,6 +142,9 @@ export default function AgentDeployer({
 	const handleDeploy = async () => {
 		setIsDeploying(true);
 		try {
+			if (imageUrl) {
+				agentConfig.image = imageUrl;
+			}
 			const result = await deployAgent(agentConfig, signAndExec, account?.address || "", "agent-deployer");
 			if (result.success) {
 				toast({
@@ -323,7 +326,7 @@ export default function AgentDeployer({
 			</div>
 
 			<Tabs defaultValue="basic" className="w-full">
-				<TabsList className="grid grid-cols-5 w-full">
+				<TabsList className="grid grid-cols-5 w-full bg-background">
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
 					<TabsTrigger value="examples">Examples</TabsTrigger>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 // Animation variants
 const containerVariants = {
@@ -30,16 +31,16 @@ const itemVariants = {
 export default function KappabayPage() {
 	return (
 		<main className="min-h-screen bg-background text-foreground">
-			<Header />
 			<PageTransition>
 				{/* Hero Section */}
-				<section className="py-20 bg-gradient-to-b from-background to-background/50">
-					<div className="container mx-auto px-4 text-center">
+				<section className="bg-main-gradient relative h-[120vh]">
+					<Header textColor="dark:text-gray-950" />
+					<div className="container mx-auto px-4 text-center pt-20">
 						<motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-6">
-							<motion.h1 variants={itemVariants} className="text-5xl font-bold mb-6">
+							<motion.h1 variants={itemVariants} className="text-5xl font-bold mb-6 text-background">
 								KappaBae
 							</motion.h1>
-							<motion.p variants={itemVariants} className="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto">
+							<motion.p variants={itemVariants} className="text-xl text-background mb-10 max-w-3xl mx-auto">
 								Create your perfect digital companion with our AI-powered character builder. Customize personality,
 								appearance, and more to bring your ideal waifu to life on the SUI network.
 							</motion.p>
@@ -50,12 +51,35 @@ export default function KappabayPage() {
 									</Button>
 								</Link>
 								<Link href="/kappabae/gallery">
-									<Button variant="outline" size="lg">
+									<Button
+										variant="outline"
+										size="lg"
+										className="bg-transparent text-foreground dark:text-gray-950 hover:bg-white/10 rounded-full px-8"
+									>
 										Browse Gallery
 									</Button>
 								</Link>
 							</motion.div>
 						</motion.div>
+					</div>
+					{/* Decorative elements */}
+					<div className="absolute left-1/2 top-[83%] transform -translate-x-1/2 -translate-y-1/2 z-[1]">
+						<Image src="/green-moon-group.png" alt="Green Moon" width={500} height={500} priority />
+					</div>
+					<div className="absolute right-[55%] top-[59%] z-0 rotate-[30deg]">
+						<Image src="/ellipse-3.png" alt="Purple Sphere" width={80} height={80} className="opacity-80" />
+					</div>
+
+					{/* Purple spheres */}
+					<div className="absolute left-[5%] top-[63%] z-0">
+						<Image src="/ellipse-1.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
+					</div>
+
+					<div className="absolute right-[0%] top-[75%] z-0">
+						<Image src="/ellipse-3.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
+					</div>
+					<div className="absolute right-[44%] top-[48%] z-[2] rotate-[-7deg] scale-125">
+						<Image src="/kappabae-image.png" alt="Kappabae" width={140} height={140} />
 					</div>
 				</section>
 
@@ -96,7 +120,10 @@ export default function KappabayPage() {
 									whileInView={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.5, delay: index * 0.1 }}
 									viewport={{ once: true }}
-									className="bg-card rounded-lg p-6 text-center"
+									className="rounded-md p-6 text-center"
+									style={{
+										background: "radial-gradient(113.77% 100% at 50% 100%, #380C41 0%, #030D06 100%)",
+									}}
 								>
 									<div className="text-4xl mb-4">{feature.icon}</div>
 									<h3 className="text-xl font-bold mb-2">{feature.title}</h3>
@@ -138,7 +165,7 @@ export default function KappabayPage() {
 									whileInView={{ opacity: 1, x: 0 }}
 									transition={{ duration: 0.5 }}
 									viewport={{ once: true }}
-									className="bg-card rounded-lg p-6"
+									className="bg-card rounded-md p-6"
 								>
 									<p className="italic mb-4">"{testimonial.quote}"</p>
 									<div className="flex items-center">
@@ -156,7 +183,7 @@ export default function KappabayPage() {
 				</section>
 
 				{/* CTA Section */}
-				<section className="py-20">
+				<section className="py-20 relative">
 					<div className="container mx-auto px-4 text-center">
 						<motion.div
 							initial={{ opacity: 0, scale: 0.9 }}
@@ -175,6 +202,18 @@ export default function KappabayPage() {
 								</Button>
 							</Link>
 						</motion.div>
+					</div>
+					<div className="absolute right-[75%] top-[3%] z-0 scale-75">
+						<Image src="/kappabae-chibi-image.png" alt="Chibi" width={140} height={140} className="w-full h-auto" />
+					</div>
+					<div className="absolute right-[3%] top-[8%] z-0 scale-75">
+						<Image src="/kappatux-image.png" alt="Tux" width={140} height={140} className="w-full h-auto" />
+					</div>
+					<div className="absolute left-1/2 bottom-[-12rem] -translate-x-1/2 text-center z-20">
+						<div className="mb-2">
+							<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
+						</div>
+						<p className="dark:text-white text-background text-sm">Powered by 4pto Labs</p>
 					</div>
 				</section>
 			</PageTransition>

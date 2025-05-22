@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Terminal, Loader2, Pause, Play, RefreshCw, Settings, Send, Wallet } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { AddressShort } from "./address-short";
 
 interface AgentRowProps {
 	agent: any;
@@ -37,35 +38,6 @@ function generateLastActive(createdAt: any) {
 		.replace(/\//g, "-");
 }
 
-function generateRandomTimeRemaining() {
-	const random = Math.random();
-
-	if (random < 0.33) {
-		// Generate hours (1-23)
-		const hours = Math.floor(Math.random() * 23) + 1;
-		return `${hours} hour${hours !== 1 ? "s" : ""}`;
-	} else if (random < 0.66) {
-		// Generate days (1-30)
-		const days = Math.floor(Math.random() * 30) + 1;
-		return `${days} day${days !== 1 ? "s" : ""}`;
-	} else {
-		// Generate minutes (1-59) - for cases that don't show warning
-		const minutes = Math.floor(Math.random() * 59) + 1;
-		return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-	}
-}
-
-const copyToClipboard = (text: string) => {
-	navigator.clipboard
-		.writeText(text)
-		.then(() => {
-			alert("ID copied to clipboard!");
-		})
-		.catch((err) => {
-			console.error("Failed to copy: ", err);
-		});
-};
-
 export default function AgentRow({
 	agent,
 	index,
@@ -86,31 +58,7 @@ export default function AgentRow({
 		>
 			<TableCell className="font-medium">{agent.name}</TableCell>
 			<TableCell className="font-mono text-xs">
-				<div className="flex items-center space-x-2">
-					<span>{agent.id.substring(0, 5)}...</span>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-6 w-6"
-						onClick={() => copyToClipboard(agent.id)}
-						title="Copy full ID"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							width="14"
-							height="14"
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							strokeWidth="2"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						>
-							<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-							<path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-						</svg>
-					</Button>
-				</div>
+				<AddressShort address={agent.id} />
 			</TableCell>
 			<TableCell>
 				<Badge variant={isActive ? "default" : "outline"}>{isActive ? "Active" : "Inactive"}</Badge>
@@ -125,9 +73,8 @@ export default function AgentRow({
 					</Button>
 				</div>
 			</TableCell>
-			<TableCell>
-				{generateRandomTimeRemaining()}
-				{/* {agent.timeRemaining?.includes("hours") ? (
+			{/* <TableCell>
+				{agent.timeRemaining?.includes("hours") ? (
 					Number.parseInt(agent.timeRemaining) < 4 ? (
 						<div className="flex items-center text-red-500">
 							<span>{agent.timeRemaining}</span>
@@ -181,8 +128,8 @@ export default function AgentRow({
 					)
 				) : (
 					<span>{agent.timeRemaining}</span>
-				)} */}
-			</TableCell>
+				)}
+			</TableCell> */}
 			<TableCell>
 				{new Date(agent.createdAt)
 					.toLocaleDateString("en-GB", {

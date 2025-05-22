@@ -5,10 +5,12 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { useState } from "react";
-import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useEffect } from "react";
+import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
 import { withdrawGas } from "@/lib/actions/withdraw-gas";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 
 interface ManageGasDialogProps {
 	open: boolean;
@@ -30,7 +32,56 @@ export default function ManageGasDialog({
 	setWithdrawAmount,
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
-	const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
+	const [isExecuting, setIsExecuting] = useState(false);
+
+	// ── New state to hold on‐chain gas balance ───────────────────────────────
+	const [gasBalance, setGasBalance] = useState<string>();
+
+	// ── On mount / agent change: call the Move entry fun check_gas_balance ────
+	useEffect(() => {
+		if (!wallet?.address || !agent?.objectId || isExecuting) return;
+		setIsExecuting(true);
+
+		const tx = new Transaction();
+		tx.moveCall({
+			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::check_gas_balance`,
+			arguments: [tx.object(agent.objectId)],
+		});
+
+		signAndExecuteTransaction(tx)
+			.then((result) => {
+				const evt: any = (result.events || []).find((e: any) => e.type?.endsWith("::agent::GasBalanceChecked"));
+				if (evt && "parsedJson" in evt) {
+					setGasBalance(evt.parsedJson.balance);
+				}
+			})
+			.catch((e) => {
+				console.error("check_gas_balance failed", e);
+			})
+			.finally(() => {
+				setIsExecuting(false);
+			});
+	}, [wallet?.address, agent?.objectId]);
+
+	// ── compute time until gasBalance drains at 1_000_000 mist per hour ──
+	const timeRemaining: string | undefined = gasBalance
+		? (() => {
+				const feePerHour = 1_000_000; // mist drawn per hour
+				const totalSeconds = (Number(gasBalance) / feePerHour) * 3600;
+				const days = Math.floor(totalSeconds / 86400);
+				const hours = Math.floor((totalSeconds % 86400) / 3600);
+				const minutes = Math.floor((totalSeconds % 3600) / 60);
+				let result = "";
+				if (days) result += `${days}d `;
+				if (hours) result += `${hours}h `;
+				result += `${minutes}m`;
+				return result;
+		  })()
+		: undefined;
+
+	// ── raw hours remaining (for coloring logic) ─────────────────────────
+	const hoursRemaining: number | undefined = gasBalance ? Number(gasBalance) / 1_000_000 : undefined;
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -48,27 +99,22 @@ export default function ManageGasDialog({
 				arguments: [txn.object(agent.objectId), payment],
 			});
 
-			signAndExecuteTransaction(
-				{ transaction: txn },
-				{
-					onSuccess: async (result) => {
-						console.log("Deposit transaction:", result);
-						toast({
-							title: "Deposit Successful",
-							description: "Deposit transaction executed successfully.",
-						});
-						// Optionally trigger a refresh here if needed.
-					},
-					onError: (error) => {
-						console.error("Deposit move call failed:", error);
-						toast({
-							title: "Deposit Failed",
-							description: "Deposit transaction failed.",
-							variant: "destructive",
-						});
-					},
-				}
-			);
+			signAndExecuteTransaction(txn)
+				.then((result) => {
+					toast({
+						title: "Deposit Successful",
+						description: "Deposit executed.",
+					});
+					// Optionally trigger a refresh here if needed.
+				})
+				.catch((error) => {
+					console.error("Deposit move call failed:", error);
+					toast({
+						title: "Deposit Failed",
+						description: "Deposit transaction failed.",
+						variant: "destructive",
+					});
+				});
 		} catch (error) {
 			console.error("Error in handleDeposit:", error);
 			toast({
@@ -171,6 +217,87 @@ export default function ManageGasDialog({
 					<DialogTitle>Manage Gas Bag</DialogTitle>
 					<DialogDescription>Add or withdraw SUI from this agent's gas bag.</DialogDescription>
 				</DialogHeader>
+
+				{/* ── CURRENT GAS BALANCE ──────────────────────────────────────────── */}
+				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
+					<span>Current Gas Balance:</span>
+					<span className="font-medium">
+						{gasBalance ? `${(Number(gasBalance) / 1e9).toFixed(3)} SUI` : "Loading..."}
+					</span>
+				</div>
+
+				{/* ── TIME REMAINING AT 1_000_000 mist/hour ──────────────────────── */}
+				<div className="px-4 py-2 bg-background border rounded mb-4 text-sm flex justify-between">
+					<span>Time Remaining:</span>
+					{hoursRemaining != null ? (
+						hoursRemaining < 4 ? (
+							<div className="flex items-center text-red-500 group">
+								<span>{timeRemaining}</span>
+								<div className="relative ml-2">
+									{/* warning icon */}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										className="text-red-500"
+									>
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+										<line x1="12" y1="9" x2="12" y2="13" />
+										<line x1="12" y1="17" x2="12.01" y2="17" />
+									</svg>
+									<div
+										className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+									>
+										Critical: Less than 4 hours uptime remaining
+									</div>
+								</div>
+							</div>
+						) : hoursRemaining < 24 ? (
+							<div className="flex items-center text-yellow-500 group">
+								<span>{timeRemaining}</span>
+								<div className="relative ml-2">
+									{/* warning icon */}
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="16"
+										height="16"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										className="text-yellow-500"
+									>
+										<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+										<line x1="12" y1="9" x2="12" y2="13" />
+										<line x1="12" y1="17" x2="12.01" y2="17" />
+									</svg>
+									<div
+										className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+									>
+										Less than a day remaining
+									</div>
+								</div>
+							</div>
+						) : (
+							<span className="font-medium">{timeRemaining}</span>
+						)
+					) : (
+						<span className="font-medium">Loading…</span>
+					)}
+				</div>
+
 				<div className="grid gap-4 py-4">
 					<div className="space-y-2">
 						<Label htmlFor="deposit">Deposit SUI</Label>
