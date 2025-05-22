@@ -8,7 +8,7 @@ import { ListingsGrid } from "@/components/marketplace/ListingsGrid";
 import { CreateListingDialog } from "@/components/marketplace/CreateListingDialog";
 import { AgentDetailsDialog } from "@/components/marketplace/AgentDetailsDialog";
 import { readDynamicFields } from "@/lib/marketplace-utils";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { Transaction } from "@mysten/sui/transactions";
@@ -28,7 +28,7 @@ export default function MarketplacePage() {
 
 	// live listings from on‐chain marketplace
 	const [listings, setListings] = useState<any[]>([]);
-
+	const suiClient = useSuiClient();
 	const wallet = useCurrentAccount();
 	const signAndExecute = useSignExecuteAndWaitForTransaction();
 	const { caps } = useOwnedCaps();
@@ -38,12 +38,43 @@ export default function MarketplacePage() {
 
 	const fetchListings = useCallback(async () => {
 		try {
-			const data = await readDynamicFields();
-			setListings(data);
+			const raw = await readDynamicFields();
+
+			const enriched = await Promise.all(
+				raw.map(async (item: any) => {
+					const agentId = item.fields.agent_id;
+					let image_url = item.fields.image_url || "";
+
+					try {
+						const obj = await suiClient.getObject({
+							id: agentId,
+							options: { showContent: true },
+						});
+
+						const fields = (obj.data?.content as any)?.fields;
+
+						if (fields?.image) {
+							image_url = fields.image;
+						}
+					} catch (e) {
+						console.warn("Failed to fetch on-chain object", agentId, e);
+					}
+
+					return {
+						...item,
+						fields: {
+							...item.fields,
+							image_url,
+						},
+					};
+				})
+			);
+
+			setListings(enriched);
 		} catch (err) {
 			console.error("Failed to load marketplace listings:", err);
 		}
-	}, []);
+	}, [suiClient]);
 
 	// initial load + poll every 20s (cleanup on unmount)
 	useEffect(() => {

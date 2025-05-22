@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
+import { Transaction } from "@mysten/sui/transactions";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { listAgent } from "@/lib/marketplace-utils";
 
@@ -39,7 +40,8 @@ export function CreateListingDialog({
 	const [price, setPrice] = useState("");
 
 	const wallet = useCurrentAccount();
-	const { caps } = useOwnedCaps();
+	// include the refetch function so we can reload caps after creating a kiosk
+	const { caps, refetch: refetchCaps } = useOwnedCaps();
 	const signer = useSignExecuteAndWaitForTransaction();
 
 	// load owned agents
@@ -60,8 +62,40 @@ export function CreateListingDialog({
 			const selCap = caps.find((c) => c.data.content.fields.agent_id === agentId);
 			if (!selCap) throw new Error("AgentCap missing");
 			const agentCapId = selCap.data.objectId;
-			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-			if (!kioskCap) throw new Error("KioskOwnerCap missing");
+			// see if user has a KioskOwnerCap
+			let kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+			if (!kioskCap) {
+				// prompt creation of a kiosk
+				toast({
+					title: "No kiosk cap found",
+					description: "Creating your kiosk… Confirm in wallet",
+				});
+				const txCreate = new Transaction();
+				txCreate.moveCall({
+					target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::create_user_kiosk`,
+					arguments: [],
+				});
+				await signer(txCreate);
+				toast({
+					title: "Kiosk created",
+					description: "Fetching your new kiosk cap…",
+				});
+
+				// refresh owned caps, retrying up to 5 times with 1s delay
+				const maxRetries = 5;
+				let newCaps;
+				for (let i = 0; i < maxRetries; i++) {
+					const result = await refetchCaps();
+					newCaps = result.data;
+					kioskCap = newCaps?.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+					if (kioskCap) break;
+					await new Promise((r) => setTimeout(r, 1000));
+				}
+				if (!kioskCap) {
+					throw new Error("KioskOwnerCap still missing after multiple retries");
+				}
+			}
+
 			const {
 				objectId: kioskCapId,
 				content: {
