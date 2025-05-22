@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Info, Star } from "lucide-react";
+import Image from "next/image";
 
 interface ListingCardProps {
   agent: any;
@@ -18,8 +19,19 @@ export function ListingCard({ agent, onDetails, onPurchase }: ListingCardProps) 
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
-      <div className="h-48 bg-muted flex items-center justify-center">
-        <img src={image_url || "/placeholder.svg"} alt={name} className="w-full h-full object-cover" />
+      <div className="h-48 bg-muted flex items-center justify-center relative">
+        {image_url ? (
+          <Image
+            src={image_url}
+            alt={name || "agent image"}
+            fill
+            className="object-cover"
+            style={{ objectFit: "cover" }}
+            sizes="100vw"
+          />
+        ) : (
+          <img src="/placeholder.svg" alt={name} className="w-full h-full object-cover" />
+        )}
       </div>
       <CardContent className="p-4 flex-grow">
         <div className="flex justify-between items-start mb-2">
