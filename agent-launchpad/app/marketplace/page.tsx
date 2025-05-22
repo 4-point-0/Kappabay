@@ -3,6 +3,7 @@
 import Header from "@/components/header";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { JsonRpcProvider, Connection } from "@mysten/sui.js";
 import { FilterBar } from "@/components/marketplace/FilterBar";
 import { ListingsGrid } from "@/components/marketplace/ListingsGrid";
 import { CreateListingDialog } from "@/components/marketplace/CreateListingDialog";
@@ -36,16 +37,52 @@ export default function MarketplacePage() {
 	const MARKET_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 	const { fields: marketFields } = useMarketplaceObject(MARKET_ID);
 
+	// SUI RPC provider for on-chain calls
+	const provider = useMemo(
+		() =>
+			new JsonRpcProvider(
+				new Connection({ fullnode: process.env.NEXT_PUBLIC_SUI_RPC_URL! })
+			),
+		[]
+	);
+
 	const fetchListings = useCallback(async () => {
 		try {
-			const data = await readDynamicFields();
-			console.log("data", data);
+			const raw = await readDynamicFields();
 
-			setListings(data);
+			const enriched = await Promise.all(
+				raw.map(async (item) => {
+					const agentId = item.fields.agent_id;
+					let image_url = item.fields.image_url || "";
+
+					try {
+						const obj = await provider.getObject({
+							id: agentId,
+							options: { showContent: true },
+						});
+						const fields = (obj.data?.content as any)?.data?.fields;
+						if (fields?.image_url) {
+							image_url = fields.image_url;
+						}
+					} catch (e) {
+						console.warn("Failed to fetch on-chain object", agentId, e);
+					}
+
+					return {
+						...item,
+						fields: {
+							...item.fields,
+							image_url,
+						},
+					};
+				})
+			);
+
+			setListings(enriched);
 		} catch (err) {
 			console.error("Failed to load marketplace listings:", err);
 		}
-	}, []);
+	}, [provider]);
 
 	// initial load + poll every 20s (cleanup on unmount)
 	useEffect(() => {
