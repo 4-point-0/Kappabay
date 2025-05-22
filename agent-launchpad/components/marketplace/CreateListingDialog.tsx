@@ -61,8 +61,40 @@ export function CreateListingDialog({
 			const selCap = caps.find((c) => c.data.content.fields.agent_id === agentId);
 			if (!selCap) throw new Error("AgentCap missing");
 			const agentCapId = selCap.data.objectId;
-			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-			if (!kioskCap) throw new Error("KioskOwnerCap missing");
+			// see if user has a KioskOwnerCap
+			let kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+			if (!kioskCap) {
+				// prompt creation of a kiosk
+				toast({
+					title: "No kiosk cap found",
+					description: "Creating your kiosk… Confirm in wallet",
+					variant: "destructive",
+				});
+				const txCreate = new Transaction();
+				txCreate.moveCall({
+					target: "0x2::kiosk::create_user_kiosk",
+					arguments: [],
+				});
+				await signer(txCreate);
+				toast({
+					title: "Kiosk created",
+					description: "Waiting for your new kiosk cap…",
+				});
+
+				// wait until useOwnedCaps updates
+				await new Promise<void>((resolve) => {
+					const iv = setInterval(() => {
+						const found = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+						if (found) {
+							clearInterval(iv);
+							resolve();
+						}
+					}, 1000);
+				});
+				// re-fetch the cap
+				kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap")!;
+			}
+
 			const {
 				objectId: kioskCapId,
 				content: {
