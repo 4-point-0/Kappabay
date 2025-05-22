@@ -48,7 +48,6 @@ export default function MarketplacePage() {
 
 					try {
 						const fields = await getObjectFields(suiClient, agentId);
-
 						if (fields?.image) {
 							image_url = fields.image;
 						}
