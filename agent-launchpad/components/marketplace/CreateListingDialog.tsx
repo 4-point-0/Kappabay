@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
+import { Transaction } from "@mysten/sui/transactions";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { listAgent } from "@/lib/marketplace-utils";
 
