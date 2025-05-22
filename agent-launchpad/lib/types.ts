@@ -27,6 +27,9 @@ export interface AgentConfig {
 	};
 	adjectives: string[];
 	image?: string;
+	env?: {
+		[key: string]: string;
+	};
 }
 
 export interface DeploymentData {
@@ -38,4 +41,5 @@ export interface DeploymentData {
 		ownerWallet: string;
 		txDigest: string;
 	};
+	agentType: string;
 }

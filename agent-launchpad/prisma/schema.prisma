@@ -37,4 +37,6 @@ model Agent {
   dockerServiceId   String?   @unique // Docker service ID
   terminalPort      Int?      // Port the terminal is running on
   latestBlobHash    String?   // Latest blob hash
+  agentType         String?    // Custom or Kappabay agent
+  publicAgentUrl    String?   // Public URL for the agent
 }

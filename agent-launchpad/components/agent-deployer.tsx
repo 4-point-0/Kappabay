@@ -12,37 +12,57 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Trash2, Download, Upload, Wand2 } from "lucide-react";
+import { PlusCircle, Trash2, Download, Upload, Wand2, Loader2 } from "lucide-react";
 import PluginSelector from "@/components/plugin-selector";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogFooter,
+	DialogClose,
+} from "@/components/ui/dialog";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
-//import { useWallet } from "@suiet/wallet-kit";
-import { Deploy } from "@/lib/actions/deploy";
-import { Transaction } from "@mysten/sui/transactions";
-import { serializeAgentConfig } from "@/lib/utils";
-import { bcs } from "@mysten/sui/bcs";
-import { toast } from "@/hooks/use-toast";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import {
-	useCurrentAccount,
-	useCurrentWallet,
-	useDisconnectWallet,
-	useSuiClient,
-	useSignAndExecuteTransaction,
-	useSignTransaction,
-} from "@mysten/dapp-kit";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import { toast } from "@/hooks/use-toast";
+import { generateCharacter } from "@/lib/actions/generate-character";
+import { deployAgent } from "@/lib/deploy-agent";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
+import { serializeAgentConfig } from "@/lib/utils";
+import { updateAgentConfig, persistAgentConfig } from "@/lib/actions/update-agent-config";
+import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 
-export default function AgentDeployer() {
-	const client = useSuiClient();
-	const wallet = useCurrentWallet();
+interface AgentDeployerProps {
+	initialConfig?: AgentConfig;
+	isConfiguring?: boolean;
+	agentId?: string;
+}
+
+export default function AgentDeployer({
+	initialConfig = defaultAgentConfig,
+	isConfiguring = false,
+	agentId,
+}: AgentDeployerProps) {
 	const account = useCurrentAccount();
 	const signAndExec = useSignExecuteAndWaitForTransaction();
-
-	const { mutate: disconnect } = useDisconnectWallet();
-
-	const [agentConfig, setAgentConfig] = useState<AgentConfig>(defaultAgentConfig);
+	const [agentConfig, setAgentConfig] = useState<AgentConfig>(initialConfig);
+	const [isDeploying, setIsDeploying] = useState(false);
+	const [isGenerating, setIsGenerating] = useState(false);
+	// new: dialog state + user‐entered prompt
+	const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+	const [aiDescription, setAiDescription] = useState("");
+	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+
+	useEffect(() => {
+		if (initialConfig.image) {
+			setImageUrl(initialConfig.image);
+		}
+	}, []);
 
 	const handleChange = (field: string, value: any) => {
 		setAgentConfig((prev) => ({
@@ -120,115 +140,126 @@ export default function AgentDeployer() {
 	};
 
 	const handleDeploy = async () => {
-		const tx = new Transaction();
-
-		const [coin] = tx.splitCoins(tx.gas, [1 * 10000000]);
-
-		tx.moveCall({
-			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::create_agent`,
-			arguments: [
-				tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(Buffer.from(serializeAgentConfig(agentConfig))))),
-				coin,
-				tx.pure.string(agentConfig.image || "https://example.com/placeholder.png"),
-			],
-		});
-
+		setIsDeploying(true);
 		try {
-			const txResult = await signAndExec(tx);
-
-			console.log("Transaction result:", txResult);
-			console.log("Transaction result structure:", JSON.stringify(txResult, null, 2));
-
-			// Extract object IDs from transaction result
-			let agentObjectId = "";
-			let agentCapId = "";
-			let adminCapId = "";
-
-			// The structure of txResult can vary between SDK versions
-			// Let's inspect the structure more carefully
-			const txResultStr = JSON.stringify(txResult);
-			console.log("Full transaction result:", txResultStr);
-			console.log("Conditional:", txResult.objectChanges && Array.isArray(txResult.objectChanges));
-
-			if (txResult.objectChanges && Array.isArray(txResult.objectChanges)) {
-				for (const change of txResult.objectChanges) {
-					if (change.type === "created") {
-						if (change.objectType.includes("::agent::AgentCap")) {
-							agentCapId = change.objectId;
-						} else if (change.objectType.includes("::agent::AdminCap")) {
-							adminCapId = change.objectId;
-						} else if (change.objectType.includes("::agent::Agent")) {
-							agentObjectId = change.objectId;
-						}
-					}
-				}
+			if (imageUrl) {
+				agentConfig.image = imageUrl;
 			}
-			console.log("AgentObjectId: ", agentObjectId);
-			console.log("AgentCapId: ", agentCapId);
-			console.log("AdminCapId: ", adminCapId);
-			// If we still couldn't find the objects, try another approach
-			if (!agentObjectId || !agentCapId || !adminCapId) {
-				// Attempt to get the digest and then use the Sui explorer API or blockchain API
-				const txDigest = txResult.digest;
-				console.error("Could not extract objects directly. Transaction digest:", txDigest);
-				toast({
-					title: "Deployment Warning",
-					description: "Could not automatically extract object IDs. Please check the console and input them manually.",
-					variant: "destructive",
-				});
-				return;
-			}
-
-			// Call Deploy server action
-			const deployResult = await Deploy({
-				agentConfig,
-				onChainData: {
-					agentObjectId,
-					agentCapId,
-					adminCapId,
-					ownerWallet: account?.address || "",
-					txDigest: txResult.digest,
-				},
-			});
-
-			if (deployResult.success) {
-				// Create a second transaction to transfer the caps to the agent wallet
-				const transferTx = new Transaction();
-				if (deployResult.agentWallet) {
-					// Transfer AdminCap
-					transferTx.transferObjects(
-						[transferTx.object(adminCapId)],
-						transferTx.pure.address(deployResult.agentWallet)
-					);
-				} else {
-					toast({
-						title: "No Agent Wallet Found",
-						description: deployResult.error || "Unknown error occurred",
-						variant: "destructive",
-					});
-				}
-
-				// Execute the transfer
-				await signAndExec(transferTx);
-
+			const result = await deployAgent(agentConfig, signAndExec, account?.address || "", "agent-deployer");
+			if (result.success) {
 				toast({
 					title: "Agent deployed successfully",
-					description: `Agent ID: ${deployResult.agentId}, available at: ${deployResult.agentUrl}`,
+					description: `Agent ID: ${result.agentId}`,
 				});
 			} else {
 				toast({
-					title: "Backend Deployment Error",
-					description: deployResult.error || "Unknown error occurred",
+					title: "Deployment Error",
+					description: result.error || "Unknown error",
 					variant: "destructive",
 				});
 			}
-		} catch (error: unknown) {
+		} catch (err: any) {
 			toast({
-				title: `${error}`,
+				title: err.message || "Deployment Error",
 				description: "Failed to deploy",
 				variant: "destructive",
 			});
-			console.error(error);
+			console.error(err);
+		} finally {
+			setIsDeploying(false);
+		}
+	};
+
+	// new: update just the config of an existing agent
+	const { mutateAsync: signTransaction } = useSignTransaction();
+	const suiClient = useSuiClient();
+
+	const handleUpdate = async () => {
+		if (!agentId || !account?.address) return toast({ title: "Missing parameters", variant: "destructive" });
+		if (imageUrl) {
+			agentConfig.image = imageUrl;
+		}
+
+		setIsDeploying(true);
+		try {
+			// 1) ask backend to build & agent-sign the tx
+			const { presignedTxBytes, agentSignature, adminCapId, agentObjectId, agentAddress } = await updateAgentConfig(
+				agentId,
+				agentConfig,
+				account.address
+			);
+
+			// 2) replicate the exact same Move call locally to get the sponsor‐signature
+			const tx = new Transaction();
+			const raw = Array.from(Buffer.from(serializeAgentConfig(agentConfig)));
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_configuration`,
+				arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure(bcs.vector(bcs.u8()).serialize(raw))],
+			});
+			tx.setSender(agentAddress);
+			tx.setGasOwner(account.address);
+
+			const walletSigned = await signTransaction({ transaction: tx });
+
+			// 3) submit the sponsored tx with both signatures
+			const result = await suiClient.executeTransactionBlock({
+				transactionBlock: presignedTxBytes,
+				signature: [agentSignature, walletSigned.signature],
+				requestType: "WaitForLocalExecution",
+				options: {
+					showEffects: true,
+					showEvents: true,
+				},
+			});
+
+			if (result.effects?.status.status === "success") {
+				// 4) now persist the JSON in Prisma
+				await persistAgentConfig(agentId, agentConfig);
+				toast({ title: "Configuration updated" });
+			} else {
+				throw new Error("On-chain update failed: ", result.effects?.status?.error as any);
+			}
+		} catch (err: any) {
+			toast({
+				title: "Update Error",
+				description: err.message,
+				variant: "destructive",
+			});
+		} finally {
+			setIsDeploying(false);
+		}
+	};
+
+	const handleGenerateCharacter = async (description: string) => {
+		setIsGenerating(true);
+		const formData = new FormData();
+		formData.append("description", description);
+		try {
+			const { config, error } = await generateCharacter(formData);
+			if (error) {
+				toast({
+					title: "AI Assist Error",
+					description: Array.isArray(error.description) ? error.description.join(", ") : JSON.stringify(error),
+					variant: "destructive",
+				});
+			} else if (config) {
+				setAgentConfig(config);
+				toast({
+					title: "AI Assist",
+					description: "Agent configuration generated successfully",
+				});
+				setIsAiModalOpen(false);
+				setAiDescription("");
+			}
+		} catch (err) {
+			toast({
+				title: "AI Assist Error",
+				description: "Failed to generate config",
+				variant: "destructive",
+			});
+			console.error(err);
+		} finally {
+			setIsGenerating(false);
 		}
 	};
 
@@ -243,16 +274,44 @@ export default function AgentDeployer() {
 					<TooltipProvider>
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<Button variant="outline" className="opacity-50 cursor-not-allowed" disabled>
+								<Button variant="outline" onClick={() => setIsAiModalOpen(true)} disabled={isGenerating}>
 									<Wand2 className="mr-2 h-4 w-4" />
 									AI Assist
 								</Button>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p>Coming soon: AI assisted parameter generation</p>
+								<p>AI assisted parameter generation</p>
 							</TooltipContent>
 						</Tooltip>
 					</TooltipProvider>
+
+					{/* -------------- AI Assist Modal -------------- */}
+					<Dialog open={isAiModalOpen} onOpenChange={setIsAiModalOpen}>
+						<DialogContent>
+							<DialogHeader>
+								<DialogTitle>AI Assist</DialogTitle>
+								<DialogDescription>
+									Describe your character in as much detail as possible. Provide all context you think is necessary.
+								</DialogDescription>
+							</DialogHeader>
+							<Textarea
+								placeholder="A cheerful and helpful AI assistant named Nova. Always polite, loves sharing fun facts, and speaks in a warm, conversational tone. Enjoys helping with productivity and light-hearted chats."
+								value={aiDescription}
+								onChange={(e) => setAiDescription(e.target.value)}
+								className="min-h-[150px] w-full placeholder:text-gray-500 placeholder:opacity-90"
+							/>
+							<DialogFooter>
+								<DialogClose>Close</DialogClose>
+								<Button
+									variant="outline"
+									onClick={() => handleGenerateCharacter(aiDescription)}
+									disabled={isGenerating}
+								>
+									{isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "AI Generate"}
+								</Button>
+							</DialogFooter>
+						</DialogContent>
+					</Dialog>
 
 					<Button variant="outline" onClick={importConfig}>
 						<Upload className="mr-2 h-4 w-4" />
@@ -267,11 +326,11 @@ export default function AgentDeployer() {
 			</div>
 
 			<Tabs defaultValue="basic" className="w-full">
-				<TabsList className="grid grid-cols-5 w-full">
+				<TabsList className="grid grid-cols-5 w-full bg-background">
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
 					<TabsTrigger value="examples">Examples</TabsTrigger>
-					<TabsTrigger value="plugins">Plugins</TabsTrigger>
+					<TabsTrigger value="plugins">Integrations</TabsTrigger>
 					<TabsTrigger value="advanced">Advanced</TabsTrigger>
 				</TabsList>
 
@@ -299,8 +358,8 @@ export default function AgentDeployer() {
 											<SelectValue placeholder="Select model provider" />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="deepseek">deepseek</SelectItem>
-											<SelectItem value="openai">Anthropic</SelectItem>
+											<SelectItem value="openai">OpenAI</SelectItem>
+											<SelectItem value="anthropic">Anthropic</SelectItem>
 											<SelectItem value="mistral">Mistral AI</SelectItem>
 											<SelectItem value="llama">Llama</SelectItem>
 										</SelectContent>
@@ -330,6 +389,16 @@ export default function AgentDeployer() {
 											<SelectValue placeholder="Select voice model" />
 										</SelectTrigger>
 										<SelectContent>
+											{![
+												"en_US-male-medium",
+												"en_US-female-medium",
+												"en_UK-male-medium",
+												"en_UK-female-medium",
+											].includes(agentConfig.settings.voice.model) && (
+												<SelectItem value={agentConfig.settings.voice.model}>
+													{agentConfig.settings.voice.model}
+												</SelectItem>
+											)}
 											<SelectItem value="en_US-male-medium">US Male (Medium)</SelectItem>
 											<SelectItem value="en_US-female-medium">US Female (Medium)</SelectItem>
 											<SelectItem value="en_UK-male-medium">UK Male (Medium)</SelectItem>
@@ -337,6 +406,33 @@ export default function AgentDeployer() {
 										</SelectContent>
 									</Select>
 								</div>
+							</div>
+
+							{/* Add the image URL input field */}
+							<div className="space-y-2">
+								<div className="flex items-center">
+									<Label htmlFor="imageUrl">Agent Image URL</Label>
+									<span className="text-xs text-gray-500 ml-2">(Optional)</span>
+								</div>
+								<Input
+									id="imageUrl"
+									value={imageUrl}
+									onChange={(e) => setImageUrl(e.target.value)}
+									placeholder="Enter URL for agent image"
+								/>
+								{imageUrl && (
+									<div className="mt-2 border rounded-md p-2 max-w-xs">
+										<img
+											src={imageUrl || "/placeholder.svg"}
+											alt="Agent preview"
+											className="max-h-32 object-contain mx-auto"
+											onError={(e) => {
+												e.currentTarget.src = "/placeholder.svg?height=128&width=128";
+												e.currentTarget.alt = "Invalid image URL";
+											}}
+										/>
+									</div>
+								)}
 							</div>
 						</CardContent>
 					</Card>
@@ -589,12 +685,23 @@ export default function AgentDeployer() {
 				</TabsContent>
 
 				<TabsContent value="plugins" className="space-y-4 mt-4">
-					<Card className="relative">
-						<div className="absolute inset-0 bg-gray-200 bg-opacity-50 flex items-center justify-center z-10 rounded-md">
-							<Badge className="text-lg py-2 px-4">Coming Soon</Badge>
-						</div>
+					<Card>
 						<CardContent className="pt-6">
-							<PluginSelector />
+							<PluginSelector
+								agentConfig={agentConfig}
+								onPluginChange={(plugins) => {
+									setAgentConfig((prev) => ({
+										...prev,
+										plugins: plugins,
+									}));
+								}}
+								onEnvChange={(env) => {
+									setAgentConfig((prev) => ({
+										...prev,
+										env: env,
+									}));
+								}}
+							/>
 						</CardContent>
 					</Card>
 				</TabsContent>
@@ -730,8 +837,17 @@ export default function AgentDeployer() {
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={handleDeploy}>
-					Deploy Agent
+				<Button size="lg" onClick={isConfiguring ? handleUpdate : handleDeploy} disabled={isDeploying}>
+					{isDeploying ? (
+						<>
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							{isConfiguring ? "Updating..." : "Deploying..."}
+						</>
+					) : isConfiguring ? (
+						"Update Agent"
+					) : (
+						"Deploy Agent"
+					)}
 				</Button>
 			</div>
 		</div>

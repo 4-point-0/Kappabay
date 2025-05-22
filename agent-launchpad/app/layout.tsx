@@ -1,24 +1,18 @@
-"use client";
+import type React from "react";
 import type { Metadata } from "next";
+import { Inter, Funnel_Display } from "next/font/google";
 import "./globals.css";
-import "@suiet/wallet-kit/style.css";
-import { EnokiFlowProvider } from "@mysten/enoki/react";
-import { SuiClientProvider, createNetworkConfig } from "@mysten/dapp-kit";
-import { WalletProvider } from "@suiet/wallet-kit";
-import { getFullnodeUrl } from "@mysten/sui/client";
-import Providers from "@/app/providers";
-import Header from "@/components/header";
+import Providers from "./providers";
+import BackgroundMountains from "@/components/background-nountains";
 
-const metadata: Metadata = {
-	title: "Kappabay",
-	description: "Created with love by 4PTO Labs",
+const inter = Inter({ subsets: ["latin"] });
+const funnel = Funnel_Display({ subsets: ["latin"], weight: ["400", "700"] });
+
+export const metadata: Metadata = {
+	title: "Kappabay - AI Agent Marketplace",
+	description: "A decentralized marketplace for AI Agent capabilities and data feeds built on SUI",
+	generator: "v0.dev",
 };
-
-const { networkConfig } = createNetworkConfig({
-	devnet: { url: getFullnodeUrl("devnet") },
-	testnet: { url: getFullnodeUrl("testnet") },
-	mainnet: { url: getFullnodeUrl("mainnet") },
-});
 
 export default function RootLayout({
 	children,
@@ -26,12 +20,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
-			<body>
-				<Providers>
-					<Header />
-					{children}
-				</Providers>
+		<html lang="en" suppressHydrationWarning>
+			<body className={`${inter.className} ${funnel.className}`}>
+				<Providers>{children}</Providers>
+				<BackgroundMountains />
 			</body>
 		</html>
 	);
