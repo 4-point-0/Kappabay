@@ -49,7 +49,6 @@ export function StatusContent({
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
 	const [selectedCap, setSelectedCap] = useState("");
 	const [transferAddress, setTransferAddress] = useState("");
-	const signAndExec = useSignExecuteAndWaitForTransaction();
 
 	// Fetch & optionally filter agents:
 	async function refreshAgents() {
