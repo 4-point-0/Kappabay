@@ -39,6 +39,8 @@ export default function MarketplacePage() {
 	const fetchListings = useCallback(async () => {
 		try {
 			const data = await readDynamicFields();
+			console.log("data", data);
+
 			setListings(data);
 		} catch (err) {
 			console.error("Failed to load marketplace listings:", err);
