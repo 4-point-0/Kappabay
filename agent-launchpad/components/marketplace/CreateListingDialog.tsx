@@ -73,7 +73,7 @@ export function CreateListingDialog({
 				});
 				const txCreate = new Transaction();
 				txCreate.moveCall({
-					target: "0x2::kiosk::create_user_kiosk",
+					target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::create_user_kiosk`,
 					arguments: [],
 				});
 				await signer(txCreate);
