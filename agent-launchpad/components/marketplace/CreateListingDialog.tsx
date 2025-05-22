@@ -82,11 +82,19 @@ export function CreateListingDialog({
 					description: "Fetching your new kiosk cap…",
 				});
 
-				// refresh owned caps from chain
-				const { data: newCaps } = await refetchCaps();
-				if (!newCaps) throw new Error("Failed to refresh kiosk caps");
-				kioskCap = newCaps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-				if (!kioskCap) throw new Error("KioskOwnerCap still missing after creation");
+				// refresh owned caps, retrying up to 5 times with 1s delay
+				const maxRetries = 5;
+				let newCaps;
+				for (let i = 0; i < maxRetries; i++) {
+					const result = await refetchCaps();
+					newCaps = result.data;
+					kioskCap = newCaps?.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+					if (kioskCap) break;
+					await new Promise((r) => setTimeout(r, 1000));
+				}
+				if (!kioskCap) {
+					throw new Error("KioskOwnerCap still missing after multiple retries");
+				}
 			}
 
 			const {
