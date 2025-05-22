@@ -34,6 +34,12 @@ export default function BackgroundMountains() {
 				className="w-full h-auto"
 				priority
 			/>
+			<div className="absolute left-1/2 bottom-[18rem] -translate-x-1/2 text-center z-20">
+				<div className="mb-2">
+					<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
+				</div>
+				<p className="dark:text-white text-background text-sm">By 4pto Labs</p>
+			</div>
 		</div>
 	);
 }

@@ -149,7 +149,7 @@ export default function Home() {
 					</div>
 
 					{/* 4pto Labs logo and text - highest z-index */}
-					<div className="absolute left-1/2 bottom-[22rem] -translate-x-1/2 text-center z-20">
+					<div className="absolute left-1/2 bottom-[18rem] -translate-x-1/2 text-center z-20">
 						<div className="mb-2">
 							<Image src="/logo-4pto.png" alt="4pto Labs Logo" width={120} height={40} className="mx-auto" />
 						</div>
