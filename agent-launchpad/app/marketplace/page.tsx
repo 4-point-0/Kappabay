@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { useMarketplaceObject } from "@/hooks/use-marketplace-object";
 import Image from "next/image";
 import { PageTransition } from "@/components/page-transition";
+import { getObjectFields } from "@/lib/actions/sui-utils";
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -46,13 +47,7 @@ export default function MarketplacePage() {
 					let image_url = item.fields.image_url || "";
 
 					try {
-						const obj = await suiClient.getObject({
-							id: agentId,
-							options: { showContent: true },
-						});
-
-						const fields = (obj.data?.content as any)?.fields;
-
+						const fields = await getObjectFields(suiClient, agentId);
 						if (fields?.image) {
 							image_url = fields.image;
 						}

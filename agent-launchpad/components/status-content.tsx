@@ -7,7 +7,9 @@ import AgentsTable from "@/components/agents-table";
 import ManageGasDialog from "@/components/manage-gas-dialog";
 import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
 import Link from "next/link";
-import { useCurrentAccount, useSignPersonalMessage } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from "@mysten/dapp-kit";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+import { getObjectFields } from "@/lib/actions/sui-utils";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
@@ -37,6 +39,7 @@ export function StatusContent({
 }: StatusContentProps) {
 	const wallet = useCurrentAccount();
 	const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
+	const suiClient = useSuiClient();
 	const { caps } = useOwnedCaps();
 
 	const [agents, setAgents] = useState<any[]>([]);
@@ -49,7 +52,6 @@ export function StatusContent({
 	const [selectedAgentForGas, setSelectedAgentForGas] = useState<any>(null);
 	const [selectedCap, setSelectedCap] = useState("");
 	const [transferAddress, setTransferAddress] = useState("");
-	const signAndExec = useSignExecuteAndWaitForTransaction();
 
 	// Fetch & optionally filter agents:
 	async function refreshAgents() {
@@ -65,7 +67,19 @@ export function StatusContent({
 			if (filterByAgentType) {
 				list = list.filter((a) => a.agentType === filterByAgentType);
 			}
-			setAgents(list);
+			// ── batch-fetch on-chain gas_tank for each agent and convert to SUI ──
+			const balances = await Promise.all(
+				list.map(async (a) => ({
+					id: a.id,
+					gasTank: (await getObjectFields(suiClient, a.objectId)).gas_tank,
+				}))
+			);
+			const enriched = list.map((a) => {
+				const match = balances.find((b) => b.id === a.id);
+				const bag = match ? (Number(match.gasTank) / 1e9).toFixed(5) : "0.000";
+				return { ...a, gasBag: bag };
+			});
+			setAgents(enriched);
 		} catch (err) {
 			console.error("Error fetching agents:", err);
 		}
