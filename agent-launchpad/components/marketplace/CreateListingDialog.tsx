@@ -69,7 +69,6 @@ export function CreateListingDialog({
 				toast({
 					title: "No kiosk cap found",
 					description: "Creating your kiosk… Confirm in wallet",
-					variant: "destructive",
 				});
 				const txCreate = new Transaction();
 				txCreate.moveCall({

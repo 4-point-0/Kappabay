@@ -3,13 +3,12 @@
 import Header from "@/components/header";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { JsonRpcProvider, Connection } from "@mysten/sui.js";
 import { FilterBar } from "@/components/marketplace/FilterBar";
 import { ListingsGrid } from "@/components/marketplace/ListingsGrid";
 import { CreateListingDialog } from "@/components/marketplace/CreateListingDialog";
 import { AgentDetailsDialog } from "@/components/marketplace/AgentDetailsDialog";
 import { readDynamicFields } from "@/lib/marketplace-utils";
-import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { Transaction } from "@mysten/sui/transactions";
@@ -29,7 +28,7 @@ export default function MarketplacePage() {
 
 	// live listings from on‐chain marketplace
 	const [listings, setListings] = useState<any[]>([]);
-
+	const suiClient = useSuiClient();
 	const wallet = useCurrentAccount();
 	const signAndExecute = useSignExecuteAndWaitForTransaction();
 	const { caps } = useOwnedCaps();
@@ -37,32 +36,25 @@ export default function MarketplacePage() {
 	const MARKET_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 	const { fields: marketFields } = useMarketplaceObject(MARKET_ID);
 
-	// SUI RPC provider for on-chain calls
-	const provider = useMemo(
-		() =>
-			new JsonRpcProvider(
-				new Connection({ fullnode: process.env.NEXT_PUBLIC_SUI_RPC_URL! })
-			),
-		[]
-	);
-
 	const fetchListings = useCallback(async () => {
 		try {
 			const raw = await readDynamicFields();
 
 			const enriched = await Promise.all(
-				raw.map(async (item) => {
+				raw.map(async (item: any) => {
 					const agentId = item.fields.agent_id;
 					let image_url = item.fields.image_url || "";
 
 					try {
-						const obj = await provider.getObject({
+						const obj = await suiClient.getObject({
 							id: agentId,
 							options: { showContent: true },
 						});
-						const fields = (obj.data?.content as any)?.data?.fields;
-						if (fields?.image_url) {
-							image_url = fields.image_url;
+
+						const fields = (obj.data?.content as any)?.fields;
+
+						if (fields?.image) {
+							image_url = fields.image;
 						}
 					} catch (e) {
 						console.warn("Failed to fetch on-chain object", agentId, e);
@@ -82,7 +74,7 @@ export default function MarketplacePage() {
 		} catch (err) {
 			console.error("Failed to load marketplace listings:", err);
 		}
-	}, [provider]);
+	}, [suiClient]);
 
 	// initial load + poll every 20s (cleanup on unmount)
 	useEffect(() => {
