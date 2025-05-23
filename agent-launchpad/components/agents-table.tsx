@@ -108,7 +108,7 @@ export default function AgentsTable({
 								</div>
 							</TableHead>
 							<TableHead>{moneyLabel || "Gas Bag"}</TableHead>
-							{/* <TableHead>Time Remaining</TableHead> */}
+							<TableHead>Time Remaining</TableHead>
 							<TableHead className="cursor-pointer" onClick={() => handleSort("createdAt")}>
 								<div className="flex items-center">
 									Created

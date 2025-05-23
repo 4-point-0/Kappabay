@@ -48,6 +48,24 @@ export default function AgentRow({
 	onOpenTransferCap,
 }: AgentRowProps) {
 	const isActive = agent.status === "ACTIVE";
+	// ── compute time until gasBalance drains at 1_000_000 mist per hour ──
+	const timeRemaining: string | undefined = agent.gasBag
+		? (() => {
+				const feePerHour = 1_000_000; // mist drawn per hour
+				const totalSeconds = ((Number(agent.gasBag) * 1e9) / feePerHour) * 3600;
+				const days = Math.floor(totalSeconds / 86400);
+				const hours = Math.floor((totalSeconds % 86400) / 3600);
+				const minutes = Math.floor((totalSeconds % 3600) / 60);
+				let result = "";
+				if (days) result += `${days}d `;
+				if (hours) result += `${hours}h `;
+				result += `${minutes}m`;
+				return result;
+		  })()
+		: undefined;
+
+	// ── raw hours remaining (for coloring logic) ─────────────────────────
+	const hoursRemaining: number | undefined = agent.gasBag ? (Number(agent.gasBag) * 1e9) / 1_000_000 : undefined;
 	return (
 		<motion.tr
 			key={agent.id}
@@ -73,12 +91,13 @@ export default function AgentRow({
 					</Button>
 				</div>
 			</TableCell>
-			{/* <TableCell>
-				{agent.timeRemaining?.includes("hours") ? (
-					Number.parseInt(agent.timeRemaining) < 4 ? (
-						<div className="flex items-center text-red-500">
-							<span>{agent.timeRemaining}</span>
+			<TableCell>
+				{hoursRemaining != null ? (
+					hoursRemaining < 4 ? (
+						<div className="flex items-center text-red-500 group">
+							<span>{timeRemaining}</span>
 							<div className="relative ml-2">
+								{/* warning icon */}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="16"
@@ -91,19 +110,24 @@ export default function AgentRow({
 									strokeLinejoin="round"
 									className="text-red-500"
 								>
-									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-									<line x1="12" y1="9" x2="12" y2="13"></line>
-									<line x1="12" y1="17" x2="12.01" y2="17"></line>
+									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+									<line x1="12" y1="9" x2="12" y2="13" />
+									<line x1="12" y1="17" x2="12.01" y2="17" />
 								</svg>
-								<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+								<div
+									className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+								>
 									Critical: Less than 4 hours uptime remaining
 								</div>
 							</div>
 						</div>
-					) : (
+					) : hoursRemaining < 24 ? (
 						<div className="flex items-center text-yellow-500 group">
-							<span>{agent.timeRemaining}</span>
+							<span>{timeRemaining}</span>
 							<div className="relative ml-2">
+								{/* warning icon */}
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									width="16"
@@ -116,20 +140,26 @@ export default function AgentRow({
 									strokeLinejoin="round"
 									className="text-yellow-500"
 								>
-									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-									<line x1="12" y1="9" x2="12" y2="13"></line>
-									<line x1="12" y1="17" x2="12.01" y2="17"></line>
+									<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+									<line x1="12" y1="9" x2="12" y2="13" />
+									<line x1="12" y1="17" x2="12.01" y2="17" />
 								</svg>
-								<div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
+								<div
+									className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2
+										bg-black text-white text-xs rounded py-1 px-2 whitespace-nowrap
+										opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"
+								>
 									Less than a day remaining
 								</div>
 							</div>
 						</div>
+					) : (
+						<span className="font-medium">{timeRemaining}</span>
 					)
 				) : (
-					<span>{agent.timeRemaining}</span>
+					<span className="font-medium">Loading…</span>
 				)}
-			</TableCell> */}
+			</TableCell>
 			<TableCell>
 				{new Date(agent.createdAt)
 					.toLocaleDateString("en-GB", {
