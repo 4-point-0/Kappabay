@@ -75,10 +75,8 @@ async function portainerFetch(path: string, options: any = {}) {
 async function getContainerId(name: string): Promise<string> {
 	const response = await portainerFetch(`/api/endpoints/${PORTAINER_ENDPOINT_ID}/docker/containers/json?all=1`);
 	const containers = response.data;
-	console.log("name", name);
 
 	const match = containers.find((c: any) => {
-		console.log("c.Names", c.Names);
 		return c.Names?.some((n: string) => n.includes(name));
 	});
 
