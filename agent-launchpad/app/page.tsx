@@ -140,9 +140,14 @@ export default function Home() {
 								viewport={{ once: true }}
 								className="bg-gray-300 rounded-lg h-[300px] flex items-center justify-center"
 							>
-								<div className="text-center text-gray-600">
-									<p className="text-lg font-medium">AI Oracle Diagram</p>
-									<p className="text-sm">(Placeholder for diagram/illustration)</p>
+								<div className="text-center text-gray-600 ">
+									<Image
+										src="/decision.jpg"
+										alt="Decision"
+										width={120}
+										height={40}
+										className="w-full h-auto rounded-md"
+									/>
 								</div>
 							</motion.div>
 						</div>
