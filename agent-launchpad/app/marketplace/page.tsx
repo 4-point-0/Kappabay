@@ -32,7 +32,7 @@ export default function MarketplacePage() {
 	const suiClient = useSuiClient();
 	const wallet = useCurrentAccount();
 	const signAndExecute = useSignExecuteAndWaitForTransaction();
-	const { caps } = useOwnedCaps();
+	const { caps, refetch: refetchCaps } = useOwnedCaps();
 
 	const MARKET_ID = process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID!;
 	const { fields: marketFields } = useMarketplaceObject(MARKET_ID);
@@ -105,11 +105,41 @@ export default function MarketplacePage() {
 			// seller’s kiosk that holds the listing
 			const sellerKioskId = agent.fields.kiosk_id;
 
-			// your own KioskOwnerCap → needed for transfer policy
-			const kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
-			if (!kioskCap) throw new Error("No KioskOwnerCap found for your account");
+			// ensure user has a KioskOwnerCap, creating one if missing
+			let kioskCap = caps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+			if (!kioskCap) {
+				toast({ title: "No kiosk cap found", description: "Creating your kiosk… Confirm in wallet" });
+				// build and submit creation tx
+				const txCreate = new Transaction();
+				txCreate.moveCall({
+					target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::create_user_kiosk`,
+					arguments: [],
+				});
+				await signAndExecute(txCreate);
+				toast({ title: "Kiosk created", description: "Fetching your new kiosk cap…" });
+
+				// refetch caps and wait up to 5s for the new kiosk cap
+				const maxRetries = 5;
+				for (let i = 0; i < maxRetries; i++) {
+					const res = await refetchCaps();
+					const newCaps = res.data ?? [];
+					kioskCap = newCaps.find((c) => c.data.type === "0x2::kiosk::KioskOwnerCap");
+					if (kioskCap) break;
+					await new Promise((r) => setTimeout(r, 1000));
+				}
+				if (!kioskCap) {
+					throw new Error("KioskOwnerCap still missing after multiple retries");
+				}
+			}
+
+			// now you can safely read your kioskCap data
 
 			// build tx manually so we can split off exactly the payment coin
+			const {
+				objectId: kioskCapId,
+				content: { fields: { for: kioskId } }
+			} = kioskCap.data;
+
 			const tx = new Transaction();
 
 			// amount in mist is stored on the listing
