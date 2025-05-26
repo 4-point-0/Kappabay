@@ -24,7 +24,8 @@ module nft_template::agent_marketplace {
         agent_id: ID,
         price: u64,
         seller: address,
-        kiosk_id: ID
+        kiosk_id: ID,
+        category: String
     }
 
     public struct AgentPurchased has copy, drop {
@@ -33,13 +34,15 @@ module nft_template::agent_marketplace {
         price: u64,
         seller: address,
         buyer: address,
-        royalty_amount: u64
+        royalty_amount: u64,
+        category: String
     }
 
     public struct AgentDelisted has copy, drop {
         agent_cap_id: ID,
         agent_id: ID,
-        seller: address
+        seller: address,
+        category: String
     }
 
     // Marketplace administrator capability
@@ -68,6 +71,7 @@ module nft_template::agent_marketplace {
         name: String,
         description: String,
         image_url: String,
+        category: String,
         creation_time: u64
     }
 
@@ -137,6 +141,7 @@ module nft_template::agent_marketplace {
         name: String,
         description: String,
         image_url: String,
+        category: String,
         ctx: &mut tx_context::TxContext
     ) {
         // Validation code
@@ -166,6 +171,7 @@ module nft_template::agent_marketplace {
             name,
             description,
             image_url,
+            category,
             creation_time: tx_context::epoch_timestamp_ms(ctx)
         };
         
@@ -191,7 +197,8 @@ module nft_template::agent_marketplace {
             agent_id,
             price,
             seller,
-            kiosk_id
+            kiosk_id,
+            category
         });
     }
 
@@ -212,6 +219,7 @@ module nft_template::agent_marketplace {
         let listing_info = table::borrow(&marketplace.listings, agent_cap_id);
         let price = listing_info.price;
         let seller = listing_info.seller;
+        let category = listing_info.category;
         
         // Verify this is the correct kiosk
         assert!(object::id(kiosk) == listing_info.kiosk_id, EInvalidKiosk);
@@ -257,7 +265,8 @@ module nft_template::agent_marketplace {
             price, // Total price
             seller,
             buyer: tx_context::sender(ctx),
-            royalty_amount
+            royalty_amount,
+            category
         });
 
         // Clean up tables - need to store the result to satisfy drop constraint
@@ -285,6 +294,7 @@ module nft_template::agent_marketplace {
         let seller = listing_info.seller;
         let kiosk_id = listing_info.kiosk_id;
         let agent_id = listing_info.agent_id;
+        let category = listing_info.category;
         
         // Verify this is the correct kiosk
         assert!(object::id(kiosk) == kiosk_id, EInvalidKiosk);
@@ -305,7 +315,8 @@ module nft_template::agent_marketplace {
         event::emit(AgentDelisted {
             agent_cap_id,
             agent_id,
-            seller
+            seller,
+            category
         });
         
         // Take the agent cap from the kiosk
@@ -333,7 +344,7 @@ module nft_template::agent_marketplace {
     public fun get_listing_info(
         marketplace: &Marketplace, 
         agent_cap_id: ID
-    ): (ID, ID, address, u64, String, String, String, u64) {
+    ): (ID, ID, address, u64, String, String, String, String, u64) {
         let info = table::borrow(&marketplace.listings, agent_cap_id);
         (
             info.agent_id,
@@ -343,6 +354,7 @@ module nft_template::agent_marketplace {
             info.name,
             info.description,
             info.image_url,
+            info.category,
             info.creation_time
         )
     }
