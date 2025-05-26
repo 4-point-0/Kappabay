@@ -1,141 +1,151 @@
-# Hot Potato Game & AI Agent System
+# Decentralized AI Agent Marketplace on Sui
 
-This repository contains a Sui Move implementation of a Hot Potato game with a GameManager for tracking players and distributing rewards, along with an AI Agent system for game interactions.
+A comprehensive system for creating, managing, and trading AI agents as NFTs on the Sui blockchain, featuring integrated marketplace functionality, royalty systems, and decentralized agent operations.
 
 ## Package Information
 
-- **Package ID**: `0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6`
-- **Relevant Modules**:
-  - `agent` - Manages game agents and AI interactions
-  - `prompt_manager` - Manages prompt storage and retrieval
-  - `hot_potato` - Core hot potato game logic
-  - `game_manager` - Game coordination and rewards
+- **Package ID**: `0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5`
+- **Core Modules**:
+  - `agent` - Core AI agent functionality and fund management
+  - `agent_marketplace` - Decentralized marketplace using Sui Kiosk
+  - `agent_royalty` - Creator royalty enforcement system
+  - `prompt_manager` - AI interaction and prompt management
+  - `game_manager` - Extensible game coordination framework
+  - `hot_potato` - Example game implementation
 
-## Agent & Prompt System
+## Core Features
 
-The repository includes an AI agent system to facilitate game interactions. The system consists of:
+### 🤖 AI Agent System
 
-1. **Agent Module** - Handles agent configuration, funding, and basic prompt functionality
-2. **Prompt Manager** - Provides centralized prompt storage, retrieval, and management
+Create sophisticated AI agents with persistent storage and autonomous fund management:
 
-### Agent Setup Instructions
+- **Configuration Management**: Store agent settings, behaviors, and parameters
+- **Memory System**: Persistent memory storage for agent learning and context
+- **Knowledge Bank**: Centralized knowledge storage and retrieval
+- **Multi-Tier Fund Management**:
+  - Gas Tank: For transaction execution
+  - Private Funds: Agent-controlled resources
+  - Public Funds: Community-accessible resources
+- **Object Storage**: Built-in storage for rewards, assets, and game objects
 
-Follow these steps to set up an agent with prompt management.
+### 🏪 Decentralized Marketplace
 
-#### Step 1: Create an Agent
+Trade AI agents using Sui's native Kiosk system:
+
+- **Sui Kiosk Integration**: Leverages Sui's built-in trading infrastructure
+- **Creator Royalties**: Automatic royalty distribution to original creators
+- **Listing Management**: List, delist, and manage agent sales
+- **Transfer Policies**: Configurable rules for agent ownership transfers
+- **Event Tracking**: Comprehensive marketplace analytics
+
+### 💬 Prompt Management System
+
+Sophisticated AI interaction framework:
+
+- **Centralized Prompt Storage**: Organized prompt and response management
+- **Callback System**: Support for both single and multi-callback workflows
+- **Agent Integration**: Direct integration with agent capabilities
+- **Response Tracking**: Monitor AI interactions and responses
+
+### 🎮 Extensible Game Framework
+
+Built-in game coordination system for agent-based applications:
+
+- **Game Management**: Create and coordinate multi-agent games
+- **Prize Pool Management**: Automated reward distribution
+- **Player Tracking**: Monitor participation and game statistics
+- **Event System**: Real-time game state updates
+
+## Complete System Setup
+
+### Prerequisites
+
+Before using the system, you need:
+
+1. **Publisher Object**: Obtained from package deployment (required for marketplace initialization)
+2. **SUI Tokens**: For gas fees and initial funding
+3. **Sui CLI**: Configured and connected to the appropriate network
+
+### Phase 1: System Initialization (One-time Setup)
+
+#### 1. Initialize the Marketplace
+
+**⚠️ Important**: This must be done once per deployment and requires the Publisher object from package deployment.
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module agent \
-  --function create_agent \
-  --args "[0]" "[COIN_ID_FOR_INITIAL_GAS]" "[IMAGE_URL]" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent_marketplace \
+  --function initialize_marketplace \
+  --args "[PUBLISHER_OBJECT]" "500" \
   --gas-budget 20000000
 ```
 
 This creates:
 
-- A shared Agent object
-- An AdminCap for the agent
-- An AgentCap for bag access
+- **Marketplace** (shared): `[MARKETPLACE_ID]`
+- **MarketplaceAdminCap**: `[MARKETPLACE_ADMIN_CAP_ID]`
+- **TransferPolicy** (shared): `[TRANSFER_POLICY_ID]`
+- **TransferPolicyCap**: `[TRANSFER_POLICY_CAP_ID]`
 
-Note the IDs from the transaction output:
+#### 2. Setup Display Objects (One-time)
 
-- Agent ID: `[AGENT_ID]`
-- AdminCap ID: `[ADMIN_CAP_ID]`
-- AgentCap ID: `[AGENT_CAP_ID]`
+The `hot_potato` module's `init()` function automatically creates display objects for NFTs when the package is deployed.
 
-#### Step 2: Create a Prompt Manager
+### Phase 2: User Onboarding
+
+#### For Each User Who Wants to Trade Agents:
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
+# Create a personal kiosk for trading
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent_marketplace \
+  --function create_user_kiosk \
+  --gas-budget 20000000
+```
+
+This creates:
+
+- **User Kiosk** (shared): `[USER_KIOSK_ID]`
+- **KioskOwnerCap**: `[USER_KIOSK_CAP_ID]`
+
+### Phase 3: Agent Creation and Setup
+
+#### 1. Create an AI Agent
+
+```bash
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function create_agent \
+  --args "[AGENT_CONFIG_BYTES]" "[INITIAL_GAS_COIN]" "[IMAGE_URL]" \
+  --gas-budget 20000000
+```
+
+This creates:
+
+- **Agent** (shared): `[AGENT_ID]`
+- **AdminCap**: `[ADMIN_CAP_ID]`
+- **AgentCap**: `[AGENT_CAP_ID]`
+
+#### 2. Initialize Prompt Manager for the Agent
+
+```bash
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
   --module prompt_manager \
   --function init_prompt_manager \
   --args "[AGENT_ID]" "[ADMIN_CAP_ID]" \
   --gas-budget 20000000
 ```
 
-This creates a shared Prompt Manager object for centralized prompt handling:
+This creates:
 
-- Prompt Manager ID: `[PROMPT_MANAGER_ID]`
+- **PromptManager** (shared): `[PROMPT_MANAGER_ID]`
 
-### Prompt Management
+### Phase 4: Game Framework Setup (Optional)
 
-#### Creating Prompts
-
-```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function infer_prompt \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "What is the status of my hot potato game?" "[AGENT_WALLET_ADDRESS]" \
-  --gas-budget 20000000
-```
-
-For prompts with callbacks:
+#### 1. Create Oven for Game Objects
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function infer_prompt_with_callback \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "What is the status of my hot potato game?" "[AGENT_WALLET_ADDRESS]" "[PACKAGE_ID]::game_manager::check_game_status" \
-  --gas-budget 20000000
-```
-
-#### Adding Responses
-
-```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function add_response \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[PROMPT_ID]" "Your game has 5 active players." \
-  --gas-budget 20000000
-```
-
-#### Updating Prompts
-
-```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function update_prompt \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[PROMPT_ID]" "Updated question about my hot potato game?" \
-  --gas-budget 20000000
-```
-
-#### Retrieving Prompts
-
-```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function retrieve_prompt \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[PROMPT_ID]" "[USER_ADDRESS]" \
-  --gas-budget 20000000
-```
-
-#### Managing Prompts
-
-```bash
-# Remove a specific prompt
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function remove_prompt \
-  --args "[PROMPT_MANAGER_ID]" "[ADMIN_CAP_ID]" "[PROMPT_ID]" \
-  --gas-budget 20000000
-
-# Completely destroy the prompt manager
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module prompt_manager \
-  --function destroy_prompt_manager \
-  --args "[PROMPT_MANAGER_ID]" "[ADMIN_CAP_ID]" \
-  --gas-budget 20000000
-```
-
-## Game Setup Instructions
-
-Follow these steps to set up a complete hot potato game environment.
-
-### Step 1: Create an Oven
-
-```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
   --module hot_potato \
   --function create_oven \
   --args "[AGENT_ID]" "[AGENT_CAP_ID]" \
@@ -144,217 +154,544 @@ sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c
 
 This creates:
 
-- A shared Oven object
-- An OvenCap for baking potatoes
+- **Oven** (shared): `[OVEN_ID]`
+- **OvenCap**: `[OVEN_CAP_ID]`
 
-Note the IDs:
-
-- Oven ID: `[OVEN_ID]`
-- OvenCap ID: `[OVEN_CAP_ID]`
-
-### Step 2: Create a GameManager
+#### 2. Create Game Manager
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
   --module game_manager \
   --function create_game_manager \
-  --args "[OVEN_ID]" "[COIN_FOR_PRIZE_POOL]" \
+  --args "[OVEN_ID]" "[INITIAL_PRIZE_POOL_COIN]" \
   --gas-budget 20000000
 ```
 
 This creates:
 
-- A shared GameManager object
-- A GameManagerCap for administration
+- **GameManager** (shared): `[GAME_MANAGER_ID]`
+- **GameManagerCap**: `[GAME_MANAGER_CAP_ID]`
 
-Note the IDs:
+## Quick Start
 
-- GameManager ID: `[GAME_MANAGER_ID]`
-- GameManagerCap ID: `[GAME_MANAGER_CAP_ID]`
+### For New Users (After System Setup)
 
-### Step 3: Create a Game
+Once the system is initialized, new users can quickly get started:
+
+#### 1. Create Your Trading Kiosk
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module game_manager \
-  --function create_game \
-  --args "[GAME_MANAGER_ID]" "[GAME_MANAGER_CAP_ID]" "[48]" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent_marketplace \
+  --function create_user_kiosk \
   --gas-budget 20000000
 ```
 
-The game ID will be emitted in a GameCreated event in the transaction output.
-
-- Game ID: `[GAME_ID]`
-
-## Game Workflow
-
-### 0. Create a ModelCap for UI Access (Required)
+#### 2. Create Your First Agent
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module hot_potato \
-  --function create_model_cap \
-  --args "[RECIPIENT_ADDRESS]" "0x6" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function create_agent \
+  --args "[CONFIG_BYTES]" "[GAS_COIN]" "[IMAGE_URL]" \
   --gas-budget 20000000
 ```
 
-This creates a ModelCap that allows the recipient to interact with the game UI:
-
-- ModelCap ID: `[MODEL_CAP_ID]`
-
-### 1. Bake a Potato
+#### 3. Set Up Prompt Management
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module hot_potato \
-  --function bake_potato \
-  --args "[OVEN_ID]" "[GAME_MANAGER_ID]" "[PAYMENT_COIN]" "0x6" "0x8" "[RECIPIENT_ADDRESS]" "[METADATA]" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module prompt_manager \
+  --function init_prompt_manager \
+  --args "[YOUR_AGENT_ID]" "[YOUR_ADMIN_CAP_ID]" \
   --gas-budget 20000000
 ```
 
-This creates a potato and transfers it to the recipient:
+### For Frontend Developers
 
-- Potato ID: `[POTATO_ID]`
+Key objects you'll need to track:
 
-### 2. Register the Potato with a Game
+- **Marketplace ID**: `[MARKETPLACE_ID]` (shared, same for all users)
+- **TransferPolicy ID**: `[TRANSFER_POLICY_ID]` (shared, same for all users)
+- **User Kiosk ID**: `[USER_KIOSK_ID]` (unique per user)
+- **Agent IDs**: `[AGENT_ID]` (unique per agent)
+- **PromptManager IDs**: `[PROMPT_MANAGER_ID]` (unique per agent)
+
+## Agent Management
+
+### Fund Your Agent
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module game_manager \
-  --function register_potato \
-  --args "[GAME_MANAGER_ID]" "[GAME_MANAGER_CAP_ID]" "[POTATO_ID]" "[GAME_ID]" \
+# Add gas for transactions
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function deposit_gas \
+  --args "[AGENT_ID]" "[GAS_COIN]" \
+  --gas-budget 20000000
+
+# Add private funds (admin only)
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function deposit_private_funds \
+  --args "[AGENT_ID]" "[ADMIN_CAP_ID]" "[FUNDS_COIN]" \
   --gas-budget 20000000
 ```
 
-### 3. Create GameCap for the Recipient
+### Update Agent Configuration
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module hot_potato \
-  --function create_game_cap \
-  --args "[POTATO_ID]" "[RECIPIENT_ADDRESS]" \
+# Update agent configuration
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function update_configuration \
+  --args "[AGENT_ID]" "[ADMIN_CAP_ID]" "[NEW_CONFIG_BYTES]" \
+  --gas-budget 20000000
+
+# Update memories
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent \
+  --function update_memories \
+  --args "[AGENT_ID]" "[ADMIN_CAP_ID]" "[MEMORY_BYTES]" \
   --gas-budget 20000000
 ```
 
-This creates a GameCap for the recipient:
+## Marketplace Operations
 
-- GameCap ID: `[GAME_CAP_ID]`
-
-### 4. Transfer the Potato (by Recipient)
+### List an Agent for Sale
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module hot_potato \
-  --function transfer_potato \
-  --args "[POTATO_ID]" "[GAME_CAP_ID]" "[GAME_MANAGER_ID]" "[GAME_MANAGER_CAP_ID]" "0x6" "[NEW_RECIPIENT_ADDRESS]" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent_marketplace \
+  --function list_agent \
+  --args "[MARKETPLACE_ID]" "[AGENT_CAP_ID]" "[AGENT_ID]" "[KIOSK_ID]" "[KIOSK_CAP_ID]" "[PRICE_IN_MIST]" "[NAME]" "[DESCRIPTION]" "[IMAGE_URL]" "[CATEGORY]" \
   --gas-budget 20000000
 ```
 
-### 5. Record the Transfer (by Admin)
+### Purchase an Agent
 
 ```bash
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
-  --module game_manager \
-  --function record_transfer_by_potato \
-  --args "[GAME_MANAGER_ID]" "[GAME_MANAGER_CAP_ID]" "[POTATO_ID]" "[PLAYER_ADDRESS]" \
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module agent_marketplace \
+  --function purchase_agent \
+  --args "[MARKETPLACE_ID]" "[SELLER_KIOSK_ID]" "[AGENT_CAP_ID]" "[TRANSFER_POLICY_ID]" "[PAYMENT_COIN]" \
   --gas-budget 20000000
 ```
 
-## Agent and Game Integration
+## AI Interactions
 
-The agent system can be integrated with the Hot Potato game to provide AI-driven game experiences:
+### Create and Manage Prompts
 
-1. **Game Questions**: Users can ask the agent about their game status, rules, or strategies
-2. **Game Actions**: The agent can trigger game actions through callbacks
-3. **Notifications**: The agent can notify users about game events or status changes
-
-Example prompts for game integration:
-
-```
-# Ask about game status
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
+```bash
+# Simple prompt
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
   --module prompt_manager \
   --function infer_prompt \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "What is the status of my hot potato game?" "[AGENT_WALLET_ADDRESS]" \
+  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[QUESTION_STRING]" "[AGENT_WALLET_ADDRESS]" \
   --gas-budget 20000000
 
-# Ask to create a new game with callback
-sui client call --package 0x7d892b57ed607b6c8ba029296a7c679ab7e70bfe3e82b67e005c337d02c369a6 \
+# Prompt with callback
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
   --module prompt_manager \
-  --function infer_prompt_with_callback \
-  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "Create a new hot potato game for me" "[AGENT_WALLET_ADDRESS]" "[PACKAGE_ID]::game_manager::create_game" \
+  --function infer_prompt_with_single_callback \
+  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[QUESTION_STRING]" "[AGENT_WALLET_ADDRESS]" "[CALLBACK_FUNCTION]" \
+  --gas-budget 20000000
+
+# Add response to prompt
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module prompt_manager \
+  --function add_response \
+  --args "[PROMPT_MANAGER_ID]" "[AGENT_CAP_ID]" "[PROMPT_ID]" "[RESPONSE_STRING]" \
   --gas-budget 20000000
 ```
 
-## Important Notes
+## Key Events
 
-1. **Clock and Random Objects**:
+The system emits comprehensive events for monitoring and integration:
 
-   - Clock Object: `0x6`
-   - Random Object: `0x8`
+### Agent Events
 
-2. **Agent System Events**:
+- `AgentCreated` - New agent initialization
+- `FundsDeposited` - Agent funding operations
+- `ObjectStored` - Asset storage in agents
+- `GasBalanceChecked` - Balance monitoring
 
-   - The prompt manager emits events that can be monitored by backend services
-   - Key events include: `PromptCreated`, `PromptWithCallback`, `PromptResponseAdded`, `PromptUpdated`
+### Marketplace Events
 
-3. **Potato Fee**:
+- `AgentListed` - Agent listing for sale
+- `AgentPurchased` - Successful agent purchase with royalty info
+- `AgentDelisted` - Agent removal from marketplace
 
-   - Each potato costs 0.5 SUI to create
-   - This fee is automatically added to the prize pool
+### Prompt Events
 
-4. **Game Lifecycle**:
+- `PromptCreated` - New AI interaction
+- `PromptWithCallback` - Callback-enabled prompts
+- `PromptResponseAdded` - AI response received
 
-   - The potato has an expiry time (24 hours from creation)
-   - Each transfer must occur within a transfer window (30 minutes)
-   - If a player holds a potato too long, it "burns"
-   - If the potato reaches its expiry time, it "expires"
-
-5. **Sponsored Transactions**:
-   To enable sponsored transactions:
-   1. Extract a reward coin using `get_reward_coin`
-   2. Use the Sui SDK to create a sponsored transaction
-   3. The transaction should have:
-      - User's address as the sender
-      - Agent's address as the gas owner
-      - Extracted coin as the gas payment
-
-## System Architecture
+## Architecture
 
 ```
 ┌─────────────────────┐         ┌─────────────────────┐
 │                     │         │                     │
-│    Agent System     │         │    Game System      │
+│    Agent System     │         │   Marketplace       │
 │                     │         │                     │
 ├─────────────────────┤         ├─────────────────────┤
 │                     │         │                     │
 │  ┌───────────────┐  │         │  ┌───────────────┐  │
-│  │     Agent     │  │         │  │     Oven      │  │
-│  └───────┬───────┘  │         │  └───────┬───────┘  │
-│          │          │         │          │          │
-│  ┌───────┴───────┐  │         │  ┌───────┴───────┐  │
-│  │ Prompt Manager│  │         │  │ Game Manager  │  │
-│  └───────────────┘  │         │  └───────┬───────┘  │
-│                     │         │          │          │
-└──────────┬──────────┘         │  ┌───────┴───────┐  │
-           │                    │  │     Game      │  │
-           │                    │  └───────┬───────┘  │
-           │                    │          │          │
-           │                    │  ┌───────┴───────┐  │
-           └────────────────────┼─▶│  Hot Potato   │  │
-                                │  └───────────────┘  │
-                                │                     │
-                                └─────────────────────┘
+│  │ Agent         │  │◄────────┤  │ Kiosk System  │  │
+│  │ - Config      │  │         │  │ - Listings    │  │
+│  │ - Memory      │  │         │  │ - Trading     │  │
+│  │ - Knowledge   │  │         │  └───────────────┘  │
+│  │ - Funds       │  │         │                     │
+│  └───────┬───────┘  │         │  ┌───────────────┐  │
+│          │          │         │  │ Royalty       │  │
+│  ┌───────┴───────┐  │         │  │ System        │  │
+│  │ Prompt        │  │         │  └───────────────┘  │
+│  │ Manager       │  │         │                     │
+│  └───────────────┘  │         └─────────────────────┘
+│                     │
+└─────────────────────┘
 ```
 
-## Backend Integration
+## Game Framework (Additional Features)
 
-The backend services should:
+The system includes an extensible game framework for building agent-based applications:
 
-1. Listen for events from both agent and game modules
-2. Process prompts and generate responses
-3. Execute callbacks when requested
-4. Monitor game status and player activities
-5. Handle sponsored transactions
+### Game Management
 
-For more details on backend integration, refer to the agent system documentation.
+```bash
+# Create game manager
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module game_manager \
+  --function create_game_manager \
+  --args "[OVEN_ID]" "[PRIZE_POOL_COIN]" \
+  --gas-budget 20000000
+
+# Create a new game
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module game_manager \
+  --function create_game \
+  --args "[GAME_MANAGER_ID]" "[GAME_MANAGER_CAP_ID]" "[GAME_NAME_BYTES]" \
+  --gas-budget 20000000
+```
+
+### Example: Hot Potato Game
+
+As a demonstration of the game framework capabilities, we've included a Hot Potato game implementation:
+
+```bash
+# Create oven for game objects
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module hot_potato \
+  --function create_oven \
+  --args "[AGENT_ID]" "[AGENT_CAP_ID]" \
+  --gas-budget 20000000
+
+# Create game objects
+sui client call --package 0xe27d33e8b9888236f946a783d93748f8e96e357abf707a963088c79dbf1b12a5 \
+  --module hot_potato \
+  --function bake_potato \
+  --args "[OVEN_ID]" "[GAME_MANAGER_ID]" "[PAYMENT_COIN]" "0x6" "0x8" "[RECIPIENT]" "[METADATA]" \
+  --gas-budget 20000000
+```
+
+## Integration Guidelines
+
+### Backend Services
+
+Backend services should monitor events for:
+
+1. Agent creation and configuration updates
+2. Marketplace transactions and royalty distribution
+3. Prompt processing and response management
+4. Game state changes and reward distribution
+
+### Frontend Applications
+
+The system provides comprehensive event tracking for building:
+
+- Agent management dashboards
+- Marketplace interfaces
+- AI interaction tools
+- Game applications
+
+## Frontend Development Guide
+
+### Essential Object IDs to Track
+
+Your frontend will need to manage these key object types:
+
+**Global Objects (shared across all users):**
+
+- `MARKETPLACE_ID` - The main marketplace (shared object)
+- `TRANSFER_POLICY_ID` - The transfer policy for agent trading (shared object)
+
+**Per-User Objects:**
+
+- `USER_KIOSK_ID` - Each user's trading kiosk (shared object, user-owned)
+- `USER_KIOSK_CAP_ID` - Capability to manage user's kiosk (owned object)
+
+**Per-Agent Objects:**
+
+- `AGENT_ID` - The agent itself (shared object)
+- `ADMIN_CAP_ID` - Administrative control over agent (owned object)
+- `AGENT_CAP_ID` - Operational capability for agent (owned object)
+- `PROMPT_MANAGER_ID` - Agent's prompt manager (shared object)
+
+**Per-Game Objects (if using game features):**
+
+- `GAME_MANAGER_ID` - Game coordination (shared object)
+- `GAME_MANAGER_CAP_ID` - Game administration (owned object)
+- `OVEN_ID` - Game object factory (shared object)
+- `OVEN_CAP_ID` - Game object creation rights (owned object)
+
+### User Onboarding Flow
+
+```typescript
+// Example frontend onboarding sequence
+async function onboardNewUser(userAddress: string) {
+  // 1. Create user's trading kiosk
+  const kioskTx = await createUserKiosk();
+  const kioskResult = await executeTransaction(kioskTx);
+  const userKioskId = extractKioskId(kioskResult);
+  const userKioskCapId = extractKioskCapId(kioskResult);
+
+  // 2. Store user's kiosk info
+  await saveUserProfile(userAddress, {
+    kioskId: userKioskId,
+    kioskCapId: userKioskCapId,
+  });
+
+  // 3. User can now create agents and trade
+}
+```
+
+### Event Monitoring
+
+**Critical Events to Monitor:**
+
+```typescript
+// Agent Events
+interface AgentCreated {
+  id: string;
+  admin: string;
+}
+
+// Marketplace Events
+interface AgentListed {
+  agent_cap_id: string;
+  agent_id: string;
+  price: number;
+  seller: string;
+  kiosk_id: string;
+  category: string;
+}
+
+interface AgentPurchased {
+  agent_cap_id: string;
+  agent_id: string;
+  price: number;
+  seller: string;
+  buyer: string;
+  royalty_amount: number;
+  category: string;
+}
+
+// Prompt Events
+interface PromptCreated {
+  id: string;
+  prompt_text: string;
+  sender: string;
+  agent_wallet: string;
+}
+```
+
+### State Management Recommendations
+
+**User State:**
+
+```typescript
+interface UserState {
+  address: string;
+  kioskId?: string;
+  kioskCapId?: string;
+  ownedAgents: AgentInfo[];
+  ownedKioskCaps: string[];
+}
+```
+
+**Agent State:**
+
+```typescript
+interface AgentInfo {
+  agentId: string;
+  adminCapId?: string; // Only if user owns this
+  agentCapId?: string; // Only if user owns this
+  promptManagerId?: string;
+  configuration: any;
+  gasBalance: number;
+  privateBalance: number;
+  publicBalance: number;
+}
+```
+
+**Marketplace State:**
+
+```typescript
+interface MarketplaceListing {
+  agentCapId: string;
+  agentId: string;
+  price: number;
+  seller: string;
+  kioskId: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  creationTime: number;
+}
+```
+
+### Transaction Building Patterns
+
+**Creating an Agent:**
+
+```typescript
+async function createAgent(config: AgentConfig) {
+  const tx = new TransactionBlock();
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::agent::create_agent`,
+    arguments: [
+      tx.pure(config.configBytes),
+      tx.object(config.initialGasCoin),
+      tx.pure(config.imageUrl),
+    ],
+  });
+
+  return tx;
+}
+```
+
+**Listing an Agent:**
+
+```typescript
+async function listAgent(listing: ListingParams) {
+  const tx = new TransactionBlock();
+
+  tx.moveCall({
+    target: `${PACKAGE_ID}::agent_marketplace::list_agent`,
+    arguments: [
+      tx.object(MARKETPLACE_ID),
+      tx.object(listing.agentCapId),
+      tx.object(listing.agentId),
+      tx.object(listing.userKioskId),
+      tx.object(listing.userKioskCapId),
+      tx.pure(listing.price),
+      tx.pure(listing.name),
+      tx.pure(listing.description),
+      tx.pure(listing.imageUrl),
+      tx.pure(listing.category),
+    ],
+  });
+
+  return tx;
+}
+```
+
+### Common Patterns and Gotchas
+
+**1. Object Ownership Tracking:**
+
+- Shared objects (agents, marketplace, kiosks) can be accessed by anyone
+- Owned objects (caps) must be owned by the transaction sender
+- Always verify cap ownership before building transactions
+
+**2. Capability Management:**
+
+- AdminCap = full agent control
+- AgentCap = operational access
+- KioskOwnerCap = kiosk management rights
+- Never expose private keys or capabilities to unauthorized users
+
+**3. Error Handling:**
+
+```typescript
+// Common error codes to handle
+const ERROR_CODES = {
+  ENotAuthorized: "User doesn't own required capability",
+  EAgentNotForSale: "Agent is not currently listed",
+  EInsufficientBalance: "Insufficient funds for operation",
+  EInvalidPrice: "Price must be greater than 0",
+};
+```
+
+**4. Fee Considerations:**
+
+- Marketplace royalties (default 5% = 500 basis points)
+- Gas fees for all transactions
+- Game fees (0.5 SUI for potato creation)
+
+## Important Notes
+
+1. **System Dependencies**:
+
+   - Clock Object: `0x6`
+   - Random Object: `0x8`
+   - Publisher object from package deployment
+
+2. **Initialization Order**:
+
+   - Deploy package → Get Publisher object → Initialize marketplace → Users create kiosks → Create agents
+
+3. **Fund Management**: Agents support three-tier fund management for different use cases
+
+4. **Marketplace Integration**: Built on Sui Kiosk for maximum compatibility and security
+
+5. **Extensibility**: The modular design allows for easy extension with new game types and AI capabilities
+
+6. **Decentralization**: All agent operations are fully decentralized and controllable by capability holders
+
+## Deployment Checklist
+
+### For System Administrators:
+
+**One-Time Setup:**
+
+- [ ] Deploy the package and obtain Publisher object
+- [ ] Initialize marketplace with desired royalty rate
+- [ ] Record and share Marketplace ID and TransferPolicy ID
+- [ ] Set up event monitoring infrastructure
+
+**Per-Environment:**
+
+- [ ] Configure frontend with correct package ID and object IDs
+- [ ] Set up backend event listeners
+- [ ] Test full user onboarding flow
+- [ ] Verify marketplace operations work correctly
+
+### For Users:
+
+**First-Time Setup:**
+
+- [ ] Create personal kiosk for trading
+- [ ] Create first agent with initial funding
+- [ ] Set up prompt manager for agent
+- [ ] Test basic operations (fund agent, create prompt, etc.)
+
+**Ongoing Usage:**
+
+- [ ] Monitor agent balances and top up as needed
+- [ ] Manage agent configurations and memories
+- [ ] Participate in marketplace trading
+- [ ] Use prompt system for AI interactions
+
+## Development
+
+This system provides a complete foundation for building decentralized AI agent ecosystems. The modular architecture allows developers to:
+
+- Create custom agent behaviors and configurations
+- Build specialized marketplaces for different agent types
+- Develop games and applications that leverage agent capabilities
+- Implement custom royalty and reward systems
+
+For advanced usage and custom implementations, refer to the contract source code and event documentation.
