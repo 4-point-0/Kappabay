@@ -6,6 +6,8 @@ import { KioskClient, KioskTransaction, Network } from "@mysten/kiosk";
 import { Transaction } from "@mysten/sui/transactions";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export const KioskBalance = () => {
 	const suiClient = useSuiClient();
@@ -75,16 +77,23 @@ export const KioskBalance = () => {
 	const sui = Number(mistBalance) / 1e9;
 
 	return (
-		<div className="mb-6 p-4 bg-muted rounded-md text-center">
-			<span className="font-medium">Your Kiosk SUI Balance:</span>{" "}
-			{sui.toLocaleString(undefined, { maximumFractionDigits: 3 })} SUI
-			<button
-				onClick={handleWithdraw}
-				disabled={withdrawing || mistBalance === "0"}
-				className="ml-4 px-3 py-1 bg-primary text-white rounded disabled:opacity-50"
-			>
-				{withdrawing ? "Withdrawing..." : "Withdraw All"}
-			</button>
-		</div>
+		<Card className="mb-6">
+			<CardHeader>
+				<CardTitle>Your Kiosk SUI Balance</CardTitle>
+			</CardHeader>
+			<CardContent className="flex items-center justify-between">
+				<span className="font-medium">
+					{sui.toLocaleString(undefined, { maximumFractionDigits: 3 })} SUI
+				</span>
+				<Button
+					onClick={handleWithdraw}
+					disabled={withdrawing || mistBalance === "0"}
+					variant="default"
+					size="sm"
+				>
+					{withdrawing ? "Withdrawing..." : "Withdraw All"}
+				</Button>
+			</CardContent>
+		</Card>
 	);
 };
