@@ -8,6 +8,7 @@ import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
 import { toast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export const KioskBalance = () => {
 	const suiClient = useSuiClient();
@@ -78,8 +79,16 @@ export const KioskBalance = () => {
 
 	return (
 		<Card className="mb-6">
-			<CardHeader>
+			<CardHeader className="flex items-center justify-between">
 				<CardTitle>Your Kiosk SUI Balance</CardTitle>
+				<Button
+					variant="ghost"
+					size="icon"
+					aria-label="Refresh balance"
+					onClick={fetchBalance}
+				>
+					<RefreshCw className="h-4 w-4" />
+				</Button>
 			</CardHeader>
 			<CardContent className="flex items-center justify-between">
 				<span className="font-medium">{sui.toLocaleString(undefined, { maximumFractionDigits: 3 })} SUI</span>
