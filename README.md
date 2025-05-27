@@ -1,18 +1,11 @@
 ## Setup
 
-To run the complete system:
+The eliza-kappabay-agent, kappabay-terminal-next, and oracle projects are combined into a single Docker image. No manual setup or separate runs are required for these components.
 
-1. First set up and run the eliza-kappabay-agent:
+Main entrypoint:
 
+1. Navigate to the agent-launchpad directory:
    ```bash
-   cd eliza-kappabay-agent
-   # Follow instructions in its README.md
+   cd agent-launchpad
    ```
-
-2. Then set up and run the kappabay-terminal-next:
-   ```bash
-   cd ../kappabay-terminal-next
-   # Follow instructions in its README.md
-   ```
-
-Both components must be running simultaneously for the full system functionality.
+2. Follow the instructions in its README.md for further configuration and to run the system.
