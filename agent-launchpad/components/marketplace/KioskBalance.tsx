@@ -2,36 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { useSuiClient, useCurrentAccount } from "@mysten/dapp-kit";
-import { useOwnedCaps } from "@/hooks/use-owned-caps";
+import { KioskClient } from "@mystenlabs/ts-sdks";
 
 export const KioskBalance = () => {
   const suiClient = useSuiClient();
-  const { caps, isLoading: capsLoading } = useOwnedCaps();
+  const { address } = useCurrentAccount();
+
   const [mistBalance, setMistBalance] = useState<string>("0");
 
   useEffect(() => {
-    if (capsLoading) return;
-    const kioskCap = caps.find(
-      (c) => c.data.type === "0x2::kiosk::KioskOwnerCap"
-    );
-    if (!kioskCap) {
-      setMistBalance("0");
-      return;
-    }
-    const kioskId = kioskCap.data.content.fields.for as string;
-    suiClient
-      .getBalance({ owner: kioskId, coinType: "0x2::sui::SUI" })
-      .then((bal) => {
-        // if getBalance returns a string or { totalBalance: string }
-        const total =
-          typeof bal === "string" ? bal : (bal as any).totalBalance;
-        setMistBalance(total);
-      })
-      .catch((e) => {
+    if (!address) return;
+
+    // use the official Kiosk SDK to fetch the kiosk.profits field
+    const kioskClient = new KioskClient({ provider: suiClient });
+    (async () => {
+      try {
+        const { kioskIds } = await kioskClient.getOwnedKiosks({ address });
+        if (kioskIds.length === 0) {
+          setMistBalance("0");
+          return;
+        }
+        const { kiosk } = await kioskClient.getKiosk({
+          id: kioskIds[0],
+          options: { withKioskFields: true },
+        });
+        setMistBalance(kiosk.profits);
+      } catch (e) {
         console.error("Kiosk balance fetch failed", e);
         setMistBalance("0");
-      });
-  }, [caps, capsLoading, suiClient]);
+      }
+    })();
+  }, [suiClient, address]);
 
   // convert mist → SUI
   const sui = Number(mistBalance) / 1e9;
