@@ -60,7 +60,7 @@ export const KioskBalance = () => {
 				kioskClient: new KioskClient({ client: suiClient, network: Network.TESTNET }),
 				cap: kioskCap,
 			});
-			kioskTx.withdraw(account.address, BigInt(mistBalance));
+			kioskTx.withdraw(account?.address!, BigInt(mistBalance));
 			kioskTx.finalize();
 			await signAndExecute(tx);
 			toast({ title: "Withdraw successful" });
@@ -82,15 +82,8 @@ export const KioskBalance = () => {
 				<CardTitle>Your Kiosk SUI Balance</CardTitle>
 			</CardHeader>
 			<CardContent className="flex items-center justify-between">
-				<span className="font-medium">
-					{sui.toLocaleString(undefined, { maximumFractionDigits: 3 })} SUI
-				</span>
-				<Button
-					onClick={handleWithdraw}
-					disabled={withdrawing || mistBalance === "0"}
-					variant="default"
-					size="sm"
-				>
+				<span className="font-medium">{sui.toLocaleString(undefined, { maximumFractionDigits: 3 })} SUI</span>
+				<Button onClick={handleWithdraw} disabled={withdrawing || mistBalance === "0"} variant="default" size="sm">
 					{withdrawing ? "Withdrawing..." : "Withdraw All"}
 				</Button>
 			</CardContent>
