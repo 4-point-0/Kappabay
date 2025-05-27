@@ -149,7 +149,6 @@ export default function MarketplacePage() {
 			const marketFee = (priceMist * BigInt(pct)) / BigInt(10000);
 			// split gas coin for the exact payment amount
 			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64((priceMist + marketFee).toString())]);
-			console.log({ sellerKioskId, agentCapId, POLICY });
 
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::purchase_agent`,
