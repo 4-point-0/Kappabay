@@ -1,5 +1,6 @@
 "use client";
 
+import { KioskBalance } from "@/components/marketplace/KioskBalance";
 import Header from "@/components/header";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -180,6 +181,7 @@ export default function MarketplacePage() {
 			<PageTransition>
 				<Header />
 				<section className="container mx-auto px-4 py-8">
+					<KioskBalance />
 					<FilterBar
 						categories={allCategories}
 						selected={category}
