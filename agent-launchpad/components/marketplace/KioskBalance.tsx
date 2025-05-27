@@ -79,14 +79,9 @@ export const KioskBalance = () => {
 
 	return (
 		<Card className="mb-6">
-			<CardHeader className="flex items-center justify-between">
+			<CardHeader className="flex items-center justify-between flex-row">
 				<CardTitle>Your Kiosk SUI Balance</CardTitle>
-				<Button
-					variant="ghost"
-					size="icon"
-					aria-label="Refresh balance"
-					onClick={fetchBalance}
-				>
+				<Button variant="ghost" size="icon" aria-label="Refresh balance" onClick={fetchBalance}>
 					<RefreshCw className="h-4 w-4" />
 				</Button>
 			</CardHeader>
