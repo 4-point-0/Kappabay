@@ -3,9 +3,9 @@
 node_modules/
 agents
 oracles
-.env*
+
+.env
 
 /agent-launchpad/db-cache
-/kappabay-new-ui/db-cache
 
 CONVENTIONS.md
