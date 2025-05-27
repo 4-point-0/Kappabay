@@ -14,6 +14,7 @@
 		"@hookform/resolvers": "^3.9.1",
 		"@mysten/dapp-kit": "^0.16.0",
 		"@mysten/enoki": "^0.6.8",
+		"@mysten/kiosk": "^0.12.7",
 		"@mysten/sui": "^1.28.2",
 		"@next/font": "^14.2.15",
 		"@prisma/client": "^6.6.0",

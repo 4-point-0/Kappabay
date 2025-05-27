@@ -1,5 +1,6 @@
 "use client";
 
+import { KioskBalance } from "@/components/marketplace/KioskBalance";
 import Header from "@/components/header";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -149,7 +150,6 @@ export default function MarketplacePage() {
 			const marketFee = (priceMist * BigInt(pct)) / BigInt(10000);
 			// split gas coin for the exact payment amount
 			const [paymentCoin] = tx.splitCoins(tx.gas, [tx.pure.u64((priceMist + marketFee).toString())]);
-			console.log({ sellerKioskId, agentCapId, POLICY });
 
 			tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent_marketplace::purchase_agent`,
@@ -181,6 +181,7 @@ export default function MarketplacePage() {
 			<PageTransition>
 				<Header />
 				<section className="container mx-auto px-4 py-8">
+					<KioskBalance />
 					<FilterBar
 						categories={allCategories}
 						selected={category}
