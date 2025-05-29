@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, use } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
+import { getAgentInfo } from "@/lib/actions/get-agent-info";
+import { Agent } from "@prisma/client";
 
 function FilePreview({ file }: { file: File }) {
 	const [text, setText] = useState<string>("");
@@ -56,13 +58,18 @@ interface Props {
 }
 
 export default function KnowledgeTab(props: Props) {
-  const { agentId, onRegisterUpload } = props;
-  // wallet + Sui execution hook
-  const account = useCurrentAccount();
-  const signAndExec = useSignExecuteAndWaitForTransaction();
+	const { agentId, onRegisterUpload } = props;
+	// wallet + Sui execution hook
+	const account = useCurrentAccount();
+	const signAndExec = useSignExecuteAndWaitForTransaction();
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
+
+	useEffect(() => {
+		getAgentInfo(agentId).then(setAgent);
+	}, [agentId]);
 
 	const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const selected = e.target.files;
@@ -82,46 +89,46 @@ export default function KnowledgeTab(props: Props) {
 		setFiles((prev) => prev.filter((_, i) => i !== idx));
 	};
 
-  const handleUpload = async () => {
-    if (!files.length || !agentId || !account?.address) {
-      return toast({ title: "Select files and connect wallet", variant: "destructive" });
-    }
-    try {
-      // 1) combine all file texts
-      const texts = await Promise.all(files.map((f) => f.text()));
-      const combined = texts.join("\n");
-      const bytes = new TextEncoder().encode(combined);
+	const handleUpload = async () => {
+		if (!files.length || !agentId || !agent || !account?.address) {
+			return toast({ title: "Select files and connect wallet", variant: "destructive" });
+		}
+		try {
+			// 1) combine all file texts
+			const texts = await Promise.all(files.map((f) => f.text()));
+			const combined = texts.join("\n");
+			const bytes = new TextEncoder().encode(combined);
+			console.log("agent", agent);
 
-      // 2) on‐chain call to update knowledgebank
-      const tx = new Transaction();
-      tx.moveCall({
-        target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
-        arguments: [
-          tx.object(agentId),
-          // if adminCap differs, replace the next line with the actual cap object id
-          tx.object(agentId),
-          tx.pure(bcs.vector(bcs.u8()).serialize(bytes)),
-        ],
-      });
-      tx.setSender(account.address);
-      tx.setGasOwner(account.address);
-      await signAndExec(tx);
-      toast({ title: "Knowledgebank updated on‐chain" });
+			// 2) on‐chain call to update knowledgebank
+			const tx = new Transaction();
+			tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
+				arguments: [
+					tx.object(agent.objectId),
+					// if adminCap differs, replace the next line with the actual cap object id
+					tx.object(agent.capId),
+					tx.pure(bcs.vector(bcs.u8()).serialize(bytes)),
+				],
+			});
+			tx.setSender(account.address);
+			await signAndExec(tx);
+			toast({ title: "Knowledgebank updated on‐chain" });
 
-      // 3) then call HTTP endpoint
-      const form = new FormData();
-      files.forEach((f) => form.append("files", f));
-      const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
-        method: "POST",
-        body: form,
-      });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: "Knowledge uploaded via API" });
-      setFiles([]);
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
-    }
-  };
+			// 3) then call HTTP endpoint
+			const form = new FormData();
+			files.forEach((f) => form.append("files", f));
+			const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
+				method: "POST",
+				body: form,
+			});
+			if (!res.ok) throw new Error(await res.text());
+			toast({ title: "Knowledge uploaded via API" });
+			setFiles([]);
+		} catch (err: any) {
+			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+		}
+	};
 
 	// once handleUpload stable, give it to parent
 	useEffect(() => {
