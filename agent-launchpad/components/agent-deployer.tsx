@@ -14,6 +14,7 @@ import PluginsTab from "@/components/deployer/plugins-tab";
 import AdvancedTab from "@/components/deployer/advanced-tab";
 import AiAssistModal from "@/components/deployer/ai-assist-modal";
 import ImportExportButtons from "@/components/deployer/import-export-buttons";
+import KnowledgeTab from "@/components/deployer/knowledge-tab";
 import { defaultAgentConfig } from "@/lib/default-config";
 import type { AgentConfig } from "@/lib/types";
 import { useCurrentAccount } from "@mysten/dapp-kit";
@@ -295,6 +296,7 @@ export default function AgentDeployer({
 					<TabsTrigger value="examples">Examples</TabsTrigger>
 					<TabsTrigger value="plugins">Integrations</TabsTrigger>
 					<TabsTrigger value="advanced">Advanced</TabsTrigger>
+					{isConfiguring && <TabsTrigger value="knowledge">Knowledge</TabsTrigger>}
 				</TabsList>
 
 				<TabsContent value="basic" className="space-y-4 mt-4">
@@ -337,6 +339,11 @@ export default function AgentDeployer({
 				<TabsContent value="advanced" className="space-y-4 mt-4">
 					<AdvancedTab agentConfig={agentConfig} handleChange={handleChange} />
 				</TabsContent>
+				{isConfiguring && (
+					<TabsContent value="knowledge" className="space-y-4 mt-4">
+						<KnowledgeTab agentId={agentId!} />
+					</TabsContent>
+				)}
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
