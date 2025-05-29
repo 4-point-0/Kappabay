@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useCurrentAccount } from "@mysten/dapp-kit";
-import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
+import { updateKnowledgeBank } from "@/lib/actions/update-knowledgebank";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -61,7 +62,9 @@ export default function KnowledgeTab(props: Props) {
 	const { agentId, onRegisterUpload } = props;
 	// wallet + Sui execution hook
 	const account = useCurrentAccount();
-	const signAndExec = useSignExecuteAndWaitForTransaction();
+	// we'll use the raw signTransaction + suiClient for sponsored submission
+	const { mutateAsync: signTransaction } = useSignTransaction();
+	const suiClient = useSuiClient();
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,25 +100,45 @@ export default function KnowledgeTab(props: Props) {
 			// 1) combine all file texts
 			const texts = await Promise.all(files.map((f) => f.text()));
 			const combined = texts.join("\n");
-			const bytes = new TextEncoder().encode(combined);
-			console.log("agent", agent);
 
-			// 2) on‐chain call to update knowledgebank
-			const tx = new Transaction();
-			tx.moveCall({
+			// 2) server-side: build & agent-sign the tx
+			const {
+				presignedTxBytes,
+				agentSignature,
+				agentAddress,
+				adminCapId,
+				agentObjectId,
+			} = await updateKnowledgeBank(agentId, combined);
+
+			// 3) client-side: replicate the same Move call so we can sign as gas sponsor
+			const sponsorTx = new Transaction();
+			sponsorTx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
 				arguments: [
-					tx.object(agent.objectId),
-					// if adminCap differs, replace the next line with the actual cap object id
-					tx.object(agent.capId),
-					tx.pure(bcs.vector(bcs.u8()).serialize(bytes)),
+					sponsorTx.object(agentObjectId),
+					sponsorTx.object(adminCapId),
+					sponsorTx.pure(bcs.vector(bcs.u8()).serialize(new TextEncoder().encode(combined))),
 				],
 			});
-			tx.setSender(account.address);
-			await signAndExec(tx);
-			toast({ title: "Knowledgebank updated on‐chain" });
+			sponsorTx.setSender(agentAddress);
+			sponsorTx.setGasOwner(account.address);
 
-			// 3) then call HTTP endpoint
+			// 4) get sponsor signature
+			const { signature: sponsorSig } = await signTransaction({ transaction: sponsorTx });
+
+			// 5) submit the presigned bytes + both signatures
+			const result = await suiClient.executeTransactionBlock({
+				transactionBlock: presignedTxBytes,
+				signature: [agentSignature, sponsorSig],
+				requestType: "WaitForLocalExecution",
+				options: { showEffects: true, showEvents: true, showObjectChanges: true },
+			});
+			if (result.effects?.status.status !== "success")
+				throw new Error("On-chain update failed");
+
+			toast({ title: "Knowledgebank updated on-chain" });
+
+			// 6) finally hit your HTTP RAG endpoint
 			const form = new FormData();
 			files.forEach((f) => form.append("files", f));
 			const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
