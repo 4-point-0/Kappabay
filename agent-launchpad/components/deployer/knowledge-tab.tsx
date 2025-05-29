@@ -163,12 +163,25 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "Knowledgebank updated on-chain" });
 
 			// 6) upload via REST client
-			// await apiClient.removeKnowledge(agentId, "http://localhost:3050");
-			// await apiClient.addKnowledge(agentId, files, "http://localhost:3050");
-			await apiClient.removeKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", "http://localhost:3050");
-			await apiClient.addKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", files, "http://localhost:3050");
+			const base = "http://localhost:3050";
+			await apiClient.removeKnowledge(agentId, base);
+			await apiClient.addKnowledge(agentId, files, base);
 			toast({ title: "Knowledge uploaded via API" });
-			setFiles([]);
+
+			// 7) refresh on‐chain knowledgebank
+			if (agent?.objectId) {
+				const fields = await getObjectFields(suiClient, agent.objectId);
+				const kb = fields.knowledgebank;
+				const text = Array.isArray(kb)
+					? new TextDecoder().decode(new Uint8Array(kb))
+					: "";
+				const existingFile = new File([text], "existing-knowledge.txt", {
+					type: "text/plain",
+				});
+				setFiles([existingFile]);
+			} else {
+				setFiles([]);
+			}
 		} catch (err: any) {
 			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
 		}
