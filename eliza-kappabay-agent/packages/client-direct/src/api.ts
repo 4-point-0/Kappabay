@@ -1,5 +1,7 @@
 import express from "express";
 import type { Router } from "express";
+import multer from "multer";
+import type { Express } from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import path from "path";
@@ -65,6 +67,11 @@ export function createApiRouter(
             limit: getEnvVariable("EXPRESS_MAX_PAYLOAD") || "100kb",
         })
     );
+
+    // in‐memory storage for small .md/.txt uploads
+    const knowledgeUpload = multer({ storage: multer.memoryStorage() });
+
+    // ── new knowledge endpoints ──
 
     router.get("/", (req, res) => {
         res.send("Welcome, this is the REST API!");
@@ -305,6 +312,132 @@ export function createApiRouter(
         } catch (error) {
             console.error("Error fetching memories:", error);
             res.status(500).json({ error: "Failed to fetch memories" });
+        }
+    });
+
+    // POST /agents/:agentId/knowledge
+    router.post(
+        "/agents/:agentId/knowledge",
+        knowledgeUpload.array("files"),
+        async (req: express.Request, res) => {
+            const { agentId } = req.params;
+            const runtime: AgentRuntime =
+                agents.get(agentId) ||
+                Array.from(agents.values()).find(
+                    (a) =>
+                        a.character.name.toLowerCase() === agentId.toLowerCase()
+                );
+            if (!runtime) {
+                res.status(404).json({ error: "Agent not found" });
+                return;
+            }
+
+            const files = req.files as Express.Multer.File[];
+            if (!files || !files.length) {
+                res.status(400).json({ error: "No files uploaded" });
+                return;
+            }
+
+            // switch to RAG manager for file‐based knowledge
+            const ragKM = runtime.ragKnowledgeManager;
+            try {
+                const added: string[] = [];
+                for (const file of files) {
+                    // determine file type
+                    const ext = (path.extname(file.originalname).slice(1) ||
+                        "txt") as "md" | "txt";
+                    const content = file.buffer.toString("utf-8");
+
+                    const isShared = Boolean(req.body.shared);
+
+                    // generate the same scoped‐ID that RAG will use
+                    const id = ragKM.generateScopedId(
+                        file.originalname,
+                        isShared
+                    );
+                    // actually ingest + chunk
+                    await ragKM.processFile({
+                        path: file.originalname,
+                        content,
+                        type: ext,
+                        isShared,
+                    });
+
+                    added.push(id);
+                }
+                res.json({ success: true, added });
+            } catch (e: any) {
+                elizaLogger.error("Failed to add knowledge:", e);
+                res.status(500).json({
+                    error: "Failed to add knowledge",
+                    details: e.message,
+                });
+            }
+        }
+    );
+
+    // DELETE /agents/:agentId/knowledge  → clear *all* RAG knowledge for this agent
+    router.delete(
+        "/agents/:agentId/knowledge",
+        async (req, res) => {
+            const params = validateUUIDParams(req.params, res);
+            if (!params) return;
+            const { agentId } = params;
+
+            const runtime =
+                agents.get(agentId) ||
+                Array.from(agents.values()).find(
+                    (a) => a.character.name.toLowerCase() === agentId.toLowerCase()
+                );
+            if (!runtime) {
+                res.status(404).json({ error: "Agent not found" });
+                return;
+            }
+
+            const ragKM = runtime.ragKnowledgeManager;
+            try {
+                // first clear private entries, then shared ones
+                await ragKM.clearKnowledge();
+                await ragKM.clearKnowledge(true);
+                res.json({ success: true });
+            } catch (e: any) {
+                elizaLogger.error("Failed to clear knowledge:", e);
+                res.status(500).json({
+                    error: "Failed to clear knowledge",
+                    details: e.message,
+                });
+            }
+        }
+    );
+
+    // GET /agents/:agentId/knowledge  → list all RAG knowledge entries
+    router.get("/agents/:agentId/knowledge", async (req, res) => {
+        // validate UUID
+        const params = validateUUIDParams(req.params, res);
+        if (!params) return;
+        const { agentId } = params;
+
+        // find runtime by id or name
+        const runtime =
+            agents.get(agentId) ||
+            Array.from(agents.values()).find(
+                (a) => a.character.name.toLowerCase() === agentId.toLowerCase()
+            );
+        if (!runtime) {
+            res.status(404).json({ error: "Agent not found" });
+            return;
+        }
+
+        try {
+            const ragKM = runtime.ragKnowledgeManager;
+            const knowledgeList = await ragKM.listAllKnowledge(agentId);
+            res.json({ success: true, knowledge: knowledgeList });
+        } catch (e: any) {
+            elizaLogger.error("Failed to list knowledge:", e);
+            res.status(500).json({
+                error: "Failed to list knowledge",
+                details: e.message,
+            });
         }
     });
 

@@ -7,6 +7,7 @@ export interface AgentConfig {
 		voice: {
 			model: string;
 		};
+		ragKnowledge: boolean;
 	};
 	plugins: any[];
 	bio: string[];

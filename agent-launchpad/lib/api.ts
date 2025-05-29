@@ -9,7 +9,7 @@ const fetcher = async ({
 }: {
 	baseUrl: string;
 	url: string;
-	method?: "GET" | "POST";
+	method?: "GET" | "POST" | "DELETE";
 	body?: object | FormData;
 	headers?: HeadersInit;
 }) => {
@@ -109,6 +109,31 @@ export const apiClient = {
 			url: `/${agentId}/whisper`,
 			method: "POST",
 			body: formData,
+		});
+	},
+	/**
+	 * Upload RAG knowledge files for an agent
+	 * POST /agents/:agentId/knowledge
+	 */
+	addKnowledge: (agentId: string, files: File[], baseUrl: string) => {
+		const formData = new FormData();
+		files.forEach((file) => formData.append("files", file));
+		return fetcher({
+			baseUrl,
+			url: `/agents/${agentId}/knowledge`,
+			method: "POST",
+			body: formData,
+		});
+	},
+	/**
+	 * Clear all RAG knowledge for an agent
+	 * DELETE /agents/:agentId/knowledge
+	 */
+	removeKnowledge: (agentId: string, baseUrl: string) => {
+		return fetcher({
+			baseUrl,
+			url: `/agents/${agentId}/knowledge`,
+			method: "DELETE",
 		});
 	},
 };

@@ -1,7 +1,6 @@
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
-import { Buffer } from "buffer";
 import { encoding_for_model, TiktokenModel } from "@dqbd/tiktoken";
 
 /** We now pass raw strings into our fee calculator */

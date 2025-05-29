@@ -10,6 +10,7 @@ export const defaultAgentConfig: AgentConfig = {
 		voice: {
 			model: "en_US-male-medium",
 		},
+		ragKnowledge: true,
 	},
 	plugins: [],
 	bio: [

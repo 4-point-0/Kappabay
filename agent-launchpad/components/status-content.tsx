@@ -8,17 +8,12 @@ import ManageGasDialog from "@/components/manage-gas-dialog";
 import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
 import Link from "next/link";
 import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from "@mysten/dapp-kit";
-import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { useOwnedCaps } from "@/hooks/use-owned-caps";
 import { getAgentsByCapIds } from "@/lib/actions/get-agents-info";
 import { startService, stopService } from "@/lib/actions/manage-docker-service";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
-import { Transaction } from "@mysten/sui/transactions";
-import { getGasBalance } from "@/lib/agent-utils";
-import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
-import Image from "next/image";
 
 interface StatusContentProps {
 	/** href for the “Create” button */
@@ -58,10 +53,6 @@ export function StatusContent({
 		const capIds = caps
 			.filter((c: any) => c.data && c.data.type.includes("::agent::AgentCap"))
 			.map((c: any) => c.data.objectId);
-		if (capIds.length === 0) {
-			setAgents([]);
-			return;
-		}
 		try {
 			let list = (await getAgentsByCapIds(capIds)) || [];
 			if (filterByAgentType) {
