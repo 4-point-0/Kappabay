@@ -1,11 +1,50 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from "lucide-react";
+
+function FilePreview({ file }: { file: File }) {
+  const [text, setText] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    file.text().then((t) => {
+      setText(t);
+      setLoading(false);
+    });
+  }, [file]);
+
+  if (loading) {
+    return (
+      <div className="p-4 flex justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <ScrollArea className="h-60 w-80">
+      <ScrollArea.Viewport>
+        <pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar orientation="vertical">
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+      <ScrollArea.Scrollbar orientation="horizontal">
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+      <ScrollArea.Corner />
+    </ScrollArea>
+  );
+}
 
 interface Props {
 	agentId: string;
@@ -67,7 +106,14 @@ export default function KnowledgeTab({ agentId }: Props) {
 					<div className="flex flex-wrap gap-3">
 						{files.map((file, idx) => (
 							<Badge key={idx} className="flex items-center gap-1 px-3 py-1">
-								{file.name}
+								<Popover>
+									<PopoverTrigger asChild>
+										<span className="cursor-pointer underline">{file.name}</span>
+									</PopoverTrigger>
+									<PopoverContent className="p-0">
+										<FilePreview file={file} />
+									</PopoverContent>
+								</Popover>
 								<Button size="icon" onClick={() => removeFile(idx)}>
 									<Trash2 className="h-3 w-3" />
 								</Button>
