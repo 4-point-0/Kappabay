@@ -7,42 +7,42 @@ import { toast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
+	Dialog,
+	DialogTrigger,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
+	DialogClose,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 
 function FilePreview({ file }: { file: File }) {
-  const [text, setText] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+	const [text, setText] = useState<string>("");
+	const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    setLoading(true);
-    file.text().then((t) => {
-      setText(t);
-      setLoading(false);
-    });
-  }, [file]);
+	useEffect(() => {
+		setLoading(true);
+		file.text().then((t) => {
+			setText(t);
+			setLoading(false);
+		});
+	}, [file]);
 
-  if (loading) {
-    return (
-      <div className="p-4 flex justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
+	if (loading) {
+		return (
+			<div className="p-4 flex justify-center">
+				<Loader2 className="h-6 w-6 animate-spin" />
+			</div>
+		);
+	}
 
-  return (
-    <ScrollArea className="h-60 w-80">
-      <pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
-    </ScrollArea>
-  );
+	return (
+		<ScrollArea className="h-60 w-full">
+			<pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
+		</ScrollArea>
+	);
 }
 
 interface Props {
@@ -109,9 +109,9 @@ export default function KnowledgeTab({ agentId }: Props) {
 									<DialogTrigger asChild>
 										<span className="cursor-pointer underline">{file.name}</span>
 									</DialogTrigger>
-									<DialogContent className="p-0 max-w-xl">
-										<DialogHeader>
-											<DialogTitle>{file.name}</DialogTitle>
+									<DialogContent className="p-2 max-w-xl">
+										<DialogHeader className="py-2">
+											<DialogTitle className="px-2">{file.name}</DialogTitle>
 										</DialogHeader>
 										<FilePreview file={file} />
 										<DialogFooter>

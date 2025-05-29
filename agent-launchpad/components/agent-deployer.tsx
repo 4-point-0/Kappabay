@@ -290,7 +290,7 @@ export default function AgentDeployer({
 			</div>
 
 			<Tabs defaultValue="basic" className="w-full">
-				<TabsList className="grid grid-cols-5 w-full bg-background">
+				<TabsList className={`grid ${isConfiguring ? "grid-cols-6" : "grid-cols-5"} w-full bg-background `}>
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
 					<TabsTrigger value="examples">Examples</TabsTrigger>
