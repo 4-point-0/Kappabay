@@ -123,7 +123,9 @@ export default function KnowledgeTab(props: Props) {
 										</DialogHeader>
 										<FilePreview file={file} />
 										<DialogFooter>
-											<DialogClose>Close</DialogClose>
+											<DialogClose asChild>
+												<Button variant="ghost">Close</Button>
+											</DialogClose>
 										</DialogFooter>
 									</DialogContent>
 								</Dialog>
