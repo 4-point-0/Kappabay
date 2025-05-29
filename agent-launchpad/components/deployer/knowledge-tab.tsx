@@ -47,9 +47,12 @@ function FilePreview({ file }: { file: File }) {
 
 interface Props {
 	agentId: string;
+	/** called once with our upload fn so parent can trigger it */
+	onRegisterUpload?: (fn: () => void) => void;
 }
 
-export default function KnowledgeTab({ agentId }: Props) {
+export default function KnowledgeTab(props: Props) {
+	const { agentId, onRegisterUpload } = props;
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +94,11 @@ export default function KnowledgeTab({ agentId }: Props) {
 		}
 	};
 
+	// once handleUpload stable, give it to parent
+	useEffect(() => {
+		onRegisterUpload?.(handleUpload);
+	}, [handleUpload, onRegisterUpload]);
+
 	return (
 		<Card>
 			<CardContent className="pt-6 space-y-6">
@@ -126,9 +134,11 @@ export default function KnowledgeTab({ agentId }: Props) {
 						))}
 					</div>
 				</div>
-				<Button onClick={handleUpload} disabled={!files.length}>
-					Upload
-				</Button>
+				<div className="flex justify-end">
+					<Button onClick={handleUpload} disabled={!files.length}>
+						Upload
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 	);
