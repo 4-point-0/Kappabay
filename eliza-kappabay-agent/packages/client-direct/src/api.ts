@@ -376,34 +376,34 @@ export function createApiRouter(
         }
     );
 
-    // DELETE /agents/:agentId/knowledge/:knowledgeId  → use RAG removal
+    // DELETE /agents/:agentId/knowledge  → clear *all* RAG knowledge for this agent
     router.delete(
-        "/agents/:agentId/knowledge/:knowledgeId",
+        "/agents/:agentId/knowledge",
         async (req, res) => {
             const params = validateUUIDParams(req.params, res);
             if (!params) return;
             const { agentId } = params;
-            const { knowledgeId } = req.params;
+
             const runtime =
                 agents.get(agentId) ||
                 Array.from(agents.values()).find(
-                    (a) =>
-                        a.character.name.toLowerCase() === agentId.toLowerCase()
+                    (a) => a.character.name.toLowerCase() === agentId.toLowerCase()
                 );
             if (!runtime) {
                 res.status(404).json({ error: "Agent not found" });
                 return;
             }
 
-            // use RAG manager delete (will cascade chunks)
             const ragKM = runtime.ragKnowledgeManager;
             try {
-                await ragKM.removeKnowledge(knowledgeId);
-                res.json({ success: true, removed: knowledgeId });
+                // first clear private entries, then shared ones
+                await ragKM.clearKnowledge();
+                await ragKM.clearKnowledge(true);
+                res.json({ success: true });
             } catch (e: any) {
-                elizaLogger.error("Failed to remove knowledge:", e);
+                elizaLogger.error("Failed to clear knowledge:", e);
                 res.status(500).json({
-                    error: "Failed to remove knowledge",
+                    error: "Failed to clear knowledge",
                     details: e.message,
                 });
             }
