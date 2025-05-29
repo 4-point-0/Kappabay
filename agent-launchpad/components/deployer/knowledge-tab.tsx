@@ -163,7 +163,10 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "Knowledgebank updated on-chain" });
 
 			// 6) upload via REST client
-			await apiClient.addKnowledge(agentId, files, "http://localhost:3050");
+			// await apiClient.removeKnowledge(agentId, "http://localhost:3050");
+			// await apiClient.addKnowledge(agentId, files, "http://localhost:3050");
+			await apiClient.removeKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", "http://localhost:3050");
+			await apiClient.addKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", files, "http://localhost:3050");
 			toast({ title: "Knowledge uploaded via API" });
 			setFiles([]);
 		} catch (err: any) {
