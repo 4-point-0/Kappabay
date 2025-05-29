@@ -4,6 +4,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { useCurrentAccount } from "@mysten/dapp-kit";
+import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
+import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,7 +56,10 @@ interface Props {
 }
 
 export default function KnowledgeTab(props: Props) {
-	const { agentId, onRegisterUpload } = props;
+  const { agentId, onRegisterUpload } = props;
+  // wallet + Sui execution hook
+  const account = useCurrentAccount();
+  const signAndExec = useSignExecuteAndWaitForTransaction();
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,24 +82,46 @@ export default function KnowledgeTab(props: Props) {
 		setFiles((prev) => prev.filter((_, i) => i !== idx));
 	};
 
-	const handleUpload = async () => {
-		if (!files.length || !agentId) {
-			return toast({ title: "Select files first", variant: "destructive" });
-		}
-		const form = new FormData();
-		files.forEach((f) => form.append("files", f));
-		try {
-			const res = await fetch(`/agents/${agentId}/knowledge`, {
-				method: "POST",
-				body: form,
-			});
-			if (!res.ok) throw new Error(await res.text());
-			toast({ title: "Knowledge uploaded" });
-			setFiles([]);
-		} catch (err: any) {
-			toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-		}
-	};
+  const handleUpload = async () => {
+    if (!files.length || !agentId || !account?.address) {
+      return toast({ title: "Select files and connect wallet", variant: "destructive" });
+    }
+    try {
+      // 1) combine all file texts
+      const texts = await Promise.all(files.map((f) => f.text()));
+      const combined = texts.join("\n");
+      const bytes = new TextEncoder().encode(combined);
+
+      // 2) on‐chain call to update knowledgebank
+      const tx = new Transaction();
+      tx.moveCall({
+        target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
+        arguments: [
+          tx.object(agentId),
+          // if adminCap differs, replace the next line with the actual cap object id
+          tx.object(agentId),
+          tx.pure(bcs.vector(bcs.u8()).serialize(bytes)),
+        ],
+      });
+      tx.setSender(account.address);
+      tx.setGasOwner(account.address);
+      await signAndExec(tx);
+      toast({ title: "Knowledgebank updated on‐chain" });
+
+      // 3) then call HTTP endpoint
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
+        method: "POST",
+        body: form,
+      });
+      if (!res.ok) throw new Error(await res.text());
+      toast({ title: "Knowledge uploaded via API" });
+      setFiles([]);
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+    }
+  };
 
 	// once handleUpload stable, give it to parent
 	useEffect(() => {
