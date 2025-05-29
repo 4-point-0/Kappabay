@@ -69,7 +69,6 @@ export default function KnowledgeTab(props: Props) {
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	// store full on‐chain Move object fields
-	const [chainFields, setChainFields] = useState<Record<string, any> | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
 
@@ -82,17 +81,13 @@ export default function KnowledgeTab(props: Props) {
 		if (!agent?.objectId) return;
 		(async () => {
 			const fields = await getObjectFields(suiClient, agent.objectId);
-			setChainFields(fields);
 
 			// build a text representation of knowledgebank
 			const kb = fields.knowledgebank;
 			// always a byte vector => decode utf-8 text
-			let text: string;
+			let text = "";
 			if (Array.isArray(kb)) {
 				text = new TextDecoder().decode(new Uint8Array(kb));
-			} else {
-				// fallback to JSON string if shape unexpected
-				text = JSON.stringify(kb, null, 2);
 			}
 
 			// create a pseudo‐file so it appears in the UI list
