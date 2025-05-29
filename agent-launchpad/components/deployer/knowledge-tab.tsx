@@ -25,6 +25,7 @@ import { Loader2 } from "lucide-react";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
+import { apiClient } from "@/lib/api";
 
 function FilePreview({ file }: { file: File }) {
 	const [text, setText] = useState<string>("");
@@ -161,15 +162,8 @@ export default function KnowledgeTab(props: Props) {
 
 			toast({ title: "Knowledgebank updated on-chain" });
 
-			// 6) finally hit your HTTP RAG endpoint
-			const form = new FormData();
-			files.forEach((f) => form.append("files", f));
-			// const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
-			const res = await fetch(`http://localhost:3050/agents/b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb/knowledge`, {
-				method: "POST",
-				body: form,
-			});
-			if (!res.ok) throw new Error(await res.text());
+			// 6) upload via REST client
+			await apiClient.addKnowledge(agentId, files, "http://localhost:3050");
 			toast({ title: "Knowledge uploaded via API" });
 			setFiles([]);
 		} catch (err: any) {
