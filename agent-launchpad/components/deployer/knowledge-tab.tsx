@@ -102,20 +102,18 @@ export default function KnowledgeTab(props: Props) {
 			const combined = texts.join("\n");
 
 			// 2) server-side: build & agent-sign the tx
-			const {
-				presignedTxBytes,
-				agentSignature,
-				agentAddress,
-				adminCapId,
-				agentObjectId,
-			} = await updateKnowledgeBank(agentId, combined);
+			const { presignedTxBytes, agentSignature, agentAddress, adminCapId, objectId } = await updateKnowledgeBank(
+				agentId,
+				combined,
+				account.address
+			);
 
 			// 3) client-side: replicate the same Move call so we can sign as gas sponsor
 			const sponsorTx = new Transaction();
 			sponsorTx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
 				arguments: [
-					sponsorTx.object(agentObjectId),
+					sponsorTx.object(objectId),
 					sponsorTx.object(adminCapId),
 					sponsorTx.pure(bcs.vector(bcs.u8()).serialize(new TextEncoder().encode(combined))),
 				],
@@ -133,15 +131,15 @@ export default function KnowledgeTab(props: Props) {
 				requestType: "WaitForLocalExecution",
 				options: { showEffects: true, showEvents: true, showObjectChanges: true },
 			});
-			if (result.effects?.status.status !== "success")
-				throw new Error("On-chain update failed");
+			if (result.effects?.status.status !== "success") throw new Error("On-chain update failed");
 
 			toast({ title: "Knowledgebank updated on-chain" });
 
 			// 6) finally hit your HTTP RAG endpoint
 			const form = new FormData();
 			files.forEach((f) => form.append("files", f));
-			const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
+			// const res = await fetch(`http://localhost:3050/agents/${agentId}/knowledge`, {
+			const res = await fetch(`http://localhost:3050/agents/b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb/knowledge`, {
 				method: "POST",
 				body: form,
 			});
