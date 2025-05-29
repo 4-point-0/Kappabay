@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 
@@ -97,14 +105,20 @@ export default function KnowledgeTab({ agentId }: Props) {
 					<div className="flex flex-wrap gap-3">
 						{files.map((file, idx) => (
 							<Badge key={idx} className="flex items-center gap-1 px-3 py-1">
-								<Popover>
-									<PopoverTrigger asChild>
+								<Dialog>
+									<DialogTrigger asChild>
 										<span className="cursor-pointer underline">{file.name}</span>
-									</PopoverTrigger>
-									<PopoverContent className="p-0">
+									</DialogTrigger>
+									<DialogContent className="p-0 max-w-xl">
+										<DialogHeader>
+											<DialogTitle>{file.name}</DialogTitle>
+										</DialogHeader>
 										<FilePreview file={file} />
-									</PopoverContent>
-								</Popover>
+										<DialogFooter>
+											<DialogClose>Close</DialogClose>
+										</DialogFooter>
+									</DialogContent>
+								</Dialog>
 								<Button size="icon" onClick={() => removeFile(idx)}>
 									<Trash2 className="h-3 w-3" />
 								</Button>
