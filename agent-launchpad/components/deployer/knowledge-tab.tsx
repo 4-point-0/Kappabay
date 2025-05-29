@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { getObjectFields } from "@mysten/sui.js";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import { updateKnowledgeBank } from "@/lib/actions/update-knowledgebank";
@@ -25,6 +24,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
+import { getObjectFields } from "@/lib/actions/sui-utils";
 
 function FilePreview({ file }: { file: File }) {
 	const [text, setText] = useState<string>("");
@@ -87,11 +87,7 @@ export default function KnowledgeTab(props: Props) {
 			// build a text representation of knowledgebank
 			const kb = fields.knowledgebank;
 			const text =
-				typeof kb === "string"
-					? kb
-					: Array.isArray(kb)
-					? String.fromCharCode(...kb)
-					: JSON.stringify(kb, null, 2);
+				typeof kb === "string" ? kb : Array.isArray(kb) ? String.fromCharCode(...kb) : JSON.stringify(kb, null, 2);
 
 			// create a pseudo‐file so it appears in the UI list
 			const existingFile = new File([text], "existing-knowledge.txt", {
