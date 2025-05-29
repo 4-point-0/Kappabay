@@ -77,28 +77,23 @@ export default function KnowledgeTab(props: Props) {
 		getAgentInfo(agentId).then(setAgent);
 	}, [agentId]);
 
-	// whenever agentId / on‐chain object changes, fetch all fields
-	useEffect(() => {
+	// unified loader: fetch on-chain knowledgebank, decode, wrap in File[]
+	const refreshKnowledgeFiles = async () => {
 		if (!agent?.objectId) return;
-		(async () => {
-			const fields = await getObjectFields(suiClient, agent.objectId);
+		const fields = await getObjectFields(suiClient, agent.objectId);
+		const kb = fields.knowledgebank;
+		const text = Array.isArray(kb)
+			? new TextDecoder().decode(new Uint8Array(kb))
+			: "";
+		const existingFile = new File([text], "existing-knowledge.txt", {
+			type: "text/plain",
+		});
+		setFiles([existingFile]);
+	};
 
-			// build a text representation of knowledgebank
-			const kb = fields.knowledgebank;
-			// always a byte vector => decode utf-8 text
-			let text = "";
-			if (Array.isArray(kb)) {
-				text = new TextDecoder().decode(new Uint8Array(kb));
-			}
-
-			// create a pseudo‐file so it appears in the UI list
-			const existingFile = new File([text], "existing-knowledge.txt", {
-				type: "text/plain",
-			});
-
-			// replace files list with existing knowledge only on load
-			setFiles([existingFile]);
-		})();
+	// run on mount / when agent.objectId changes
+	useEffect(() => {
+		refreshKnowledgeFiles();
 	}, [agent?.objectId, suiClient]);
 
 	const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,20 +163,8 @@ export default function KnowledgeTab(props: Props) {
 			await apiClient.addKnowledge(agentId, files, base);
 			toast({ title: "Knowledge uploaded via API" });
 
-			// 7) refresh on‐chain knowledgebank
-			if (agent?.objectId) {
-				const fields = await getObjectFields(suiClient, agent.objectId);
-				const kb = fields.knowledgebank;
-				const text = Array.isArray(kb)
-					? new TextDecoder().decode(new Uint8Array(kb))
-					: "";
-				const existingFile = new File([text], "existing-knowledge.txt", {
-					type: "text/plain",
-				});
-				setFiles([existingFile]);
-			} else {
-				setFiles([]);
-			}
+			// 7) refresh on‐chain knowledgebank (uses unified logic)
+			await refreshKnowledgeFiles();
 		} catch (err: any) {
 			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
 		}
