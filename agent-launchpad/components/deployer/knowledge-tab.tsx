@@ -86,8 +86,14 @@ export default function KnowledgeTab(props: Props) {
 
 			// build a text representation of knowledgebank
 			const kb = fields.knowledgebank;
-			const text =
-				typeof kb === "string" ? kb : Array.isArray(kb) ? String.fromCharCode(...kb) : JSON.stringify(kb, null, 2);
+			// always a byte vector => decode utf-8 text
+			let text: string;
+			if (Array.isArray(kb)) {
+				text = new TextDecoder().decode(new Uint8Array(kb));
+			} else {
+				// fallback to JSON string if shape unexpected
+				text = JSON.stringify(kb, null, 2);
+			}
 
 			// create a pseudo‐file so it appears in the UI list
 			const existingFile = new File([text], "existing-knowledge.txt", {
