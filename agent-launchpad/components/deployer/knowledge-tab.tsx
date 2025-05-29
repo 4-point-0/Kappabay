@@ -26,7 +26,13 @@ export default function KnowledgeTab({ agentId }: Props) {
     if (!valid.length) {
       return toast({ title: "Only .txt or .md files allowed", variant: "destructive" });
     }
-    setFiles(valid);
+    // append new files (no duplicates by name)
+    setFiles((prev) => [
+      ...prev,
+      ...valid.filter((f) => !prev.some((p) => p.name === f.name)),
+    ]);
+    // clear input so same file can be picked again later
+    e.target.value = "";
   };
 
   const removeFile = (idx: number) => {
