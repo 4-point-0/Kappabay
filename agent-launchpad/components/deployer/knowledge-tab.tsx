@@ -69,6 +69,7 @@ export default function KnowledgeTab(props: Props) {
 	const suiClient = useSuiClient();
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
+	const [isClearing, setIsClearing] = useState(false);
 	// store full on‐chain Move object fields
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
@@ -111,6 +112,41 @@ export default function KnowledgeTab(props: Props) {
 	const removeFile = (idx: number) => {
 		setFiles((prev) => prev.filter((_, i) => i !== idx));
 	};
+	// shared on‐chain + sponsor logic
+	const sendChainUpdate = async (text: string) => {
+		const {
+			presignedTxBytes,
+			agentSignature,
+			agentAddress,
+			adminCapId,
+			objectId,
+		} = await updateKnowledgeBank(agentId, text, account.address);
+
+		const tx = new Transaction();
+		tx.moveCall({
+			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
+			arguments: [
+				tx.object(objectId),
+				tx.object(adminCapId),
+				tx.pure(bcs.vector(bcs.u8()).serialize(
+					new TextEncoder().encode(text)
+				)),
+			],
+		});
+		tx.setSender(agentAddress);
+		tx.setGasOwner(account.address);
+
+		const { signature: sponsorSig } = await signTransaction({ transaction: tx });
+		const result = await suiClient.executeTransactionBlock({
+			transactionBlock: presignedTxBytes,
+			signature: [agentSignature, sponsorSig],
+			requestType: "WaitForLocalExecution",
+			options: { showEffects: true },
+		});
+		if (result.effects?.status.status !== "success") {
+			throw new Error("On-chain update failed");
+		}
+	};
 
 	const handleUpload = async () => {
 		if (!files.length || !agentId || !agent || !account?.address) {
@@ -121,52 +157,41 @@ export default function KnowledgeTab(props: Props) {
 			const texts = await Promise.all(files.map((f) => f.text()));
 			const combined = texts.join("\n");
 
-			// 2) server-side: build & agent-sign the tx
-			const { presignedTxBytes, agentSignature, agentAddress, adminCapId, objectId } = await updateKnowledgeBank(
-				agentId,
-				combined,
-				account.address
-			);
-
-			// 3) client-side: replicate the same Move call so we can sign as gas sponsor
-			const sponsorTx = new Transaction();
-			sponsorTx.moveCall({
-				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::update_knowledgebank`,
-				arguments: [
-					sponsorTx.object(objectId),
-					sponsorTx.object(adminCapId),
-					sponsorTx.pure(bcs.vector(bcs.u8()).serialize(new TextEncoder().encode(combined))),
-				],
-			});
-			sponsorTx.setSender(agentAddress);
-			sponsorTx.setGasOwner(account.address);
-
-			// 4) get sponsor signature
-			const { signature: sponsorSig } = await signTransaction({ transaction: sponsorTx });
-
-			// 5) submit the presigned bytes + both signatures
-			const result = await suiClient.executeTransactionBlock({
-				transactionBlock: presignedTxBytes,
-				signature: [agentSignature, sponsorSig],
-				requestType: "WaitForLocalExecution",
-				options: { showEffects: true, showEvents: true, showObjectChanges: true },
-			});
-			if (result.effects?.status.status !== "success") throw new Error("On-chain update failed");
-
+			// 2) run on-chain update
+			await sendChainUpdate(combined);
 			toast({ title: "Knowledgebank updated on-chain" });
 
-			// 6) upload via REST client
+			// 3) upload via REST client
 			const base = "http://localhost:3050";
-			// await apiClient.removeKnowledge(agentId, base);
-			// await apiClient.addKnowledge(agentId, files, base);
-			await apiClient.removeKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", base);
-			await apiClient.addKnowledge("b20f6965-85f2-03e4-a1c3-2d05e5f4b2fb", files, base);
-			await new Promise((r) => setTimeout(r, 1000));
-			// 7) refresh on‐chain knowledgebank (uses unified logic)
+			await apiClient.removeKnowledge(agentId, base);
+			await apiClient.addKnowledge(agentId, files, base);
 			await refreshKnowledgeFiles();
 			toast({ title: "Knowledge uploaded via API" });
 		} catch (err: any) {
 			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+		}
+	};
+
+	// new handler: clear existing knowledge
+	const handleClear = async () => {
+		if (!agentId || !agent || !account?.address) {
+			return toast({ title: "Connect wallet & select agent", variant: "destructive" });
+		}
+		setIsClearing(true);
+		try {
+			// reset chain to empty vector
+			await sendChainUpdate("");
+			toast({ title: "On-chain knowledge cleared" });
+
+			// clear via REST
+			const base = "http://localhost:3050";
+			await apiClient.removeKnowledge(agentId, base);
+			await refreshKnowledgeFiles();
+			toast({ title: "API knowledge cleared" });
+		} catch (err: any) {
+			toast({ title: "Clear failed", description: err.message, variant: "destructive" });
+		} finally {
+			setIsClearing(false);
 		}
 	};
 
@@ -213,9 +238,18 @@ export default function KnowledgeTab(props: Props) {
 					</div>
 				</div>
 				<div className="flex justify-end">
-					<Button onClick={handleUpload} disabled={!files.length}>
-						Upload
-					</Button>
+					<div className="flex space-x-2">
+						<Button onClick={handleUpload} disabled={!files.length}>
+							Upload
+						</Button>
+						<Button
+							variant="outline"
+							onClick={handleClear}
+							disabled={isClearing}
+						>
+							Clear Existing Knowledge
+						</Button>
+					</div>
 				</div>
 			</CardContent>
 		</Card>
