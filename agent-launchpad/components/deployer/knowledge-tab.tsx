@@ -32,16 +32,7 @@ function FilePreview({ file }: { file: File }) {
 
   return (
     <ScrollArea className="h-60 w-80">
-      <ScrollArea.Viewport>
-        <pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
-      </ScrollArea.Viewport>
-      <ScrollArea.Scrollbar orientation="vertical">
-        <ScrollArea.Thumb />
-      </ScrollArea.Scrollbar>
-      <ScrollArea.Scrollbar orientation="horizontal">
-        <ScrollArea.Thumb />
-      </ScrollArea.Scrollbar>
-      <ScrollArea.Corner />
+      <pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
     </ScrollArea>
   );
 }
