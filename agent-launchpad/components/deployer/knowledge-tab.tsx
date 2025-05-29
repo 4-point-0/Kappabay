@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { getObjectFields } from "@mysten/sui.js";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import { updateKnowledgeBank } from "@/lib/actions/update-knowledgebank";
@@ -67,12 +68,40 @@ export default function KnowledgeTab(props: Props) {
 	const suiClient = useSuiClient();
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
+	// store full on‐chain Move object fields
+	const [chainFields, setChainFields] = useState<Record<string, any> | null>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
 
 	useEffect(() => {
 		getAgentInfo(agentId).then(setAgent);
 	}, [agentId]);
+
+	// whenever agentId / on‐chain object changes, fetch all fields
+	useEffect(() => {
+		if (!agent?.objectId) return;
+		(async () => {
+			const fields = await getObjectFields(suiClient, agent.objectId);
+			setChainFields(fields);
+
+			// build a text representation of knowledgebank
+			const kb = fields.knowledgebank;
+			const text =
+				typeof kb === "string"
+					? kb
+					: Array.isArray(kb)
+					? String.fromCharCode(...kb)
+					: JSON.stringify(kb, null, 2);
+
+			// create a pseudo‐file so it appears in the UI list
+			const existingFile = new File([text], "existing-knowledge.txt", {
+				type: "text/plain",
+			});
+
+			// replace files list with existing knowledge only on load
+			setFiles([existingFile]);
+		})();
+	}, [agent?.objectId, suiClient]);
 
 	const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const selected = e.target.files;
