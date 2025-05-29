@@ -11,7 +11,7 @@ import { prisma } from "@/lib/db";
  */
 export async function getAgentsByCapIds(capIds: string[]) {
 	if (!capIds || capIds.length === 0) {
-		throw new Error("Missing capability IDs.");
+		return [];
 	}
 	try {
 		const agents = await prisma.agent.findMany({

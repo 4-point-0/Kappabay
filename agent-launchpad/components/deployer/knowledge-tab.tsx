@@ -73,9 +73,14 @@ export default function KnowledgeTab(props: Props) {
 	// store full on‐chain Move object fields
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
+	const [runtimeAgentId, setRuntimeAgentId] = useState<string | null>(null);
 
 	useEffect(() => {
-		getAgentInfo(agentId).then(setAgent);
+		getAgentInfo(agentId).then(async (result) => {
+			setAgent(result);
+			const resp = await apiClient.getAgents(result?.publicAgentUrl!);
+			setRuntimeAgentId(resp.agents?.[0].id);
+		});
 	}, [agentId]);
 
 	// unified loader: fetch on-chain knowledgebank, decode, wrap in File[]
@@ -84,6 +89,7 @@ export default function KnowledgeTab(props: Props) {
 		const fields = await getObjectFields(suiClient, agent.objectId);
 		const kb = fields.knowledgebank;
 		const text = Array.isArray(kb) ? new TextDecoder().decode(new Uint8Array(kb)) : "";
+		if (!text) return;
 		const existingFile = new File([text], "existing-knowledge.txt", {
 			type: "text/plain",
 		});
@@ -112,15 +118,15 @@ export default function KnowledgeTab(props: Props) {
 	const removeFile = (idx: number) => {
 		setFiles((prev) => prev.filter((_, i) => i !== idx));
 	};
+
 	// shared on‐chain + sponsor logic
 	const sendChainUpdate = async (text: string) => {
-		const {
-			presignedTxBytes,
-			agentSignature,
-			agentAddress,
-			adminCapId,
-			objectId,
-		} = await updateKnowledgeBank(agentId, text, account.address);
+		if (!account?.address) return toast({ title: "Connect wallet", variant: "destructive" });
+		const { presignedTxBytes, agentSignature, agentAddress, adminCapId, objectId } = await updateKnowledgeBank(
+			agentId,
+			text,
+			account.address
+		);
 
 		const tx = new Transaction();
 		tx.moveCall({
@@ -128,9 +134,7 @@ export default function KnowledgeTab(props: Props) {
 			arguments: [
 				tx.object(objectId),
 				tx.object(adminCapId),
-				tx.pure(bcs.vector(bcs.u8()).serialize(
-					new TextEncoder().encode(text)
-				)),
+				tx.pure(bcs.vector(bcs.u8()).serialize(new TextEncoder().encode(text))),
 			],
 		});
 		tx.setSender(agentAddress);
@@ -149,7 +153,7 @@ export default function KnowledgeTab(props: Props) {
 	};
 
 	const handleUpload = async () => {
-		if (!files.length || !agentId || !agent || !account?.address) {
+		if (!files.length || !agentId || !agent || !account?.address || !runtimeAgentId) {
 			return toast({ title: "Select files and connect wallet", variant: "destructive" });
 		}
 		try {
@@ -162,9 +166,9 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "Knowledgebank updated on-chain" });
 
 			// 3) upload via REST client
-			const base = "http://localhost:3050";
-			await apiClient.removeKnowledge(agentId, base);
-			await apiClient.addKnowledge(agentId, files, base);
+			const base = agent.publicAgentUrl!;
+			await apiClient.removeKnowledge(runtimeAgentId, base);
+			await apiClient.addKnowledge(runtimeAgentId, files, base);
 			await refreshKnowledgeFiles();
 			toast({ title: "Knowledge uploaded via API" });
 		} catch (err: any) {
@@ -174,7 +178,7 @@ export default function KnowledgeTab(props: Props) {
 
 	// new handler: clear existing knowledge
 	const handleClear = async () => {
-		if (!agentId || !agent || !account?.address) {
+		if (!agentId || !agent || !account?.address || !runtimeAgentId) {
 			return toast({ title: "Connect wallet & select agent", variant: "destructive" });
 		}
 		setIsClearing(true);
@@ -184,9 +188,9 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "On-chain knowledge cleared" });
 
 			// clear via REST
-			const base = "http://localhost:3050";
-			await apiClient.removeKnowledge(agentId, base);
-			await refreshKnowledgeFiles();
+			const base = agent.publicAgentUrl!;
+			await apiClient.removeKnowledge(runtimeAgentId, base);
+			setFiles([]);
 			toast({ title: "API knowledge cleared" });
 		} catch (err: any) {
 			toast({ title: "Clear failed", description: err.message, variant: "destructive" });
@@ -242,11 +246,7 @@ export default function KnowledgeTab(props: Props) {
 						<Button onClick={handleUpload} disabled={!files.length}>
 							Upload
 						</Button>
-						<Button
-							variant="outline"
-							onClick={handleClear}
-							disabled={isClearing}
-						>
+						<Button variant="outline" onClick={handleClear} disabled={isClearing}>
 							Clear Existing Knowledge
 						</Button>
 					</div>

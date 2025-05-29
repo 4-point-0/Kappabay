@@ -9,7 +9,7 @@ const fetcher = async ({
 }: {
 	baseUrl: string;
 	url: string;
-	method?: "GET" | "POST";
+	method?: "GET" | "POST" | "DELETE";
 	body?: object | FormData;
 	headers?: HeadersInit;
 }) => {

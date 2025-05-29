@@ -49,6 +49,10 @@ export default function AgentDeployer({
 	const [aiDescription, setAiDescription] = useState("");
 	const [imageUrl, setImageUrl] = useState<string>("");
 	const fileInputRef = useRef<HTMLInputElement>(null);
+	// track which tab is active
+	const [activeTab, setActiveTab] = useState<string>("basic");
+	// will hold the child’s upload function
+	const knowledgeUploadRef = useRef<() => void>(() => {});
 
 	useEffect(() => {
 		if (initialConfig.image) {
@@ -289,7 +293,7 @@ export default function AgentDeployer({
 				</div>
 			</div>
 
-			<Tabs defaultValue="basic" className="w-full">
+			<Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 				<TabsList className={`grid ${isConfiguring ? "grid-cols-6" : "grid-cols-5"} w-full bg-background `}>
 					<TabsTrigger value="basic">Basic Info</TabsTrigger>
 					<TabsTrigger value="personality">Personality</TabsTrigger>
@@ -341,24 +345,28 @@ export default function AgentDeployer({
 				</TabsContent>
 				{isConfiguring && (
 					<TabsContent value="knowledge" className="space-y-4 mt-4">
-						<KnowledgeTab agentId={agentId!} />
+						<KnowledgeTab agentId={agentId!} onRegisterUpload={(fn) => (knowledgeUploadRef.current = fn)} />
 					</TabsContent>
 				)}
 			</Tabs>
 
 			<div className="flex justify-end mt-8">
-				<Button size="lg" onClick={isConfiguring ? handleUpdate : handleDeploy} disabled={isDeploying}>
-					{isDeploying ? (
-						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							{isConfiguring ? "Updating..." : "Deploying..."}
-						</>
-					) : isConfiguring ? (
-						"Update Agent"
-					) : (
-						"Deploy Agent"
-					)}
-				</Button>
+				{activeTab !== "knowledge" && (
+					<Button size="lg" disabled={isDeploying} onClick={isConfiguring ? handleUpdate : handleDeploy}>
+						{isConfiguring && activeTab === "knowledge" ? (
+							"Upload"
+						) : isDeploying ? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								{isConfiguring ? "Updating..." : "Deploying..."}
+							</>
+						) : isConfiguring ? (
+							"Update Agent"
+						) : (
+							"Deploy Agent"
+						)}
+					</Button>
+				)}
 			</div>
 		</div>
 	);

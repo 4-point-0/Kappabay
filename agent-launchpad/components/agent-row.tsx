@@ -76,7 +76,7 @@ export default function AgentRow({
 		>
 			<TableCell className="font-medium">{agent.name}</TableCell>
 			<TableCell className="font-mono text-xs">
-				<AddressShort address={agent.id} />
+				<AddressShort address={agent.objectId} />
 			</TableCell>
 			<TableCell>
 				<Badge variant={isActive ? "default" : "outline"}>{isActive ? "Active" : "Inactive"}</Badge>
