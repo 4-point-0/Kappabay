@@ -5,6 +5,7 @@ import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
 import { prisma } from "@/lib/db";
+import { deleteBlob, uploadTextBlob } from "../walrus-api";
 
 export async function updateKnowledgeBank(
 	agentId: string,
@@ -54,14 +55,20 @@ export async function updateKnowledgeBank(
 }
 
 /**
- * Persist the current Walrus blobId in Prisma  
+ * Persist the current Walrus blobId in Prisma
  */
-export async function persistKnowledgeBlob(
-  agentId: string,
-  blobId: string | null
-) {
-  return prisma.agent.update({
-    where: { id: agentId },
-    data: { knowledgeBlobId: blobId },
-  });
+export async function persistKnowledgeBlob(agentId: string, blobId: string | null) {
+	return prisma.agent.update({
+		where: { id: agentId },
+		data: { knowledgeBlobId: blobId },
+	});
+}
+
+export async function updateKnowledgeBlobWalrus(combined: string): Promise<string> {
+	const buffer = Buffer.from(combined, "utf-8");
+	return uploadTextBlob(buffer);
+}
+
+export async function deleteKnowledgeBlobWalrus(blobId: string): Promise<void> {
+	return deleteBlob(blobId);
 }

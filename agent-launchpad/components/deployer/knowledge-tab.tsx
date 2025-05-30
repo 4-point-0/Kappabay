@@ -8,7 +8,11 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
-import { updateKnowledgeBank, persistKnowledgeBlob } from "@/lib/actions/update-knowledgebank";
+import {
+	updateKnowledgeBank,
+	persistKnowledgeBlob,
+	updateKnowledgeBlobWalrus,
+} from "@/lib/actions/update-knowledgebank";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,7 +28,6 @@ import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { apiClient } from "@/lib/api";
-import { uploadTextBlob, deleteBlob } from "@/lib/walrus-api";
 import { FilePreview } from "./file-preview";
 
 interface Props {
@@ -95,6 +98,7 @@ export default function KnowledgeTab(props: Props) {
 	// shared on‐chain + sponsor logic
 	const sendChainUpdate = async (text: string) => {
 		if (!account?.address) return toast({ title: "Connect wallet", variant: "destructive" });
+		debugger;
 		const { presignedTxBytes, agentSignature, agentAddress, adminCapId, objectId } = await updateKnowledgeBank(
 			agentId,
 			text,
@@ -130,17 +134,13 @@ export default function KnowledgeTab(props: Props) {
 			return toast({ title: "Select files and connect wallet", variant: "destructive" });
 		}
 		try {
-			// 0) delete old blob if present
-			if (agent.knowledgeBlobId) {
-				await deleteBlob(agent.knowledgeBlobId);
-			}
 			// 1) combine all file texts
 			const texts = await Promise.all(files.map((f) => f.text()));
 			const combined = texts.join("\n");
 
 			// 1.5) upload combined to Walrus
-			const buffer = Buffer.from(combined, "utf-8");
-			const newBlobId = await uploadTextBlob(buffer);
+			const newBlobId = await updateKnowledgeBlobWalrus(combined);
+
 			// persist in our DB & local state
 			await persistKnowledgeBlob(agentId, newBlobId);
 			setAgent((prev) => prev && { ...prev, knowledgeBlobId: newBlobId });
@@ -175,9 +175,8 @@ export default function KnowledgeTab(props: Props) {
 			const base = agent.publicAgentUrl!;
 			await apiClient.removeKnowledge(runtimeAgentId, base);
 
-			// delete from Walrus and clear our DB/state
+			// delete and clear our DB/state
 			if (agent.knowledgeBlobId) {
-				await deleteBlob(agent.knowledgeBlobId);
 				await persistKnowledgeBlob(agentId, null);
 				setAgent((prev) => prev && { ...prev, knowledgeBlobId: null });
 			}
