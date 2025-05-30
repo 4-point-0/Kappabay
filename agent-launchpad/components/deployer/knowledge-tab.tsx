@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, use } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -20,39 +20,11 @@ import {
 	DialogFooter,
 	DialogClose,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { apiClient } from "@/lib/api";
-
-function FilePreview({ file }: { file: File }) {
-	const [text, setText] = useState<string>("");
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		setLoading(true);
-		file.text().then((t) => {
-			setText(t);
-			setLoading(false);
-		});
-	}, [file]);
-
-	if (loading) {
-		return (
-			<div className="p-4 flex justify-center">
-				<Loader2 className="h-6 w-6 animate-spin" />
-			</div>
-		);
-	}
-
-	return (
-		<ScrollArea className="h-60 w-full">
-			<pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
-		</ScrollArea>
-	);
-}
+import { FilePreview } from "./file-preview";
 
 interface Props {
 	agentId: string;
