@@ -39,4 +39,5 @@ model Agent {
   latestBlobHash    String?   // Latest blob hash
   agentType         String?    // Custom or Kappabay agent
   publicAgentUrl    String?   // Public URL for the agent
+  knowledgeBlobId   String?   // new: current Walrus blob for on-chain knowledge
 }
