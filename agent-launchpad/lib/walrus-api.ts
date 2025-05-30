@@ -2,6 +2,48 @@ const WALRUS_PUBLISHER_URL = process.env.WALRUS_PUBLISHER_URL!;
 const WALRUS_AGGREGATOR_URL = process.env.WALRUS_AGGREGATOR_URL!;
 
 /**
+ * Upload a text blob (e.g. .txt/.md) to Walrus Publisher.
+ */
+export const uploadTextBlob = async (
+  buffer: Buffer,
+  sendObjectTo?: string
+): Promise<string> => {
+  const url = `${WALRUS_PUBLISHER_URL}/v1/blobs`;
+  const params: any = { deletable: true };
+  if (sendObjectTo) params.send_object_to = sendObjectTo;
+  const fullUrl = `${url}?${new URLSearchParams(params).toString()}`;
+
+  const headers = {
+    "Content-Type": "text/plain",
+    "Content-Length": buffer.length.toString(),
+  };
+
+  const response = await fetch(fullUrl, {
+    method: "PUT",
+    headers,
+    body: buffer,
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(`Walrus text upload failed: ${err.message || response.statusText}`);
+  }
+  const data = await response.json();
+  // newlyCreated or alreadyCertified
+  return data.newlyCreated?.blobObject.blobId ?? data.alreadyCertified?.blobId;
+};
+
+/**
+ * Delete a previously‐created blob.
+ */
+export const deleteBlob = async (blobId: string): Promise<void> => {
+  const url = `${WALRUS_PUBLISHER_URL}/v1/blobs/${encodeURIComponent(blobId)}`;
+  const resp = await fetch(url, { method: "DELETE" });
+  if (!resp.ok) {
+    throw new Error(`Walrus deleteBlob ${blobId} failed: ${resp.statusText}`);
+  }
+};
+
+/**
  * Uploads a blob to Walrus Publisher.
  * @param filePath Path to the db.sqlite file.
  * @param sendObjectTo Optional address to transfer the blob object.

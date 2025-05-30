@@ -24,6 +24,8 @@ import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { apiClient } from "@/lib/api";
+import { uploadTextBlob, deleteBlob } from "@/lib/walrus-api";
+import { updateAgentKnowledgeBlob } from "@/lib/api";
 import { FilePreview } from "./file-preview";
 
 interface Props {
@@ -129,9 +131,20 @@ export default function KnowledgeTab(props: Props) {
 			return toast({ title: "Select files and connect wallet", variant: "destructive" });
 		}
 		try {
+			// 0) delete old blob if present
+			if (agent.knowledgeBlobId) {
+				await deleteBlob(agent.knowledgeBlobId);
+			}
 			// 1) combine all file texts
 			const texts = await Promise.all(files.map((f) => f.text()));
 			const combined = texts.join("\n");
+
+			// 1.5) upload combined to Walrus
+			const buffer = Buffer.from(combined, "utf-8");
+			const newBlobId = await uploadTextBlob(buffer);
+			// persist in our DB & local state
+			await updateAgentKnowledgeBlob(agentId, newBlobId);
+			setAgent((prev) => prev && { ...prev, knowledgeBlobId: newBlobId });
 
 			// 2) run on-chain update
 			await sendChainUpdate(combined);
@@ -162,6 +175,14 @@ export default function KnowledgeTab(props: Props) {
 			// clear via REST
 			const base = agent.publicAgentUrl!;
 			await apiClient.removeKnowledge(runtimeAgentId, base);
+
+			// delete from Walrus and clear our DB/state
+			if (agent.knowledgeBlobId) {
+				await deleteBlob(agent.knowledgeBlobId);
+				await updateAgentKnowledgeBlob(agentId, null);
+				setAgent((prev) => prev && { ...prev, knowledgeBlobId: null });
+			}
+
 			setFiles([]);
 			toast({ title: "API knowledge cleared" });
 		} catch (err: any) {
