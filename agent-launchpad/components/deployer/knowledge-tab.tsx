@@ -8,7 +8,7 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
-import { updateKnowledgeBank } from "@/lib/actions/update-knowledgebank";
+import { updateKnowledgeBank, persistKnowledgeBlob } from "@/lib/actions/update-knowledgebank";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
