@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, use } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,12 @@ import { useCurrentAccount } from "@mysten/dapp-kit";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { bcs } from "@mysten/sui/bcs";
-import { updateKnowledgeBank } from "@/lib/actions/update-knowledgebank";
-import { PlusCircle, Trash2 } from "lucide-react";
+import {
+	updateKnowledgeBank,
+	persistKnowledgeBlob,
+	updateKnowledgeBlobWalrus,
+} from "@/lib/actions/update-knowledgebank";
+import { PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
 	Dialog,
@@ -20,39 +24,11 @@ import {
 	DialogFooter,
 	DialogClose,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
 import { getAgentInfo } from "@/lib/actions/get-agent-info";
 import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { apiClient } from "@/lib/api";
-
-function FilePreview({ file }: { file: File }) {
-	const [text, setText] = useState<string>("");
-	const [loading, setLoading] = useState(true);
-
-	useEffect(() => {
-		setLoading(true);
-		file.text().then((t) => {
-			setText(t);
-			setLoading(false);
-		});
-	}, [file]);
-
-	if (loading) {
-		return (
-			<div className="p-4 flex justify-center">
-				<Loader2 className="h-6 w-6 animate-spin" />
-			</div>
-		);
-	}
-
-	return (
-		<ScrollArea className="h-60 w-full">
-			<pre className="p-2 text-sm whitespace-pre-wrap">{text}</pre>
-		</ScrollArea>
-	);
-}
+import { FilePreview } from "./file-preview";
 
 interface Props {
 	agentId: string;
@@ -70,6 +46,7 @@ export default function KnowledgeTab(props: Props) {
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const [isClearing, setIsClearing] = useState(false);
+	const [isUploading, setIsUploading] = useState(false);
 	// store full on‐chain Move object fields
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
@@ -156,10 +133,18 @@ export default function KnowledgeTab(props: Props) {
 		if (!files.length || !agentId || !agent || !account?.address || !runtimeAgentId) {
 			return toast({ title: "Select files and connect wallet", variant: "destructive" });
 		}
+		setIsUploading(true);
 		try {
 			// 1) combine all file texts
 			const texts = await Promise.all(files.map((f) => f.text()));
 			const combined = texts.join("\n");
+
+			// 1.5) upload combined to Walrus
+			const newBlobId = await updateKnowledgeBlobWalrus(combined);
+
+			// persist in our DB & local state
+			await persistKnowledgeBlob(agentId, newBlobId);
+			setAgent((prev) => prev && { ...prev, knowledgeBlobId: newBlobId });
 
 			// 2) run on-chain update
 			await sendChainUpdate(combined);
@@ -173,6 +158,8 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "Knowledge uploaded via API" });
 		} catch (err: any) {
 			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+		} finally {
+			setIsUploading(false);
 		}
 	};
 
@@ -190,6 +177,13 @@ export default function KnowledgeTab(props: Props) {
 			// clear via REST
 			const base = agent.publicAgentUrl!;
 			await apiClient.removeKnowledge(runtimeAgentId, base);
+
+			// delete and clear our DB/state
+			if (agent.knowledgeBlobId) {
+				await persistKnowledgeBlob(agentId, null);
+				setAgent((prev) => prev && { ...prev, knowledgeBlobId: null });
+			}
+
 			setFiles([]);
 			toast({ title: "API knowledge cleared" });
 		} catch (err: any) {
@@ -243,11 +237,13 @@ export default function KnowledgeTab(props: Props) {
 				</div>
 				<div className="flex justify-end">
 					<div className="flex space-x-2">
-						<Button onClick={handleUpload} disabled={!files.length}>
-							Upload
+						<Button onClick={handleUpload} disabled={!files.length || isUploading}>
+							{isUploading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+							{isUploading ? "Uploading..." : "Upload"}
 						</Button>
 						<Button variant="outline" onClick={handleClear} disabled={isClearing}>
-							Clear Existing Knowledge
+							{isClearing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+							{isClearing ? "Clearing..." : "Clear Existing Knowledge"}
 						</Button>
 					</div>
 				</div>
