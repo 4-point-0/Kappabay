@@ -13,7 +13,7 @@ import {
 	persistKnowledgeBlob,
 	updateKnowledgeBlobWalrus,
 } from "@/lib/actions/update-knowledgebank";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
 	Dialog,
@@ -46,6 +46,7 @@ export default function KnowledgeTab(props: Props) {
 	// keep a real array so we can add/remove individual items
 	const [files, setFiles] = useState<File[]>([]);
 	const [isClearing, setIsClearing] = useState(false);
+	const [isUploading, setIsUploading] = useState(false);
 	// store full on‐chain Move object fields
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [agent, setAgent] = useState<Omit<Agent, "agentWalletKey"> | null>(null);
@@ -133,6 +134,7 @@ export default function KnowledgeTab(props: Props) {
 		if (!files.length || !agentId || !agent || !account?.address || !runtimeAgentId) {
 			return toast({ title: "Select files and connect wallet", variant: "destructive" });
 		}
+		setIsUploading(true);
 		try {
 			// 1) combine all file texts
 			const texts = await Promise.all(files.map((f) => f.text()));
@@ -157,6 +159,8 @@ export default function KnowledgeTab(props: Props) {
 			toast({ title: "Knowledge uploaded via API" });
 		} catch (err: any) {
 			toast({ title: "Upload failed", description: err.message || String(err), variant: "destructive" });
+		} finally {
+			setIsUploading(false);
 		}
 	};
 
@@ -234,11 +238,13 @@ export default function KnowledgeTab(props: Props) {
 				</div>
 				<div className="flex justify-end">
 					<div className="flex space-x-2">
-						<Button onClick={handleUpload} disabled={!files.length}>
-							Upload
+						<Button onClick={handleUpload} disabled={!files.length || isUploading}>
+							{isUploading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+							{isUploading ? "Uploading..." : "Upload"}
 						</Button>
 						<Button variant="outline" onClick={handleClear} disabled={isClearing}>
-							Clear Existing Knowledge
+							{isClearing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+							{isClearing ? "Clearing..." : "Clear Existing Knowledge"}
 						</Button>
 					</div>
 				</div>
