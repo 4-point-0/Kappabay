@@ -99,7 +99,6 @@ export default function KnowledgeTab(props: Props) {
 	// shared on‐chain + sponsor logic
 	const sendChainUpdate = async (text: string) => {
 		if (!account?.address) return toast({ title: "Connect wallet", variant: "destructive" });
-		debugger;
 		const { presignedTxBytes, agentSignature, agentAddress, adminCapId, objectId } = await updateKnowledgeBank(
 			agentId,
 			text,
