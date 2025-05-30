@@ -137,18 +137,3 @@ export const apiClient = {
 		});
 	},
 };
-export async function updateAgentKnowledgeBlob(
-  agentId: string,
-  blobId: string | null
-) {
-  const res = await fetch(
-    `/api/agents/${agentId}/knowledge-blob`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ blobId }),
-    }
-  );
-  if (!res.ok) throw new Error("Failed to persist knowledgeBlobId");
-  return res.json();
-}

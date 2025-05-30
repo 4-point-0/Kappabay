@@ -25,7 +25,6 @@ import { Agent } from "@prisma/client";
 import { getObjectFields } from "@/lib/actions/sui-utils";
 import { apiClient } from "@/lib/api";
 import { uploadTextBlob, deleteBlob } from "@/lib/walrus-api";
-import { updateAgentKnowledgeBlob } from "@/lib/api";
 import { FilePreview } from "./file-preview";
 
 interface Props {
