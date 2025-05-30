@@ -142,7 +142,7 @@ export default function KnowledgeTab(props: Props) {
 			const buffer = Buffer.from(combined, "utf-8");
 			const newBlobId = await uploadTextBlob(buffer);
 			// persist in our DB & local state
-			await updateAgentKnowledgeBlob(agentId, newBlobId);
+			await persistKnowledgeBlob(agentId, newBlobId);
 			setAgent((prev) => prev && { ...prev, knowledgeBlobId: newBlobId });
 
 			// 2) run on-chain update
@@ -178,7 +178,7 @@ export default function KnowledgeTab(props: Props) {
 			// delete from Walrus and clear our DB/state
 			if (agent.knowledgeBlobId) {
 				await deleteBlob(agent.knowledgeBlobId);
-				await updateAgentKnowledgeBlob(agentId, null);
+				await persistKnowledgeBlob(agentId, null);
 				setAgent((prev) => prev && { ...prev, knowledgeBlobId: null });
 			}
 
