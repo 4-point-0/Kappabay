@@ -23,6 +23,10 @@ interface ManageGasDialogProps {
 	setWithdrawToAgentAmount: (val: string) => void;
 }
 
+ // ─── constants for uniform sizing ──────────────────────────────────────────
+ const FIELD_WIDTH  = "w-32";   // same width on all inputs
+ const BUTTON_WIDTH = "w-32";   // same width on all buttons
+
 export default function ManageGasDialog({
 	open,
 	onOpenChange,
@@ -245,8 +249,14 @@ export default function ManageGasDialog({
 								placeholder="Amount"
 								value={depositAmount}
 								onChange={(e) => setDepositAmount(e.target.value)}
+								className={FIELD_WIDTH}
 							/>
-							<Button onClick={handleDeposit}>Deposit</Button>
+							<Button
+								onClick={handleDeposit}
+								className={BUTTON_WIDTH}
+							>
+								Deposit SUI
+							</Button>
 						</div>
 					</div>
 					<div className="space-y-2">
@@ -261,8 +271,14 @@ export default function ManageGasDialog({
 								placeholder="Amount"
 								value={withdrawAmount}
 								onChange={(e) => setWithdrawAmount(e.target.value)}
+								className={FIELD_WIDTH}
 							/>
-							<Button onClick={handleWithdraw}>Withdraw</Button>
+							<Button
+								onClick={handleWithdraw}
+								className={BUTTON_WIDTH}
+							>
+								Withdraw SUI
+							</Button>
 						</div>
 					</div>
 					{/* ↓ new “to agent” withdraw */}
@@ -278,9 +294,13 @@ export default function ManageGasDialog({
 								placeholder="Amount"
 								value={withdrawToAgentAmount}
 								onChange={e => setWithdrawToAgentAmount(e.target.value)}
+								className={FIELD_WIDTH}
 							/>
-							<Button onClick={handleWithdrawToAgentAccount}>
-								Withdraw to Agent
+							<Button
+								onClick={handleWithdrawToAgentAccount}
+								className={BUTTON_WIDTH}
+							>
+								Extract SUI
 							</Button>
 						</div>
 					</div>
