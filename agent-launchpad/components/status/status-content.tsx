@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import AgentsTable from "@/components/agents-table";
-import ManageGasDialog from "@/components/manage-gas-dialog";
-import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
+import AgentsTable from "@/components/status/agents-table";
+import ManageGasDialog from "@/components/status/manage-gas-dialog";
+import TransferAgentCapDialog from "@/components/status/transfer-agent-cap-dialog";
 import Link from "next/link";
 import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from "@mysten/dapp-kit";
 import { getObjectFields } from "@/lib/actions/sui-utils";
@@ -40,6 +40,8 @@ export function StatusContent({
 	const [agents, setAgents] = useState<any[]>([]);
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
+	// ← new: amount to withdraw directly into the agent’s own wallet
+	const [withdrawToAgentAmount, setWithdrawToAgentAmount] = useState("");
 	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
 	const [gasDialogOpen, setGasDialogOpen] = useState(false);
@@ -166,6 +168,9 @@ export function StatusContent({
 					setDepositAmount={setDepositAmount}
 					withdrawAmount={withdrawAmount}
 					setWithdrawAmount={setWithdrawAmount}
+					// ← pass the new props
+					withdrawToAgentAmount={withdrawToAgentAmount}
+					setWithdrawToAgentAmount={setWithdrawToAgentAmount}
 				/>
 			)}
 			<TransferAgentCapDialog

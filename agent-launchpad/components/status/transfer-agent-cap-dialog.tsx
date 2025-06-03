@@ -1,12 +1,12 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
-import { Input } from "./ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import { Input } from "../ui/input";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
-import { Label } from "./ui/label";
-import { Button } from "./ui/button";
+import { Label } from "../ui/label";
+import { Button } from "../ui/button";
 
 interface TransferAgentCapDialogProps {
 	open: boolean;

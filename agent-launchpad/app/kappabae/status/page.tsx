@@ -1,5 +1,5 @@
 "use client";
-import { StatusContent } from "@/components/status-content";
+import { StatusContent } from "@/components/status/status-content";
 
 export default function WaifuStatusPage() {
 	return (

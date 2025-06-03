@@ -9,8 +9,8 @@ import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import CharacterQuestionnaire from "@/components/character-questionnaire";
-import { CompanionSummary } from "@/components/companion-summary";
+import CharacterQuestionnaire from "@/components/kappabae/character-questionnaire";
+import { CompanionSummary } from "@/components/kappabae/companion-summary";
 
 export default function CreateCompanionPage() {
 	const [showConfig, setShowConfig] = useState(false);
