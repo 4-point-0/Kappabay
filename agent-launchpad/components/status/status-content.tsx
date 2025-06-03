@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react";
 import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
-import AgentsTable from "@/components/agents-table";
-import ManageGasDialog from "@/components/manage-gas-dialog";
-import TransferAgentCapDialog from "@/components/transfer-agent-cap-dialog";
+import AgentsTable from "@/components/status/agents-table";
+import ManageGasDialog from "@/components/status/manage-gas-dialog";
+import TransferAgentCapDialog from "@/components/status/transfer-agent-cap-dialog";
 import Link from "next/link";
 import { useCurrentAccount, useSignPersonalMessage, useSuiClient } from "@mysten/dapp-kit";
 import { getObjectFields } from "@/lib/actions/sui-utils";

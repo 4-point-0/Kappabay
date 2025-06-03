@@ -1,9 +1,9 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Button } from "../ui/button";
 import { useState } from "react";
 import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
 import { Transaction, TransactionResult } from "@mysten/sui/transactions";
@@ -33,7 +33,6 @@ export default function ManageGasDialog({
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
 	const [isExecuting, setIsExecuting] = useState(false);
-
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -169,7 +168,6 @@ export default function ManageGasDialog({
 					<DialogTitle>Manage Gas Bag</DialogTitle>
 					<DialogDescription>Add or withdraw SUI from this agent's gas bag.</DialogDescription>
 				</DialogHeader>
-
 
 				<div className="grid gap-4 py-4">
 					<div className="space-y-2">

@@ -1,12 +1,12 @@
 "use client";
 
-import { TableCell, TableRow } from "./ui/table";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
+import { TableCell, TableRow } from "../ui/table";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { Terminal, Loader2, Pause, Play, RefreshCw, Settings, Send, Wallet } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { AddressShort } from "./address-short";
+import { AddressShort } from "../address-short";
 
 interface AgentRowProps {
 	agent: any;

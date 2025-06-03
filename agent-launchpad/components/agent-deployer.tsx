@@ -27,6 +27,7 @@ import { bcs } from "@mysten/sui/bcs";
 import { serializeAgentConfig } from "@/lib/utils";
 import { updateAgentConfig, persistAgentConfig } from "@/lib/actions/update-agent-config";
 import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { useRouter } from "next/navigation";
 
 interface AgentDeployerProps {
 	initialConfig?: AgentConfig;
@@ -39,6 +40,7 @@ export default function AgentDeployer({
 	isConfiguring = false,
 	agentId,
 }: AgentDeployerProps) {
+	const router = useRouter();
 	const account = useCurrentAccount();
 	const signAndExec = useSignExecuteAndWaitForTransaction();
 	const [agentConfig, setAgentConfig] = useState<AgentConfig>(initialConfig);
@@ -148,6 +150,7 @@ export default function AgentDeployer({
 					title: "Agent deployed successfully",
 					description: `Agent ID: ${result.agentId}`,
 				});
+				router.push("/status");
 			} else {
 				toast({
 					title: "Deployment Error",
