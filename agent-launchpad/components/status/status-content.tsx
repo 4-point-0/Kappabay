@@ -40,6 +40,8 @@ export function StatusContent({
 	const [agents, setAgents] = useState<any[]>([]);
 	const [withdrawAmount, setWithdrawAmount] = useState("");
 	const [depositAmount, setDepositAmount] = useState("");
+	// ← new: amount to withdraw directly into the agent’s own wallet
+	const [withdrawToAgentAmount, setWithdrawToAgentAmount] = useState("");
 	const [loadingAgent, setLoadingAgent] = useState<string | null>(null);
 	const [terminalEnabledAgents, setTerminalEnabledAgents] = useState<string[]>([]);
 	const [gasDialogOpen, setGasDialogOpen] = useState(false);
@@ -166,6 +168,9 @@ export function StatusContent({
 					setDepositAmount={setDepositAmount}
 					withdrawAmount={withdrawAmount}
 					setWithdrawAmount={setWithdrawAmount}
+					// ← pass the new props
+					withdrawToAgentAmount={withdrawToAgentAmount}
+					setWithdrawToAgentAmount={setWithdrawToAgentAmount}
 				/>
 			)}
 			<TransferAgentCapDialog
