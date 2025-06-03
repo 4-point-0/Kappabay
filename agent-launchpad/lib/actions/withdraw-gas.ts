@@ -28,9 +28,7 @@ export async function withdrawGas(
 		arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
 	});
 	// Capture the coin object returned and transfer it to the gas owner's address if requested
-	if (transferToWallet) {
-		tx.transferObjects([coin], gasOwnerAddress);
-	}
+	tx.transferObjects([coin], transferToWallet ? gasOwnerAddress : agentAddress);
 
 	// Configure as a sponsored transaction
 	tx.setSender(agentAddress); // Agent is the transaction sender

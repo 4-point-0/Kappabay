@@ -4,9 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
-import { useState } from "react";
 import { useCurrentAccount, useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
-import { Transaction, TransactionResult } from "@mysten/sui/transactions";
+import { Transaction } from "@mysten/sui/transactions";
 import { toast } from "@/hooks/use-toast";
 import { withdrawGas } from "@/lib/actions/withdraw-gas";
 import { useSignExecuteAndWaitForTransaction } from "@/hooks/use-sign";
@@ -40,7 +39,6 @@ export default function ManageGasDialog({
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
-	const [isExecuting, setIsExecuting] = useState(false);
 
 	const handleDeposit = async () => {
 		if (!depositAmount || isNaN(Number(depositAmount)) || Number(depositAmount) <= 0) return;
@@ -93,15 +91,18 @@ export default function ManageGasDialog({
 	 * Core extract-gas flow. If `transferToWallet` is true we
 	 * will `tx.transferObjects`, otherwise we leave the coin in the agent.
 	 */
-	const executeExtractGas = async (
-		amountStr: string,
-		transferToWallet: boolean
-	) => {
+	const executeExtractGas = async (amountStr: string, transferToWallet: boolean) => {
 		// basic validation
 		if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) return;
 		if (!wallet?.address) return;
-		if (Number(amountStr) > Number(agent.gasBag)) return;
-
+		if (Number(amountStr) > Number(agent.gasBag)) {
+			toast({
+				title: "Withdraw Error",
+				description: "Insufficient gas bag balance.",
+				variant: "destructive",
+			});
+			return;
+		}
 		try {
 			const amountMist = BigInt(Math.round(Number(amountStr) * 1e9));
 			const { adminCapId, agentAddress, presignedTxBytes, agentSignature } = await withdrawGas(
@@ -117,9 +118,8 @@ export default function ManageGasDialog({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
 				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(amountMist.toString())],
 			});
-			if (transferToWallet) {
-				tx.transferObjects([coin], wallet.address);
-			}
+
+			tx.transferObjects([coin], transferToWallet ? wallet.address : agentAddress);
 			tx.setSender(agentAddress);
 			tx.setGasOwner(wallet.address);
 
@@ -179,7 +179,7 @@ export default function ManageGasDialog({
 
 				<div className="grid gap-4 py-4">
 					<div className="space-y-2">
-						<Label htmlFor="deposit">Deposit SUI</Label>
+						<Label htmlFor="deposit">To Gas bag</Label>
 						<div className="flex items-center justify-between">
 							<Input
 								id="deposit"
@@ -197,7 +197,7 @@ export default function ManageGasDialog({
 						</div>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="withdraw">Withdraw SUI</Label>
+						<Label htmlFor="withdraw">From Gas bag to Owner Wallet</Label>
 						<div className="flex items-center justify-between">
 							<Input
 								id="withdraw"
@@ -217,7 +217,7 @@ export default function ManageGasDialog({
 					</div>
 					{/* ↓ new “to agent” withdraw */}
 					<div className="space-y-2">
-						<Label htmlFor="withdraw-agent">Withdraw to Agent Wallet</Label>
+						<Label htmlFor="withdraw-agent">From Gas bag to Agent Wallet</Label>
 						<div className="flex items-center justify-between">
 							<Input
 								id="withdraw-agent"
