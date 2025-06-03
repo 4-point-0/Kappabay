@@ -89,96 +89,24 @@ export default function ManageGasDialog({
 	const { mutateAsync: signTransaction } = useSignTransaction();
 	const suiClient = useSuiClient();
 
-	const handleWithdraw = async () => {
-		if (!withdrawAmount || isNaN(Number(withdrawAmount)) || Number(withdrawAmount) <= 0) return;
+	/**
+	 * Core extract-gas flow. If `transferToWallet` is true we
+	 * will `tx.transferObjects`, otherwise we leave the coin in the agent.
+	 */
+	const executeExtractGas = async (
+		amountStr: string,
+		transferToWallet: boolean
+	) => {
+		// basic validation
+		if (!amountStr || isNaN(Number(amountStr)) || Number(amountStr) <= 0) return;
 		if (!wallet?.address) return;
-
-		// Ensure withdraw amount doesn't exceed the agent's gas bag balance.
-		if (Number(withdrawAmount) > Number(agent.gasBag)) return;
+		if (Number(amountStr) > Number(agent.gasBag)) return;
 
 		try {
-			// Convert withdraw amount from SUI to mist.
-			const withdrawAmountMist = BigInt(Math.round(Number(withdrawAmount) * 1e9));
-
-			// Get the adminCapId, agentAddress, presignedTxBytes, and agentSignature from backend.
+			const amountMist = BigInt(Math.round(Number(amountStr) * 1e9));
 			const { adminCapId, agentAddress, presignedTxBytes, agentSignature } = await withdrawGas(
 				agent.id,
-				withdrawAmountMist.toString(),
-				agent.objectId,
-				wallet.address
-			);
-
-			const tx = new Transaction();
-			const coin: TransactionResult = tx.moveCall({
-				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
-				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
-			});
-			tx.transferObjects([coin], wallet.address);
-			tx.setSender(agentAddress);
-			tx.setGasOwner(wallet.address);
-
-			const walletSignedTx = await signTransaction({ transaction: tx });
-
-			await suiClient
-				.executeTransactionBlock({
-					transactionBlock: presignedTxBytes,
-					signature: [agentSignature, walletSignedTx.signature],
-					requestType: "WaitForLocalExecution",
-					options: {
-						showEvents: true,
-						showEffects: true,
-						showObjectChanges: true,
-						showBalanceChanges: true,
-						showInput: true,
-					},
-				})
-				.then((res) => {
-					const status = res?.effects?.status.status;
-					if (status === "success") {
-						toast({
-							title: "Withdraw Successful",
-							description: "Withdraw transaction executed successfully. Transaction digest: " + res?.digest,
-						});
-						// Optionally trigger a refresh here if needed.
-					} else if (status === "failure") {
-						toast({
-							title: "Withdraw Error",
-							description: "Withdraw transaction failed.",
-							variant: "destructive",
-						});
-						console.error("Error =", res?.effects);
-					}
-				})
-				.catch((error) => {
-					console.error("Error executing sponsored transaction:", error);
-					toast({
-						title: "Withdraw Failed",
-						description: "Withdraw transaction failed.",
-						variant: "destructive",
-					});
-				});
-		} catch (error) {
-			console.error("Error in withdrawGas:", error);
-			toast({
-				title: "Withdraw Error",
-				description: "Error while executing the withdraw operation.",
-				variant: "destructive",
-			});
-		} finally {
-			setWithdrawAmount("");
-		}
-	};
-
-	const handleWithdrawToAgentAccount = async () => {
-		if (!withdrawToAgentAmount || isNaN(Number(withdrawToAgentAmount)) || Number(withdrawToAgentAmount) <= 0) return;
-		if (!wallet?.address) return;
-		if (Number(withdrawToAgentAmount) > Number(agent.gasBag)) return;
-
-		try {
-			const withdrawAmountMist = BigInt(Math.round(Number(withdrawToAgentAmount) * 1e9));
-			const { adminCapId, agentAddress, presignedTxBytes, agentSignature } = await withdrawGas(
-				agent.id,
-				withdrawAmountMist.toString(),
+				amountMist.toString(),
 				agent.objectId,
 				wallet.address
 			);
@@ -186,48 +114,59 @@ export default function ManageGasDialog({
 			const tx = new Transaction();
 			const coin = tx.moveCall({
 				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
-				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
+				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(amountMist.toString())],
 			});
-
+			if (transferToWallet) {
+				tx.transferObjects([coin], wallet.address);
+			}
 			tx.setSender(agentAddress);
 			tx.setGasOwner(wallet.address);
 
-			const walletSignedTx = await signTransaction({ transaction: tx });
+			const walletSig = await signTransaction({ transaction: tx });
+			const res = await suiClient.executeTransactionBlock({
+				transactionBlock: presignedTxBytes,
+				signature: [agentSignature, walletSig.signature],
+				requestType: "WaitForLocalExecution",
+				options: {
+					showEvents: true,
+					showEffects: true,
+					showObjectChanges: true,
+					showBalanceChanges: true,
+					showInput: true,
+				},
+			});
 
-			await suiClient
-				.executeTransactionBlock({
-					transactionBlock: presignedTxBytes,
-					signature: [agentSignature, walletSignedTx.signature],
-					requestType: "WaitForLocalExecution",
-					options: {
-						showEvents: true,
-						showEffects: true,
-						showObjectChanges: true,
-						showBalanceChanges: true,
-						showInput: true,
-					},
-				})
-				.then((res) => {
-					if (res?.effects?.status?.status === "success") {
-						toast({
-							title: "Withdraw to Agent Successful",
-							description: `Extracted ${withdrawToAgentAmount} SUI into agent’s wallet.`,
-						});
-					} else {
-						toast({ title: "Withdraw to Agent Failed", variant: "destructive", description: "Transaction failed." });
-					}
-				})
-				.catch((error) => {
-					console.error("Error extracting gas to agent:", error);
-					toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Transaction error." });
-				});
-		} catch (error) {
-			console.error("Error in handleWithdrawToAgentAccount:", error);
-			toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Unexpected error." });
+			const success = res?.effects?.status.status === "success";
+			toast({
+				title: success
+					? transferToWallet
+						? "Withdraw Successful"
+						: "Withdraw to Agent Successful"
+					: transferToWallet
+					? "Withdraw Failed"
+					: "Withdraw to Agent Failed",
+				description: success
+					? transferToWallet
+						? `Withdrew ${amountStr} SUI`
+						: `Extracted ${amountStr} SUI into agent’s wallet.`
+					: undefined,
+				variant: success ? undefined : "destructive",
+			});
+		} catch (err) {
+			console.error("Error in extract-gas flow:", err);
+			toast({
+				title: transferToWallet ? "Withdraw Error" : "Withdraw to Agent Error",
+				description: "Unexpected error.",
+				variant: "destructive",
+			});
 		} finally {
-			setWithdrawToAgentAmount("");
+			transferToWallet ? setWithdrawAmount("") : setWithdrawToAgentAmount("");
 		}
 	};
+
+	// now simply delegate
+	const handleWithdraw = () => executeExtractGas(withdrawAmount, true);
+	const handleWithdrawToAgentAccount = () => executeExtractGas(withdrawToAgentAmount, false);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
