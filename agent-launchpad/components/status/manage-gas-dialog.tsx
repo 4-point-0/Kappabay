@@ -23,9 +23,9 @@ interface ManageGasDialogProps {
 	setWithdrawToAgentAmount: (val: string) => void;
 }
 
- // ─── constants for uniform sizing ──────────────────────────────────────────
- const FIELD_WIDTH  = "w-32";   // same width on all inputs
- const BUTTON_WIDTH = "w-32";   // same width on all buttons
+// ─── constants for uniform sizing ──────────────────────────────────────────
+const FIELD_WIDTH = "w-72"; // same width on all inputs
+const BUTTON_WIDTH = "w-32"; // same width on all buttons
 
 export default function ManageGasDialog({
 	open,
@@ -189,38 +189,38 @@ export default function ManageGasDialog({
 				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
 			});
 
-			// NOTE: no tx.transferObjects([...], ...) here so coin stays in agent's wallet
 			tx.setSender(agentAddress);
 			tx.setGasOwner(wallet.address);
 
 			const walletSignedTx = await signTransaction({ transaction: tx });
 
-			await suiClient.executeTransactionBlock({
-				transactionBlock: presignedTxBytes,
-				signature: [agentSignature, walletSignedTx.signature],
-				requestType: "WaitForLocalExecution",
-				options: {
-					showEvents: true,
-					showEffects: true,
-					showObjectChanges: true,
-					showBalanceChanges: true,
-					showInput: true,
-				},
-			})
-			.then(res => {
-				if (res?.effects?.status?.status === "success") {
-					toast({
-						title: "Withdraw to Agent Successful",
-						description: `Extracted ${withdrawToAgentAmount} SUI into agent’s wallet.`,
-					});
-				} else {
-					toast({ title: "Withdraw to Agent Failed", variant: "destructive", description: "Transaction failed." });
-				}
-			})
-			.catch(error => {
-				console.error("Error extracting gas to agent:", error);
-				toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Transaction error." });
-			});
+			await suiClient
+				.executeTransactionBlock({
+					transactionBlock: presignedTxBytes,
+					signature: [agentSignature, walletSignedTx.signature],
+					requestType: "WaitForLocalExecution",
+					options: {
+						showEvents: true,
+						showEffects: true,
+						showObjectChanges: true,
+						showBalanceChanges: true,
+						showInput: true,
+					},
+				})
+				.then((res) => {
+					if (res?.effects?.status?.status === "success") {
+						toast({
+							title: "Withdraw to Agent Successful",
+							description: `Extracted ${withdrawToAgentAmount} SUI into agent’s wallet.`,
+						});
+					} else {
+						toast({ title: "Withdraw to Agent Failed", variant: "destructive", description: "Transaction failed." });
+					}
+				})
+				.catch((error) => {
+					console.error("Error extracting gas to agent:", error);
+					toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Transaction error." });
+				});
 		} catch (error) {
 			console.error("Error in handleWithdrawToAgentAccount:", error);
 			toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Unexpected error." });
@@ -240,7 +240,7 @@ export default function ManageGasDialog({
 				<div className="grid gap-4 py-4">
 					<div className="space-y-2">
 						<Label htmlFor="deposit">Deposit SUI</Label>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center justify-between">
 							<Input
 								id="deposit"
 								type="number"
@@ -251,17 +251,14 @@ export default function ManageGasDialog({
 								onChange={(e) => setDepositAmount(e.target.value)}
 								className={FIELD_WIDTH}
 							/>
-							<Button
-								onClick={handleDeposit}
-								className={BUTTON_WIDTH}
-							>
+							<Button onClick={handleDeposit} className={BUTTON_WIDTH}>
 								Deposit SUI
 							</Button>
 						</div>
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="withdraw">Withdraw SUI</Label>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center justify-between">
 							<Input
 								id="withdraw"
 								type="number"
@@ -273,10 +270,7 @@ export default function ManageGasDialog({
 								onChange={(e) => setWithdrawAmount(e.target.value)}
 								className={FIELD_WIDTH}
 							/>
-							<Button
-								onClick={handleWithdraw}
-								className={BUTTON_WIDTH}
-							>
+							<Button onClick={handleWithdraw} className={BUTTON_WIDTH}>
 								Withdraw SUI
 							</Button>
 						</div>
@@ -284,7 +278,7 @@ export default function ManageGasDialog({
 					{/* ↓ new “to agent” withdraw */}
 					<div className="space-y-2">
 						<Label htmlFor="withdraw-agent">Withdraw to Agent Wallet</Label>
-						<div className="flex items-center gap-2">
+						<div className="flex items-center justify-between">
 							<Input
 								id="withdraw-agent"
 								type="number"
@@ -293,13 +287,10 @@ export default function ManageGasDialog({
 								max={agent?.gasBag || ""}
 								placeholder="Amount"
 								value={withdrawToAgentAmount}
-								onChange={e => setWithdrawToAgentAmount(e.target.value)}
+								onChange={(e) => setWithdrawToAgentAmount(e.target.value)}
 								className={FIELD_WIDTH}
 							/>
-							<Button
-								onClick={handleWithdrawToAgentAccount}
-								className={BUTTON_WIDTH}
-							>
+							<Button onClick={handleWithdrawToAgentAccount} className={BUTTON_WIDTH}>
 								Extract SUI
 							</Button>
 						</div>
