@@ -19,6 +19,8 @@ interface ManageGasDialogProps {
 	setDepositAmount: (val: string) => void;
 	withdrawAmount: string;
 	setWithdrawAmount: (val: string) => void;
+	withdrawToAgentAmount: string;
+	setWithdrawToAgentAmount: (val: string) => void;
 }
 
 export default function ManageGasDialog({
@@ -29,6 +31,8 @@ export default function ManageGasDialog({
 	setDepositAmount,
 	withdrawAmount,
 	setWithdrawAmount,
+	withdrawToAgentAmount,
+	setWithdrawToAgentAmount,
 }: ManageGasDialogProps) {
 	const wallet = useCurrentAccount();
 	const signAndExecuteTransaction = useSignExecuteAndWaitForTransaction();
@@ -161,6 +165,66 @@ export default function ManageGasDialog({
 		}
 	};
 
+	const handleWithdrawToAgentAccount = async () => {
+		if (!withdrawToAgentAmount || isNaN(Number(withdrawToAgentAmount)) || Number(withdrawToAgentAmount) <= 0) return;
+		if (!wallet?.address) return;
+		if (Number(withdrawToAgentAmount) > Number(agent.gasBag)) return;
+
+		try {
+			const withdrawAmountMist = BigInt(Math.round(Number(withdrawToAgentAmount) * 1e9));
+			const { adminCapId, agentAddress, presignedTxBytes, agentSignature } = await withdrawGas(
+				agent.id,
+				withdrawAmountMist.toString(),
+				agent.objectId,
+				wallet.address
+			);
+
+			const tx = new Transaction();
+			const coin = tx.moveCall({
+				target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::extract_gas_for_transaction`,
+				arguments: [tx.object(agent.objectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist.toString())],
+			});
+
+			// NOTE: no tx.transferObjects([...], ...) here so coin stays in agent's wallet
+			tx.setSender(agentAddress);
+			tx.setGasOwner(wallet.address);
+
+			const walletSignedTx = await signTransaction({ transaction: tx });
+
+			await suiClient.executeTransactionBlock({
+				transactionBlock: presignedTxBytes,
+				signature: [agentSignature, walletSignedTx.signature],
+				requestType: "WaitForLocalExecution",
+				options: {
+					showEvents: true,
+					showEffects: true,
+					showObjectChanges: true,
+					showBalanceChanges: true,
+					showInput: true,
+				},
+			})
+			.then(res => {
+				if (res?.effects?.status?.status === "success") {
+					toast({
+						title: "Withdraw to Agent Successful",
+						description: `Extracted ${withdrawToAgentAmount} SUI into agent’s wallet.`,
+					});
+				} else {
+					toast({ title: "Withdraw to Agent Failed", variant: "destructive", description: "Transaction failed." });
+				}
+			})
+			.catch(error => {
+				console.error("Error extracting gas to agent:", error);
+				toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Transaction error." });
+			});
+		} catch (error) {
+			console.error("Error in handleWithdrawToAgentAccount:", error);
+			toast({ title: "Withdraw to Agent Error", variant: "destructive", description: "Unexpected error." });
+		} finally {
+			setWithdrawToAgentAmount("");
+		}
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
@@ -199,6 +263,25 @@ export default function ManageGasDialog({
 								onChange={(e) => setWithdrawAmount(e.target.value)}
 							/>
 							<Button onClick={handleWithdraw}>Withdraw</Button>
+						</div>
+					</div>
+					{/* ↓ new “to agent” withdraw */}
+					<div className="space-y-2">
+						<Label htmlFor="withdraw-agent">Withdraw to Agent Wallet</Label>
+						<div className="flex items-center gap-2">
+							<Input
+								id="withdraw-agent"
+								type="number"
+								step="0.01"
+								min="0"
+								max={agent?.gasBag || ""}
+								placeholder="Amount"
+								value={withdrawToAgentAmount}
+								onChange={e => setWithdrawToAgentAmount(e.target.value)}
+							/>
+							<Button onClick={handleWithdrawToAgentAccount}>
+								Withdraw to Agent
+							</Button>
 						</div>
 					</div>
 				</div>
