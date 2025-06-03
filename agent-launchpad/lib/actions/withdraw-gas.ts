@@ -8,7 +8,8 @@ export async function withdrawGas(
 	agentId: string,
 	withdrawAmountMist: string,
 	agentObjectId: string,
-	gasOwnerAddress: string
+	gasOwnerAddress: string,
+	transferToWallet: boolean = true
 ) {
 	// load the agent record, its keypair and address
 	const { keypair, address: agentAddress } = await getAgentKeypair(agentId);
@@ -26,8 +27,10 @@ export async function withdrawGas(
 		target: `${PACKAGE_ID}::agent::extract_gas_for_transaction`,
 		arguments: [tx.object(agentObjectId), tx.object(adminCapId), tx.pure.u64(withdrawAmountMist)],
 	});
-	// Capture the coin object returned and transfer it to the gas owner's address
-	tx.transferObjects([coin], gasOwnerAddress);
+	// Capture the coin object returned and transfer it to the gas owner's address if requested
+	if (transferToWallet) {
+		tx.transferObjects([coin], gasOwnerAddress);
+	}
 
 	// Configure as a sponsored transaction
 	tx.setSender(agentAddress); // Agent is the transaction sender

@@ -108,7 +108,8 @@ export default function ManageGasDialog({
 				agent.id,
 				amountMist.toString(),
 				agent.objectId,
-				wallet.address
+				wallet.address,
+				transferToWallet
 			);
 
 			const tx = new Transaction();
