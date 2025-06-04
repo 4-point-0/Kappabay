@@ -300,20 +300,20 @@ export class DirectClient {
                 });
 
                 // ── modular fee‐charging ──
-                if (response) {
-                    const modelSettings = getModelSettings(
-                        runtime.modelProvider,
-                        ModelClass.LARGE
-                    );
-                    await chargeFee(
-                        {
-                            prompt: text,
-                            completion: response.text,
-                            model: modelSettings.name,
-                        },
-                        runtime.modelProvider
-                    );
-                }
+                // if (response) {
+                //     const modelSettings = getModelSettings(
+                //         runtime.modelProvider,
+                //         ModelClass.LARGE
+                //     );
+                //     await chargeFee(
+                //         {
+                //             prompt: text,
+                //             completion: response.text,
+                //             model: modelSettings.name,
+                //         },
+                //         runtime.modelProvider
+                //     );
+                // }
                 // ── end fee‐charging ──
 
                 if (!response) {
