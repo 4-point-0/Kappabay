@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
-export default function BackgroundMountains() {
+export default function BackgroundFooter() {
 	const path = usePathname() || "";
 	const baseClass = "absolute left-0 right-0 z-0 w-full h-auto";
 
@@ -13,6 +13,22 @@ export default function BackgroundMountains() {
 			<div className={`${baseClass} top-[275vh]`}>
 				<Image
 					src="/mountains-background.png"
+					alt="Mountain Landscape"
+					width={1920}
+					height={600}
+					className="object-cover"
+					priority
+				/>
+			</div>
+		);
+	}
+
+	// on /functionalities use a different style
+	if (path !== "/kappabae") {
+		return (
+			<div className={`${baseClass} top-[275vh]`}>
+				<Image
+					src="/mountains-field.png"
 					alt="Mountain Landscape"
 					width={1920}
 					height={600}
