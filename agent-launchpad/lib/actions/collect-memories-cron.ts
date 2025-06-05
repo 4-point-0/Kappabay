@@ -9,6 +9,7 @@ import { Transaction } from "@mysten/sui/transactions";
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
 const UPDATE_MEMORIES_FN = `${PACKAGE_ID}::agent::update_memories`;
+const INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
 
 // sponsor
 const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
@@ -32,6 +33,8 @@ async function collectMemoriesOnce() {
 }
 
 async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash: string) {
+	console.log("in syncAgentMemory");
+
 	// 1) fetch on-chain memory
 	const fields = await getObjectFields(client, objectId);
 	const raw: number[][] = (fields as any).memories;
@@ -74,10 +77,12 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 declare global {
 	var __memCronScheduled: boolean | undefined;
 }
+console.log("global.__memCronScheduled", global.__memCronScheduled);
+
 if (!global.__memCronScheduled) {
 	global.__memCronScheduled = true;
 	collectMemoriesOnce().catch(console.error);
-	setInterval(() => collectMemoriesOnce().catch(console.error), 6 * 60 * 60 * 1000);
+	setInterval(() => collectMemoriesOnce().catch(console.error), INTERVAL);
 }
 
 export { collectMemoriesOnce as collectMemoriesCron };
