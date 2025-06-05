@@ -100,7 +100,7 @@ export default function Home() {
 					{/* Mountain landscape - positioned with lower z-index */}
 					<div className="absolute bottom-0 left-0 right-0 z-0">
 						<Image
-							src="/mountains-background.png"
+							src="/main-background.png"
 							alt="Mountain Landscape"
 							width={1920}
 							height={600}
@@ -138,7 +138,7 @@ export default function Home() {
 								whileInView={{ opacity: 1, y: 0 }}
 								transition={{ duration: 0.5, delay: 0.2 }}
 								viewport={{ once: true }}
-								className="bg-gray-300 rounded-lg h-[300px] flex items-center justify-center"
+								className="rounded-lg h-[300px] flex items-center justify-center"
 							>
 								<div className="text-center text-gray-600 ">
 									<Image

@@ -1,6 +1,7 @@
 "use client";
 
 import AgentDeployer from "@/components/agent-deployer";
+import BackgroundFooter from "@/components/background-footer";
 import Header from "@/components/header";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
@@ -21,6 +22,7 @@ export default function DeployPage() {
 						{/* Mountain landscape - positioned with lower z-index */}
 					</motion.div>
 				</div>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

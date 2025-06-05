@@ -24,7 +24,6 @@ export default function RootLayout({
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${inter.className} ${funnel.className}`}>
 				<Providers>{children}</Providers>
-				<BackgroundFooter />
 			</body>
 		</html>
 	);

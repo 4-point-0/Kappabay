@@ -130,7 +130,7 @@ export function StatusContent({
 	};
 
 	return (
-		<main className="min-h-screen bg-background text-foreground">
+		<main className="min-h-screen text-foreground">
 			<Header />
 			<PageTransition>
 				<div className="container mx-auto px-4 py-8">
