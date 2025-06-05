@@ -45,13 +45,15 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	const { keypair, address: agentAddress } = await getAgentKeypair(agentId);
 	const adminCapId = await getAdminCapId(client, agentAddress);
 	const tx = new Transaction();
+	// build JSON payload with memoryBlobId
+	const jsonPayload = JSON.stringify({ memoryBlobId: latestBlobHash });
 	tx.moveCall({
 		target: UPDATE_MEMORIES_FN,
 		arguments: [
 			tx.object(objectId),
 			tx.object(adminCapId),
-			// pass new blob id as bytes
-			tx.pure(Uint8Array.from(Buffer.from(latestBlobHash))),
+			// pass JSON-encoded payload as bytes
+			tx.pure(Uint8Array.from(Buffer.from(jsonPayload))),
 		],
 	});
 	tx.setSender(agentAddress);
