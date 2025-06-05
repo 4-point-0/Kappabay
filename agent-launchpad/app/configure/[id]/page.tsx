@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { fetchAgentConfig } from "@/lib/agent-utils";
 import { useSuiClient } from "@mysten/dapp-kit";
+import BackgroundFooter from "@/components/background-footer";
 
 export default function ConfigurePage() {
 	const params = useParams();
@@ -63,6 +64,7 @@ export default function ConfigurePage() {
 						</div>
 					)}
 				</div>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

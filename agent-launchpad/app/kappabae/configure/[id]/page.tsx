@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
+import BackgroundFooter from "@/components/background-footer";
 
 // Try to read the raw questionnaire from sessionStorage
 const loadSavedConfig = (): any | null => {
@@ -102,6 +103,7 @@ export default function ConfigurePage() {
 						</div>
 					)}
 				</div>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

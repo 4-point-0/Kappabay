@@ -265,7 +265,7 @@ export function TerminalContent() {
 												<motion.div
 													initial={{ scale: 0.9 }}
 													animate={{ scale: 1 }}
-													className={`rounded-lg p-3 ${
+													className={`rounded-md p-3 ${
 														m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
 													}`}
 												>

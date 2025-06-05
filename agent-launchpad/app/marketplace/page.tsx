@@ -18,6 +18,7 @@ import { useMarketplaceObject } from "@/hooks/use-marketplace-object";
 import Image from "next/image";
 import { PageTransition } from "@/components/page-transition";
 import { getObjectFields } from "@/lib/actions/sui-utils";
+import BackgroundFooter from "@/components/background-footer";
 
 // All available categories
 const allCategories = ["All", "Finance", "Crypto", "News", "Social", "Productivity", "Development", "Analytics"];
@@ -138,7 +139,9 @@ export default function MarketplacePage() {
 			// build tx manually so we can split off exactly the payment coin
 			const {
 				objectId: kioskCapId,
-				content: { fields: { for: kioskId } }
+				content: {
+					fields: { for: kioskId },
+				},
 			} = kioskCap.data;
 
 			const tx = new Transaction();
@@ -206,6 +209,7 @@ export default function MarketplacePage() {
 						onPurchase={handlePurchase}
 					/>
 				</section>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

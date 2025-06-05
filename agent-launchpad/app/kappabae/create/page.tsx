@@ -11,6 +11,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import CharacterQuestionnaire from "@/components/kappabae/character-questionnaire";
 import { CompanionSummary } from "@/components/kappabae/companion-summary";
+import BackgroundFooter from "@/components/background-footer";
 
 export default function CreateCompanionPage() {
 	const [showConfig, setShowConfig] = useState(false);
@@ -53,6 +54,7 @@ export default function CreateCompanionPage() {
 						)}
 					</AnimatePresence>
 				</div>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

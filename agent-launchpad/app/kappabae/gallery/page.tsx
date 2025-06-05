@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { Heart, MessageCircle, Download } from "lucide-react";
+import BackgroundFooter from "@/components/background-footer";
 
 // Mock data for gallery companions
 const galleryCompanions = [
@@ -126,6 +127,7 @@ export default function GalleryPage() {
 						))}
 					</motion.div>
 				</div>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);

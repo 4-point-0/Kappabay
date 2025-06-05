@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { Inter, Funnel_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
-import BackgroundMountains from "@/components/background-nountains";
 import "@/lib/actions/cron/cron-manager";
+import BackgroundFooter from "@/components/background-footer";
 
 const inter = Inter({ subsets: ["latin"] });
 const funnel = Funnel_Display({ subsets: ["latin"], weight: ["400", "700"] });
@@ -24,7 +24,6 @@ export default function RootLayout({
 		<html lang="en" suppressHydrationWarning>
 			<body className={`${inter.className} ${funnel.className}`}>
 				<Providers>{children}</Providers>
-				<BackgroundMountains />
 			</body>
 		</html>
 	);

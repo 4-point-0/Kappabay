@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/page-transition";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Image from "next/image";
+import BackgroundFooter from "@/components/background-footer";
 
 // Animation variants
 const containerVariants = {
@@ -78,7 +79,7 @@ export default function KappabayPage() {
 					<div className="absolute right-[0%] top-[75%] z-0">
 						<Image src="/ellipse-3.png" alt="Purple Sphere" width={140} height={140} className="opacity-80" />
 					</div>
-					<div className="absolute right-[44%] top-[48%] z-[2] rotate-[-7deg] scale-125">
+					<div className="absolute right-[44%] top-[48.3%] z-[2] scale-125">
 						<Image src="/kappabae-image.png" alt="Kappabae" width={140} height={140} />
 					</div>
 				</section>
@@ -203,10 +204,10 @@ export default function KappabayPage() {
 							</Link>
 						</motion.div>
 					</div>
-					<div className="absolute right-[75%] top-[3%] z-0 scale-75">
+					<div className="absolute left-[5%] top-[3%] z-0 scale-75">
 						<Image src="/kappabae-chibi-image.png" alt="Chibi" width={140} height={140} className="w-full h-auto" />
 					</div>
-					<div className="absolute right-[3%] top-[8%] z-0 scale-75">
+					<div className="absolute right-[5%] top-[8%] z-0 scale-75">
 						<Image src="/kappatux-image.png" alt="Tux" width={140} height={140} className="w-full h-auto" />
 					</div>
 					<div className="absolute left-1/2 bottom-[-12rem] -translate-x-1/2 text-center z-20">
@@ -216,6 +217,7 @@ export default function KappabayPage() {
 						<p className="dark:text-white text-background text-sm">By 4pto Labs</p>
 					</div>
 				</section>
+				<BackgroundFooter />
 			</PageTransition>
 		</main>
 	);
