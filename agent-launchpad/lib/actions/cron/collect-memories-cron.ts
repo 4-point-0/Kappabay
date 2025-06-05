@@ -10,7 +10,6 @@ import { bcs } from "@mysten/sui/bcs";
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
 const UPDATE_MEMORIES_FN = `${PACKAGE_ID}::agent::update_memories`;
-const INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
 
 // sponsor
 const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;

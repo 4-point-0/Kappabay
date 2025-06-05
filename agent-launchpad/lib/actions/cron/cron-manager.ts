@@ -9,6 +9,8 @@ declare global {
 }
 
 async function cronManager() {
+	console.log("in cronManager");
+
 	// 1) On startup: collect fees, then memories
 	await collectFeesOnce();
 	await collectMemoriesOnce().catch(console.error);
@@ -32,7 +34,7 @@ async function cronManager() {
 		}
 	}
 }
-
+console.log("in cron");
 if (!global.__cronManagerScheduled) {
 	global.__cronManagerScheduled = true;
 	cronManager().catch(console.error);
