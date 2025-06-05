@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@/lib/actions/collect-fee-cron";
+import "@/lib/actions/collect-memories-cron";
 
 // Config options for the networks you want to connect to
 const { networkConfig } = createNetworkConfig({
