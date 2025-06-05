@@ -7,13 +7,13 @@ export default function BackgroundFooter() {
 	const path = usePathname() || "";
 	const baseClass = "absolute left-0 right-0 z-0 w-full h-auto";
 
-	// case 1: only on the home page
+	// 1) main page “/”
 	if (path === "/") {
 		return (
 			<div className={`${baseClass} top-[50vh]`}>
 				<Image
-					src="/mountains-background.png"
-					alt="Mountain Landscape"
+					src="/main-background.png"
+					alt="Main Background"
 					width={1920}
 					height={600}
 					className="object-cover"
@@ -23,17 +23,44 @@ export default function BackgroundFooter() {
 		);
 	}
 
-	// case 2: hide on all /kappabae/* routes
-	if (path.startsWith("/kappabae")) {
-		return null;
+	// 2) root of kappabae “/kappabae”
+	if (path === "/kappabae") {
+		return (
+			<div className={`${baseClass} top-[50vh]`}>
+				<Image
+					src="/kappabae-background.png"
+					alt="Kappabae Background"
+					width={1920}
+					height={600}
+					className="object-cover"
+					priority
+				/>
+			</div>
+		);
 	}
 
-	// case 3: on all other routes
+	// 3) all other kappabae routes
+	if (path.startsWith("/kappabae/")) {
+		return (
+			<div className={`${baseClass} top-[275vh]`}>
+				<Image
+					src="/kappabae-func-background.png"
+					alt="Kappabae Functional Background"
+					width={1920}
+					height={600}
+					className="object-cover"
+					priority
+				/>
+			</div>
+		);
+	}
+
+	// 4) all other pages
 	return (
 		<div className={`${baseClass} top-[275vh]`}>
 			<Image
-				src="/field-background.png"
-				alt="Mountain Landscape"
+				src="/main-func-field.png"
+				alt="Main Functional Field Background"
 				width={1920}
 				height={600}
 				className="object-cover"
