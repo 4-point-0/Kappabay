@@ -39,10 +39,20 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	const fields = await getObjectFields(client, objectId);
 	const raw: number[][] = (fields as any).memories;
 	const flat = raw.flat();
-	const json = new TextDecoder().decode(Uint8Array.from(flat));
-	const { memoryBlobId } = JSON.parse(json);
 
-	if (memoryBlobId === latestBlobHash) return; // nothing to do
+	// decode if non‐empty, otherwise treat as “no memory on‐chain”
+	let memoryBlobId: string | null = null;
+	if (flat.length > 0) {
+		try {
+			const decoded = new TextDecoder().decode(Uint8Array.from(flat));
+			memoryBlobId = JSON.parse(decoded)?.memoryBlobId ?? null;
+		} catch {
+			memoryBlobId = null;
+		}
+	}
+
+	// if it already matches, skip
+	if (memoryBlobId === latestBlobHash) return;
 
 	// 2) prepare tx
 	const { keypair, address: agentAddress } = await getAgentKeypair(agentId);
