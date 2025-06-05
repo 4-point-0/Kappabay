@@ -1,25 +1,6 @@
 import { SuiClient } from "@mysten/sui/client";
-import { Transaction } from "@mysten/sui/transactions";
 import { getAgentInfo } from "./actions/get-agent-info";
 import { AgentConfig } from "./types";
-
-export const getGasBalance = async (agentIds: string[], signAndExecuteTransaction: any) => {
-	const tx = new Transaction();
-	for (const agentId of agentIds) {
-		tx.moveCall({
-			target: `${process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID}::agent::check_gas_balance`,
-			arguments: [tx.object(agentId)],
-		});
-	}
-
-	signAndExecuteTransaction(tx)
-		.then((result: any) => {
-			console.log("result", result);
-		})
-		.catch((e: any) => {
-			console.error("check_gas_balance failed", e);
-		});
-};
 
 // fetch on‐chain agent configuration
 export const fetchAgentConfig = async (id: string, client: SuiClient): Promise<AgentConfig> => {

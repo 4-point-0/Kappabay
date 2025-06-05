@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { getAgentKeypair, getAdminCapId, getObjectFields } from "./sui-utils";
+import { getAgentKeypair, getAdminCapId, getObjectFields } from "../sui-utils";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
@@ -85,4 +85,4 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 }
 
 // no scheduler here—driven by cron-manager.ts
-export { collectMemoriesOnce as collectMemoriesCron };
+export { collectMemoriesOnce };

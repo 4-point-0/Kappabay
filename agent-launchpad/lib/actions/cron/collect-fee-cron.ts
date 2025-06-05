@@ -5,7 +5,7 @@ import { withdrawGas } from "@/lib/actions/withdraw-gas";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { stopService } from "@/lib/actions/manage-docker-service";
-import { collectMemoriesOnce } from "./collect-memories-cron";   // ← NEW
+import { collectMemoriesOnce } from "./collect-memories-cron"; // ← NEW
 
 const FEE_AMOUNT = 1_000_000; // Mist
 const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
@@ -72,4 +72,4 @@ async function collectFeeForAgent(agentObjectId: string, agentId: string) {
 	});
 }
 
-export { collectFeesOnce as collectFeesCron };
+export { collectFeesOnce };
