@@ -5,6 +5,7 @@ import { getAgentKeypair, getAdminCapId, getObjectFields } from "./sui-utils";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { Transaction } from "@mysten/sui/transactions";
+import { bcs } from "@mysten/sui/bcs";
 
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 const PACKAGE_ID = process.env.NEXT_PUBLIC_DEPLOYER_CONTRACT_ID!;
@@ -59,14 +60,14 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	const adminCapId = await getAdminCapId(client, agentAddress);
 	const tx = new Transaction();
 	// build JSON payload with memoryBlobId
-	const jsonPayload = JSON.stringify({ memoryBlobId: latestBlobHash });
+	const bytes = new TextEncoder().encode(JSON.stringify({ memoryBlobId: latestBlobHash }));
 	tx.moveCall({
 		target: UPDATE_MEMORIES_FN,
 		arguments: [
 			tx.object(objectId),
 			tx.object(adminCapId),
 			// pass JSON-encoded payload as bytes
-			tx.pure(Uint8Array.from(Buffer.from(jsonPayload))),
+			tx.pure(bcs.vector(bcs.u8()).serialize(bytes)),
 		],
 	});
 	tx.setSender(agentAddress);
