@@ -5,6 +5,7 @@ import { withdrawGas } from "@/lib/actions/withdraw-gas";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 import { stopService } from "@/lib/actions/manage-docker-service";
+import { collectMemoriesOnce } from "./collect-memories-cron";   // ← NEW
 
 const FEE_AMOUNT = 1_000_000; // Mist
 const feeAddress = process.env.NEXT_PUBLIC_FEE_ADDRESS!;
@@ -71,15 +72,25 @@ async function collectFeeForAgent(agentObjectId: string, agentId: string) {
 	});
 }
 
-// schedule once per process
-declare global {
-	var __feeCronScheduled: boolean | undefined;
+ // schedule once per process
+declare global { var __feeCronScheduled: boolean | undefined; }
+let runCount = 0;
+
+async function feeRunner() {
+  await collectFeesOnce();
+  runCount++;
+  // every 6 fee‐runs (~6h) fire memories, then reset
+  if (runCount >= 6) {
+    runCount = 0;
+    await collectMemoriesOnce().catch(console.error);
+  }
 }
+
 if (!global.__feeCronScheduled) {
-	global.__feeCronScheduled = true;
-	// run immediately, then every hour
-	collectFeesOnce().catch(console.error);
-	setInterval(() => collectFeesOnce().catch(console.error), 60 * 60 * 1000);
+  global.__feeCronScheduled = true;
+  // kick‐off immediately, then hourly
+  feeRunner().catch(console.error);
+  setInterval(() => feeRunner().catch(console.error), 60 * 60 * 1000);
 }
 
 // also export if you ever want to invoke manually

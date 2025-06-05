@@ -84,6 +84,5 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	});
 }
 
-// scheduling moved into collect-fee-cron.ts so memories always run after fees
-
+// no scheduler here—driven by collect‐fee‐cron.ts
 export { collectMemoriesOnce as collectMemoriesCron };
