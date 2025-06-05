@@ -71,16 +71,4 @@ async function collectFeeForAgent(agentObjectId: string, agentId: string) {
 	});
 }
 
-// schedule once per process
-declare global {
-	var __feeCronScheduled: boolean | undefined;
-}
-if (!global.__feeCronScheduled) {
-	global.__feeCronScheduled = true;
-	// run immediately, then every hour
-	collectFeesOnce().catch(console.error);
-	setInterval(() => collectFeesOnce().catch(console.error), 60 * 60 * 1000);
-}
-
-// also export if you ever want to invoke manually
-export { collectFeesOnce as collectFeesCron };
+export { collectFeesOnce };

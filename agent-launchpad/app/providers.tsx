@@ -8,7 +8,6 @@ import { getFullnodeUrl } from "@mysten/sui/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import "@/lib/actions/collect-fee-cron";
 
 // Config options for the networks you want to connect to
 const { networkConfig } = createNetworkConfig({
