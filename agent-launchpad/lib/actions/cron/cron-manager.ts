@@ -9,26 +9,19 @@ declare global {
 }
 
 async function cronManager() {
-	let memCounter = 0;
+  // 1) On startup: collect fees, then sync memories
+  await collectFeesOnce();
+  await collectMemoriesOnce().catch(console.error);
 
-	// run immediately on startup
-	await collectFeesOnce();
-	memCounter++;
-	new Promise((r) => setTimeout(r, 3000));
-	if (memCounter >= 6) {
-		memCounter = 0;
-		await collectMemoriesOnce().catch(console.error);
-	}
+  // 2) Schedule fee collection every hour
+  setInterval(() => {
+    collectFeesOnce().catch(console.error);
+  }, 60 * 60 * 1000);
 
-	// then schedule fee every hour
-	setInterval(async () => {
-		await collectFeesOnce();
-		memCounter++;
-		if (memCounter >= 6) {
-			memCounter = 0;
-			await collectMemoriesOnce().catch(console.error);
-		}
-	}, 60 * 60 * 1000);
+  // 3) Schedule memory sync every 6 hours
+  setInterval(() => {
+    collectMemoriesOnce().catch(console.error);
+  }, 6 * 60 * 60 * 1000);
 }
 
 if (!global.__cronManagerScheduled) {
