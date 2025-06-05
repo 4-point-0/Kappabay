@@ -84,16 +84,6 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	});
 }
 
-// schedule every 6h
-declare global {
-	var __memCronScheduled: boolean | undefined;
-}
-console.log("global.__memCronScheduled", global.__memCronScheduled);
-
-if (!global.__memCronScheduled) {
-	global.__memCronScheduled = true;
-	collectMemoriesOnce().catch(console.error);
-	setInterval(() => collectMemoriesOnce().catch(console.error), INTERVAL);
-}
+// scheduling moved into collect-fee-cron.ts so memories always run after fees
 
 export { collectMemoriesOnce as collectMemoriesCron };
