@@ -72,26 +72,4 @@ async function collectFeeForAgent(agentObjectId: string, agentId: string) {
 	});
 }
 
- // schedule once per process
-declare global { var __feeCronScheduled: boolean | undefined; }
-let runCount = 0;
-
-async function feeRunner() {
-  await collectFeesOnce();
-  runCount++;
-  // every 6 fee‐runs (~6h) fire memories, then reset
-  if (runCount >= 6) {
-    runCount = 0;
-    await collectMemoriesOnce().catch(console.error);
-  }
-}
-
-if (!global.__feeCronScheduled) {
-  global.__feeCronScheduled = true;
-  // kick‐off immediately, then hourly
-  feeRunner().catch(console.error);
-  setInterval(() => feeRunner().catch(console.error), 60 * 60 * 1000);
-}
-
-// also export if you ever want to invoke manually
 export { collectFeesOnce as collectFeesCron };

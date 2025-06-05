@@ -84,5 +84,5 @@ async function syncAgentMemory(agentId: string, objectId: string, latestBlobHash
 	});
 }
 
-// no scheduler here—driven by collect‐fee‐cron.ts
+// no scheduler here—driven by cron-manager.ts
 export { collectMemoriesOnce as collectMemoriesCron };
