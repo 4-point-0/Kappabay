@@ -32,7 +32,7 @@ export default function BackgroundFooter() {
 	return (
 		<div className={`${baseClass} top-[275vh]`}>
 			<Image
-				src="/mountains-field.png"
+				src="/field-background.png"
 				alt="Mountain Landscape"
 				width={1920}
 				height={600}
