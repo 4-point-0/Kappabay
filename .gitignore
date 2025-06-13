@@ -1,5 +1,6 @@
 .aider*
 /contracts/build
+/court_demo/build
 node_modules/
 agents
 oracles
