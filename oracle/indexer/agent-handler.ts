@@ -256,12 +256,6 @@ export const handlePromptWithMultiCallbacks = async (
     };
 
     try {
-      const response = await apiClient.sendMessage(
-        CONFIG.AGENT_ID,
-        data?.prompt_text,
-        data?.sender,
-        null
-      );
       // Parse the callbacks from the JSON string
       let callbacks: Callback[] = [];
       try {
@@ -282,43 +276,31 @@ export const handlePromptWithMultiCallbacks = async (
         );
       }
 
-      // Process callbacks
-      if (callbacks.length > 0) {
-        // Separate callbacks by type
-        const oracleCallbacks = callbacks.filter(
-          (cb) => !cb.requires_user_wallet
-        );
-        const userCallbacks = callbacks.filter((cb) => cb.requires_user_wallet);
-
-        // Execute callbacks that don't require user wallet
-        if (oracleCallbacks.length > 0) {
-          await executeOracleCallbacks(
-            oracleCallbacks,
-            data.prompt_text,
-            response?.[0]?.text || "",
-            signer,
-            data.id,
-            data.sender
-          );
+      // Create enhanced message with callbacks for the agent
+      const enhancedMessage = {
+        prompt: data?.prompt_text,
+        callbacks: callbacks,
+        metadata: {
+          caseId: data.id,
+          sender: data.sender,
+          agentWallet: data.agent_wallet,
+          timestamp: Date.now(),
         }
+      };
 
-        // For callbacks that require user wallet, emit an event instead of storing
-        // if (userCallbacks.length > 0) {
-        //   console.log(
-        //     `User callbacks detected for address ${data.sender}. In a production system, we would emit an event here with the following data:`
-        //   );
-        //   console.log({
-        //     type: "USER_CALLBACK_REQUIRED",
-        //     promptId: data.id,
-        //     userAddress: data.sender,
-        //     prompt: data.prompt_text,
-        //     response: response?.[0]?.text || "",
-        //     callbacks: userCallbacks,
-        //   });
+      console.log(`Sending court case analysis request to agent:`, enhancedMessage);
 
-        //   // COMMENT: Here we would emit an event to a WebSocket, SSE, or other real-time notification system
-        // }
-      }
+      const response = await apiClient.sendMessage(
+        CONFIG.AGENT_ID,
+        JSON.stringify(enhancedMessage), // Send the enhanced message with callbacks
+        data?.sender,
+        null
+      );
+
+      console.log(`Agent responded with:`, response);
+
+      // Note: The agent will now handle callback execution directly via the court plugin
+      // We don't execute callbacks here anymore - the agent does it autonomously
 
       // Always populate the response to the original object
       await populateAgentObject(
@@ -344,6 +326,10 @@ export const handlePromptWithMultiCallbacks = async (
 
   await Promise.all(promises);
 };
+
+// Note: Keeping executeOracleCallbacks for backwards compatibility
+// The agent now handles callback execution directly for court cases,
+// but other use cases may still need oracle execution
 
 async function executeOracleCallbacks(
   callbacks: Callback[],
